@@ -376,6 +376,8 @@ export class Synchronizer {
                 }
             }
         }
+    }
+
     async dailyTaskReset(activeFile: TFile) {
         const originalContent = await this.app.vault.read(activeFile);
         let content = this.utils.preprocessContent(originalContent);

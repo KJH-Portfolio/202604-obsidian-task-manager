@@ -16,5 +16,8 @@
     "obsidian": "latest",
     "tslib": "2.3.1",
     "typescript": "4.5.5"
+  },
+  "dependencies": {
+    "builtin-modules": "^5.1.0"
   }
 }
