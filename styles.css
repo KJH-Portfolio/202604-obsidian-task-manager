@@ -1,0 +1,75 @@
+/* ========================================================
+   MyWorld Task Manager - Core Styles
+   Includes: Task Indent Fix, Inline Routine UI, Table Fixes
+   ======================================================== */
+
+/* 1. D-Day Marker & Task Highlighting (from fix-task-indent.css) */
+.tag[href*="D-"], .tag[href*="d-"], .tag[href*="past" i],
+.cm-tag-D-0, .cm-tag-D-1, .cm-tag-D-2, .cm-tag-D-3, .cm-tag-D-7,
+.cm-tag-d-0, .cm-tag-d-1, .cm-tag-d-2, .cm-tag-d-3, .cm-tag-d-7,
+.cm-tag-Past, .cm-tag-past {
+    font-size: 0 !important;
+    color: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    display: inline-block !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.markdown-rendered li:has([href*="D-" i]), .markdown-rendered li:has([href*="past" i]), 
+.cm-line:has([class*="tag-D-" i]), .cm-line:has([class*="tag-past" i]) {
+    background-origin: content-box !important;
+    background-clip: content-box !important;
+    background-repeat: no-repeat !important;
+    background-size: 100% 1.5em !important; 
+}
+
+/* Color Bars */
+.markdown-rendered li:has([href*="d-0" i]), .cm-line:has(.cm-tag-D-0) {
+    background-image: linear-gradient(to right, rgba(233, 49, 71, 0.8) 6px, transparent 6px), 
+                      linear-gradient(to right, rgba(233, 49, 71, 0.12) 0%, rgba(233, 49, 71, 0.12) 100%) !important;
+}
+.markdown-rendered li:has([href*="d-1" i]), .cm-line:has(.cm-tag-D-1) {
+    background-image: linear-gradient(to right, rgba(255, 210, 0, 0.8) 6px, transparent 6px), 
+                      linear-gradient(to right, rgba(255, 210, 0, 0.12) 0%, rgba(255, 210, 0, 0.12) 100%) !important;
+}
+.markdown-rendered li:has([href*="past" i]), .cm-line:has(.cm-tag-Past) {
+    background-image: linear-gradient(to right, rgba(140, 0, 40, 0.9) 6px, transparent 6px), 
+                      linear-gradient(to right, rgba(140, 0, 40, 0.15) 0%, rgba(140, 0, 40, 0.15) 100%) !important;
+}
+
+/* 2. Inline Routine UI (from inline-routine.css) */
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]) {
+    display: inline-flex !important;
+    align-items: center !important;
+    background-color: var(--background-secondary-alt) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: 20px !important;
+    padding: 4px 12px !important;
+    margin: 4px 8px 4px 0 !important;
+    width: auto !important;
+    font-size: 0.9em !important;
+}
+
+.callout[data-callout="routine"] ul>li.task-list-item::marker { display: none !important; }
+
+/* 3. Table & Callout Improvements */
+.markdown-rendered table th, .markdown-rendered table td:first-child {
+    white-space: nowrap !important;
+}
+
+.callout.is-collapsible {
+  --callout-collapse: expanded;
+}
+
+/* Dashboard Style Header (띠지) */
+body .markdown-rendered h1 {
+    background: linear-gradient(90deg, rgba(52, 152, 219, 0.25) 0%, rgba(52, 152, 219, 0) 100%) !important;
+    border-left: 5px solid #3498db !important;
+    padding: 6px 15px !important;
+    border-radius: 4px !important;
+}
