@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.orig
+.obsidian/
+dist/
+build/
+main.js

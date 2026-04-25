@@ -1,0 +1,10 @@
+{
+	"id": "myworld-task-manager",
+	"name": "MyWorld Task Manager",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Integrated task and project management for MyWorld workspace.",
+	"author": "Antigravity",
+	"authorUrl": "https://github.com/your-repo",
+	"isDesktopOnly": false
+}
