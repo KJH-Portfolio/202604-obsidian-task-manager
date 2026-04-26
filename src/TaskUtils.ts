@@ -1,4 +1,5 @@
-import { TFile, App, moment } from "obsidian";
+import { TFile, App, moment, HeadingCache } from "obsidian";
+import { MyWorldSettings, TableStats } from "./types";
 
 export const CONFIG = {
     PATHS: {
@@ -39,9 +40,9 @@ export const EMOJI_MAP: Record<string, string> = { "1": "🟦", "2": "🟩", "3"
 
 export class TaskUtils {
     app: App;
-    settings: any;
+    settings: MyWorldSettings;
 
-    constructor(app: App, settings: any) {
+    constructor(app: App, settings: MyWorldSettings) {
         this.app = app;
         this.settings = settings;
     }
@@ -57,6 +58,17 @@ export class TaskUtils {
         return content.replace(/\r\n/g, '\n')
                       .replace(/\t/g, '    ')
                       .replace(/\n{3,}/g, '\n\n');
+    }
+
+    async ensureFolder(path: string) {
+        const parts = path.split('/');
+        let current = '';
+        for (const p of parts) {
+            current = current === '' ? p : `${current}/${p}`;
+            if (!this.app.vault.getAbstractFileByPath(current)) {
+                await this.app.vault.createFolder(current);
+            }
+        }
     }
 
     generateBlockId() {
@@ -75,7 +87,7 @@ export class TaskUtils {
         const titleLink = noteName ? `[[${noteName}|진행도]]` : "진행도";
         const safeTotal = Math.max(total, 1);
         const pct = Math.round((completed / safeTotal) * 100);
-        const barLength = 10;
+        const barLength = CONFIG.SETTINGS.PROGRESS_BAR_LENGTH;
         const filled = Math.min(barLength, Math.max(0, Math.round((completed / safeTotal) * barLength)));
         return `**${titleLink}**: ${pct}% (${completed}/${total}) ${"■".repeat(filled)}${"□".repeat(barLength - filled)}`;
     }
@@ -212,13 +224,13 @@ export class TaskUtils {
     }
 
     getCache(file: TFile) {
-        return (this.app.metadataCache as any).getFileCache(file);
+        return this.app.metadataCache.getFileCache(file);
     }
 
     getSectionRange(file: TFile, sectionName: string, level = 1, fallbackLines: string[] | null = null) {
         const cache = this.getCache(file);
         if (cache && cache.headings) {
-            const hIdx = cache.headings.findIndex((h: any) => h.heading === sectionName && h.level === level);
+            const hIdx = cache.headings.findIndex((h: HeadingCache) => h.heading === sectionName && h.level === level);
             if (hIdx !== -1) {
                 const startLine = cache.headings[hIdx].position.start.line;
                 let endLine = -1;
@@ -284,51 +296,52 @@ export class TaskUtils {
         return `> [!${cType}] ${sTitle}\n${body.trimEnd()}`;
     }
 
-    parseTableStats(linesStrs: string[], headers: string) {
-        let sq: any = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 }, ar: any = { "🔹": 0, "🔻": 0 };
-        if (!headers || !linesStrs || linesStrs.length === 0) return { sq, ar, cs: {} as any, tableHeaders: [] as string[] };
+    parseTableStats(linesStrs: string[], headers: string): TableStats {
+        const sq: Record<string, number> = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 };
+        const ar: Record<string, number> = { "🔹": 0, "🔻": 0 };
+        if (!headers || !linesStrs || linesStrs.length === 0) return { sq, ar, cs: {}, tableHeaders: [] };
 
         const tableHeaders = headers.split("|").map(s => s.trim());
-        let cs: any = {};
+        const cs: Record<string, Record<string, number>> = {};
 
         linesStrs.forEach(l => {
-            let cols = l.split("|");
+            const cols = l.split("|");
             if (cols.length > 2) {
                 for (let c = 2; c < cols.length; c++) {
-                    let v = cols[c].trim();
+                    const v = cols[c].trim();
                     if (!v) continue;
-                    let emoji = EMOJI_MAP[v] || v;
-                    let hw = tableHeaders[c];
+                    const emoji = EMOJI_MAP[v] || v;
+                    const hw = tableHeaders[c];
 
                     if (hw && hw !== "" && hw !== "날짜") {
                         if (!cs[hw]) cs[hw] = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0, "🔹": 0, "🔻": 0 };
-                        if (cs[hw].hasOwnProperty(emoji)) cs[hw][emoji]++;
+                        if (Object.prototype.hasOwnProperty.call(cs[hw], emoji)) cs[hw][emoji]++;
                     }
 
-                    if (sq.hasOwnProperty(emoji)) sq[emoji]++;
-                    if (ar.hasOwnProperty(emoji)) ar[emoji]++;
+                    if (Object.prototype.hasOwnProperty.call(sq, emoji)) sq[emoji]++;
+                    if (Object.prototype.hasOwnProperty.call(ar, emoji)) ar[emoji]++;
                 }
             }
         });
         return { sq, ar, cs, tableHeaders };
     }
 
-    getCombinedBar(countsObj: any, total: number, keys: string[], len = 10) {
+    getCombinedBar(countsObj: Record<string, number>, total: number, keys: string[], len = 10) {
         if (total === 0) return "⬜".repeat(len);
         let bar = "", acc = 0, accFrac = 0;
-        for (let k of keys) {
-            let exact = (countsObj[k] / total) * len;
+        for (const k of keys) {
+            const exact = (countsObj[k] / total) * len;
             accFrac += exact;
-            let c = Math.round(accFrac) - acc;
+            const c = Math.round(accFrac) - acc;
             bar += k.repeat(c);
             acc += c;
         }
         return bar;
     }
 
-    renderStatsDashboard(sq: any, ar: any, cs: any, title = "체크리스트 통계", type = "info") {
-        const tSq = Object.values(sq).reduce((a: any, b: any) => a + b, 0) as number;
-        const tAr = Object.values(ar).reduce((a: any, b: any) => a + b, 0) as number;
+    renderStatsDashboard(sq: Record<string, number>, ar: Record<string, number>, cs: Record<string, Record<string, number>>, title = "체크리스트 통계", type = "info") {
+        const tSq = Object.values(sq).reduce((a: number, b: number) => a + b, 0);
+        const tAr = Object.values(ar).reduce((a: number, b: number) => a + b, 0);
         if (tSq === 0 && tAr === 0) return `> [!warning] ${title}: 표시할 데이터가 없습니다.\n`;
 
         let res = `> [!${type}]+ 📈 **${title}**\n`;
@@ -339,10 +352,10 @@ export class TaskUtils {
 
         const colors = ["🟦", "🟩", "🟨", "🟥"];
         colors.forEach(c => {
-            let count = sq[c] || 0;
-            let percent = tSq > 0 ? (count / tSq * 100).toFixed(1) : "0.0";
-            let barCount = Math.round(tSq > 0 ? (count / tSq * 10) : 0);
-            let bar = c.repeat(barCount) + "⬜".repeat(10 - barCount);
+            const count = sq[c] || 0;
+            const percent = tSq > 0 ? (count / tSq * 100).toFixed(1) : "0.0";
+            const barCount = Math.round(tSq > 0 ? (count / tSq * 10) : 0);
+            const bar = c.repeat(barCount) + "⬜".repeat(10 - barCount);
             res += `> | ${c} | ${count} | ${percent}% | ${bar} |\n`;
         });
 
@@ -350,13 +363,13 @@ export class TaskUtils {
         res += `> | 항목 | 세부 그래프 | 조절 지표 |\n`;
         res += `> | :-- | :-- | :--: |\n`;
 
-        for (let [name, counts] of Object.entries(cs)) {
+        for (const [name, counts] of Object.entries(cs)) {
             const detailColors = ["🟦", "🟩", "🟨", "🟥"];
-            const total = detailColors.reduce((sum, c) => sum + ((counts as any)[c] || 0), 0);
+            const total = detailColors.reduce((sum, c) => sum + (counts[c] || 0), 0);
             
             if (total > 0) {
-                let detailBar = this.getCombinedBar(counts, total, detailColors, 10);
-                let indicator = ((counts as any)["🔹"] > 0 ? `🔹 ${(counts as any)["🔹"]}` : "") + ((counts as any)["🔻"] > 0 ? ` 🔻 ${(counts as any)["🔻"]}` : "");
+                const detailBar = this.getCombinedBar(counts, total, detailColors, 10);
+                const indicator = (counts["🔹"] > 0 ? `🔹 ${counts["🔹"]}` : "") + (counts["🔻"] > 0 ? ` 🔻 ${counts["🔻"]}` : "");
                 res += `> | ${name} | ${detailBar} | ${indicator || "-"} |\n`;
             }
         }

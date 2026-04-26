@@ -1,14 +1,9 @@
-import { App, Plugin, PluginSettingTab, Setting, TFile, Notice, debounce } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, TFile, Notice, debounce, moment } from 'obsidian';
 import { TaskUtils, CONFIG } from './TaskUtils';
 import { Synchronizer } from './Synchronizer';
+import { MyWorldSettings } from './types';
 
-interface MyWorldSettings {
-	projectDir: string;
-	schedulePath: string;
-	archiveDir: string;
-	fleetingMemoPath: string;
-	autoSync: boolean;
-}
+// Settings interface moved to types.ts
 
 const DEFAULT_SETTINGS: MyWorldSettings = {
 	projectDir: CONFIG.PATHS.PROJECT_DIR,
@@ -42,17 +37,17 @@ export default class MyWorldPlugin extends Plugin {
 		this.addCommand({
 			id: 'daily-task-reset',
 			name: 'Daily Task Reset (99)',
-			callback: () => {
+			callback: async () => {
 				const activeFile = this.app.workspace.getActiveFile();
-				if (activeFile) this.synchronizer.dailyTaskReset(activeFile);
+				if (activeFile) await this.synchronizer.dailyTaskReset(activeFile);
 			}
 		});
 
 		this.addCommand({
 			id: 'archive-monthly-stats',
 			name: 'Archive Monthly Stats (103)',
-			callback: () => {
-				this.synchronizer.archiveMonthlyStats();
+			callback: async () => {
+				await this.synchronizer.archiveMonthlyStats();
 			}
 		});
 
@@ -60,8 +55,10 @@ export default class MyWorldPlugin extends Plugin {
 			id: 'quick-capture',
 			name: 'Quick Capture (100)',
 			callback: async () => {
-				// @ts-ignore
-				const idea = await this.app.plugins.plugins.templater?.templater?.tp?.system?.prompt("💡 무언가 떠오르셨나요?");
+				// Accessing Templater plugin via internal API safely
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const templater = (this.app as any).plugins.getPlugin('templater');
+				const idea = await templater?.templater?.tp?.system?.prompt("💡 무언가 떠오르셨나요?");
 				if (idea) {
 					const file = this.app.vault.getAbstractFileByPath(this.settings.fleetingMemoPath);
 					if (file instanceof TFile) {
@@ -85,15 +82,15 @@ export default class MyWorldPlugin extends Plugin {
 		this.addCommand({
 			id: 'open-fleeting-memo',
 			name: 'Open Fleeting Memo (101)',
-			callback: () => {
+			callback: async () => {
 				const file = this.app.vault.getAbstractFileByPath(this.settings.fleetingMemoPath);
 				if (file instanceof TFile) {
-					this.app.workspace.getLeaf(false).openFile(file);
+					await this.app.workspace.getLeaf(false).openFile(file);
 				}
 			}
 		});
 
-		console.log('MyWorld Task Manager loaded');
+		console.debug('MyWorld Task Manager loaded');
 	}
 
 	async handleAutoSync(file: TFile) {
@@ -102,14 +99,13 @@ export default class MyWorldPlugin extends Plugin {
 		const isDailyNote = file.path.includes("Daily"); // 사용자의 데일리 노트 폴더명에 맞춰 조정 필요
 
 		if (isProjectFile || isDailyNote) {
-			console.log(`Auto-sync triggered for: ${file.path}`);
+			console.debug(`Auto-sync triggered for: ${file.path}`);
 			await this.synchronizer.syncTaskManage(file);
-			// 102 로직도 필요한 경우 추가
 		}
 	}
 
 	onunload() {
-		console.log('MyWorld Task Manager unloaded');
+		console.debug('MyWorld Task Manager unloaded');
 	}
 
 	async loadSettings() {
@@ -134,7 +130,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Project Directory')
+			.setName('Project directory')
 			.setDesc('Folder where project files are stored')
 			.addText(text => text
 				.setPlaceholder('1. Project')
@@ -145,7 +141,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Schedule File Path')
+			.setName('Schedule file path')
 			.setDesc('Path to the main schedule markdown file')
 			.addText(text => text
 				.setPlaceholder('1. Project/-Main/01.스케줄 관리.md')
@@ -156,7 +152,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Archive Directory')
+			.setName('Archive directory')
 			.setDesc('Root folder for archiving tasks and stats')
 			.addText(text => text
 				.setPlaceholder('4. Archive/98.Schedule')
@@ -167,7 +163,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Fleeting Memo Path')
+			.setName('Fleeting memo path')
 			.setDesc('Path to the temporary/fleeting memo file')
 			.addText(text => text
 				.setPlaceholder('5. Zettelkasten/01.Fleeting/99.임시 메모.md')
@@ -178,7 +174,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Auto Sync')
+			.setName('Auto sync')
 			.setDesc('Automatically run sync logic (98, 102) on file modification')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoSync)

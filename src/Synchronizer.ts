@@ -1,12 +1,13 @@
-import { App, TFile, Notice, moment } from "obsidian";
-import { TaskUtils, REGEX, MARKER_PRI } from "./TaskUtils";
+import { App, TFile, Notice } from "obsidian";
+import { TaskUtils, REGEX } from "./TaskUtils";
+import { MyWorldSettings, DailyNoteData, TaskData, ProjectResult } from "./types";
 
 export class Synchronizer {
     app: App;
     utils: TaskUtils;
-    settings: any;
+    settings: MyWorldSettings;
 
-    constructor(app: App, utils: TaskUtils, settings: any) {
+    constructor(app: App, utils: TaskUtils, settings: MyWorldSettings) {
         this.app = app;
         this.utils = utils;
         this.settings = settings;
@@ -32,14 +33,15 @@ export class Synchronizer {
 
             const pLines = content.substring(pStart, pEnd).split("\n");
             let currNote: string | null = null; 
-            const dailyMap: any = {};
+            const dailyMap: Record<string, DailyNoteData> = {};
             
             for (let l of pLines) {
                 const calloutMatch = l.match(/^>\s*\[![a-zA-Z]+\]-?\s+.*?\*\*([^*]+)\*\*/);
                 const m = l.match(REGEX.NOTE_LINK); 
                 if (calloutMatch || m) { 
                     currNote = (calloutMatch ? calloutMatch[1] : m![1]).trim().replace(/\[\[|\]\]/g, '').split('|')[0];
-                    dailyMap[currNote] = { byId: {}, byText: {}, orderedTasks: [] }; continue; 
+                    dailyMap[currNote] = { byId: {}, byText: {}, orderedTasks: [] };
+                    continue; 
                 }
                 if (currNote) {
                     const cleanLine = l.replace(/^(?:> ?)+/, '');
@@ -50,7 +52,7 @@ export class Synchronizer {
                             const isDeleted = /\/\/$/.test(text.trim());
                             const cleanText = isDeleted ? text.replace(/\/\/$/, '').trim() : text;
                             
-                            const taskData = { checked: tM[2].toLowerCase()==='x', text: cleanText, indent: tM[1], deleted: isDeleted };
+                            const taskData: TaskData = { checked: tM[2].toLowerCase()==='x', text: cleanText, indent: tM[1], deleted: isDeleted };
                             if (id) {
                                 dailyMap[currNote].byId[id] = taskData;
                             } else {
@@ -64,9 +66,9 @@ export class Synchronizer {
             }
 
             const projectFiles = this.app.vault.getMarkdownFiles().filter(f => f.path.startsWith(this.settings.projectDir + "/"));
-            const projectResults = await Promise.all(projectFiles.map(async (file) => {
+            const projectResults = await Promise.all(projectFiles.map(async (file): Promise<ProjectResult | null> => {
                 const noteName = file.basename;
-                const dailyData = dailyMap[noteName] || { byId: {}, byText: {} };
+                const dailyData = dailyMap[noteName] || { byId: {}, byText: {}, orderedTasks: [] };
                 
                 let sContent = await this.app.vault.read(file);
                 let sLines: (string | null)[] = sContent.split("\n");
@@ -99,10 +101,10 @@ export class Synchronizer {
                                 let { text, id } = this.utils.extractIdAndText(tM[3]);
                                 if (!id) { id = this.utils.generateBlockId(); sLines[i] = l + " ^" + id; mod = true; }
                                 
-                                let data = null;
+                                let data: TaskData | null = null;
                                 if (id && dailyData.byId[id]) data = dailyData.byId[id];
                                 else if (dailyData.byText[text] && dailyData.byText[text].length > 0) {
-                                    data = dailyData.byText[text].shift();
+                                    data = dailyData.byText[text].shift() || null;
                                 }
 
                                 let currentStat = tM[2];
@@ -141,7 +143,7 @@ export class Synchronizer {
                 // Step B: New Tasks
                 if (dailyData) {
                     let lastAnchorId: string | null = null;
-                    const tasksToInsert: any[] = [];
+                    const tasksToInsert: { anchorId: string | null; task: TaskData & { id: string } }[] = [];
                     for (let ot of dailyData.orderedTasks) {
                         if (ot.type === 'id') lastAnchorId = ot.key;
                         else {
@@ -153,7 +155,7 @@ export class Synchronizer {
                         }
                     }
                     for (const [id, d] of Object.entries(dailyData.byId)) {
-                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...d as any, id } });
+                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...d, id } });
                     }
 
                     if (tasksToInsert.length > 0) {
@@ -226,10 +228,10 @@ export class Synchronizer {
                 return { sortPri, minDiff, noteName, calloutText };
             }));
 
-            const urgentItems = projectResults.filter(r => r !== null);
+            const urgentItems = projectResults.filter((r): r is ProjectResult => r !== null);
             if (urgentItems.length > 0) {
-                urgentItems.sort((a: any, b: any) => a.sortPri !== b.sortPri ? a.sortPri - b.sortPri : (a.minDiff !== b.minDiff ? a.minDiff - b.minDiff : a.noteName.localeCompare(b.noteName)));
-                const newProjSectionText = urgentItems.map((i: any) => i.calloutText).filter((t: any) => t.trim() !== "").join("\n\n") + "\n";
+                urgentItems.sort((a, b) => a.sortPri !== b.sortPri ? a.sortPri - b.sortPri : (a.minDiff !== b.minDiff ? a.minDiff - b.minDiff : a.noteName.localeCompare(b.noteName)));
+                const newProjSectionText = urgentItems.map((i) => i.calloutText).filter((t) => t.trim() !== "").join("\n\n") + "\n";
                 const newContent = content.substring(0, pStart) + pHeader + "\n" + newProjSectionText.trimEnd() + "\n" + content.substring(pEnd);
                 if (newContent !== originalContent) await this.app.vault.modify(activeFile, newContent);
             }
@@ -244,7 +246,8 @@ export class Synchronizer {
 
         let content = this.utils.preprocessContent(originalActive);
         let lines = content.split("\n"), inExec = false, inPlan = false, modifiedActive = false;
-        let execTasks: any[] = [], planTasksTotal = 0, planTasksDone = 0;
+        const execTasks: { id: string | null; status?: string; indent?: number; line: string; type?: string }[] = [];
+        let planTasksTotal = 0, planTasksDone = 0;
         let originalPlanLines: string[] = [];
 
         let planStartLine = -1, planEndLine = lines.length;
