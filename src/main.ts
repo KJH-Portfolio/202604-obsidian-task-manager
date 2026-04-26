@@ -26,9 +26,9 @@ export default class MyWorldPlugin extends Plugin {
 
 		// [자동 동기화] 저장(수정) 시 자동으로 수행
 		this.registerEvent(
-			this.app.vault.on('modify', debounce((file: TFile) => {
+			this.app.vault.on('modify', debounce(async (file: TFile) => {
 				if (!this.settings.autoSync) return;
-				this.handleAutoSync(file);
+				await this.handleAutoSync(file);
 			}, 2000, true))
 		);
 
@@ -36,7 +36,7 @@ export default class MyWorldPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'daily-task-reset',
-			name: 'Daily Task Reset (99)',
+			name: 'Daily task reset (99)',
 			callback: async () => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile) await this.synchronizer.dailyTaskReset(activeFile);
@@ -45,7 +45,7 @@ export default class MyWorldPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'archive-monthly-stats',
-			name: 'Archive Monthly Stats (103)',
+			name: 'Archive monthly stats (103)',
 			callback: async () => {
 				await this.synchronizer.archiveMonthlyStats();
 			}
@@ -53,7 +53,7 @@ export default class MyWorldPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'quick-capture',
-			name: 'Quick Capture (100)',
+			name: 'Quick capture (100)',
 			callback: async () => {
 				// Accessing Templater plugin via internal API safely
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,7 +81,7 @@ export default class MyWorldPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'open-fleeting-memo',
-			name: 'Open Fleeting Memo (101)',
+			name: 'Open fleeting memo (101)',
 			callback: async () => {
 				const file = this.app.vault.getAbstractFileByPath(this.settings.fleetingMemoPath);
 				if (file instanceof TFile) {

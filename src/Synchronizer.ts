@@ -38,8 +38,9 @@ export class Synchronizer {
             for (let l of pLines) {
                 const calloutMatch = l.match(/^>\s*\[![a-zA-Z]+\]-?\s+.*?\*\*([^*]+)\*\*/);
                 const m = l.match(REGEX.NOTE_LINK); 
-                if (calloutMatch || m) { 
-                    currNote = (calloutMatch ? calloutMatch[1] : m![1]).trim().replace(/\[\[|\]\]/g, '').split('|')[0];
+                const noteMatch = calloutMatch ? calloutMatch[1] : (m ? m[1] : null);
+                if (noteMatch) { 
+                    currNote = noteMatch.trim().replace(/\[\[|\]\]/g, '').split('|')[0];
                     dailyMap[currNote] = { byId: {}, byText: {}, orderedTasks: [] };
                     continue; 
                 }
