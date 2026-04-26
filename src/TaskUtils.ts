@@ -3,9 +3,9 @@ import { MyWorldSettings, TableStats } from "./types";
 
 export const CONFIG = {
     PATHS: {
-        PROJECT_DIR: "1. Project",
-        MAIN_SCHEDULE: "1. Project/-Main/01.스케줄 관리.md",
-        ARCHIVE_DIR: "4. Archive/98.Schedule"
+        PROJECT_DIR: "1. project",
+        MAIN_SCHEDULE: "1. project/-main/01.스케줄 관리.md",
+        ARCHIVE_DIR: "4. archive/98.schedule"
     },
     SETTINGS: {
         PROGRESS_BAR_LENGTH: 10,
@@ -126,20 +126,6 @@ export class TaskUtils {
             return { line: l, ind, isTask: true, isCompleted, m, ownM: m, hasDate: !!dM, propStatus: '' };
         });
 
-        // [사용자 요청으로 비활성화됨 - 주석 처리 유지]
-        /*
-        for (let i = lineInfos.length - 1; i >= 0; i--) {
-            if (!lineInfos[i].isTask || lineInfos[i].isCompleted) continue;
-            let bestChildM = '', bestPri = 99;
-            for (let j = i + 1; j < lineInfos.length; j++) {
-                if (lineInfos[j].ind <= lineInfos[i].ind) break;
-                if (!lineInfos[j].isTask || lineInfos[j].isCompleted) continue;
-                const p = MARKER_PRI[lineInfos[j].m.trim()] || 99;
-                if (p < bestPri) { bestPri = p; bestChildM = lineInfos[j].m; }
-            }
-            if (bestChildM && (MARKER_PRI[lineInfos[i].m.trim()] || 99) > bestPri) lineInfos[i].m = bestChildM;
-        }
-        */
 
         for (let i = 0; i < lineInfos.length; i++) {
             if (lineInfos[i].isTask && !lineInfos[i].isCompleted && lineInfos[i].hasDate) {

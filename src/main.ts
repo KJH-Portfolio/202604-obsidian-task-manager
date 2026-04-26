@@ -3,13 +3,30 @@ import { TaskUtils, CONFIG } from './TaskUtils';
 import { Synchronizer } from './Synchronizer';
 import { MyWorldSettings } from './types';
 
+interface TemplaterPlugin {
+	templater: {
+		tp: {
+			system: {
+				prompt(prompt: string): Promise<string | null>;
+			}
+		}
+	}
+}
+
+interface ObsidianApp extends App {
+	plugins: {
+		getPlugin(id: 'templater'): TemplaterPlugin | null;
+		getPlugin(id: string): unknown;
+	}
+}
+
 // Settings interface moved to types.ts
 
 const DEFAULT_SETTINGS: MyWorldSettings = {
 	projectDir: CONFIG.PATHS.PROJECT_DIR,
 	schedulePath: CONFIG.PATHS.MAIN_SCHEDULE,
 	archiveDir: CONFIG.PATHS.ARCHIVE_DIR,
-	fleetingMemoPath: "5. Zettelkasten/01.Fleeting/99.임시 메모.md",
+	fleetingMemoPath: "5. zettelkasten/01.fleeting/99.임시 메모.md",
 	autoSync: true
 }
 
@@ -55,9 +72,8 @@ export default class MyWorldPlugin extends Plugin {
 			id: 'quick-capture',
 			name: 'Quick capture (100)',
 			callback: async () => {
-				// Accessing Templater plugin via internal API safely
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const templater = (this.app as any).plugins.getPlugin('templater');
+				// Accessing Templater plugin via internal API safely using extended interface
+				const templater = (this.app as ObsidianApp).plugins.getPlugin('templater');
 				const idea = await templater?.templater?.tp?.system?.prompt("💡 무언가 떠오르셨나요?");
 				if (idea) {
 					const file = this.app.vault.getAbstractFileByPath(this.settings.fleetingMemoPath);
@@ -133,7 +149,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 			.setName('Project directory')
 			.setDesc('Folder where project files are stored')
 			.addText(text => text
-				.setPlaceholder('1. Project')
+				.setPlaceholder('1. project')
 				.setValue(this.plugin.settings.projectDir)
 				.onChange(async (value) => {
 					this.plugin.settings.projectDir = value;
@@ -144,7 +160,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 			.setName('Schedule file path')
 			.setDesc('Path to the main schedule markdown file')
 			.addText(text => text
-				.setPlaceholder('1. Project/-Main/01.스케줄 관리.md')
+				.setPlaceholder('1. project/-main/01.스케줄 관리.md')
 				.setValue(this.plugin.settings.schedulePath)
 				.onChange(async (value) => {
 					this.plugin.settings.schedulePath = value;
@@ -155,7 +171,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 			.setName('Archive directory')
 			.setDesc('Root folder for archiving tasks and stats')
 			.addText(text => text
-				.setPlaceholder('4. Archive/98.Schedule')
+				.setPlaceholder('4. archive/98.schedule')
 				.setValue(this.plugin.settings.archiveDir)
 				.onChange(async (value) => {
 					this.plugin.settings.archiveDir = value;
@@ -166,7 +182,7 @@ class MyWorldSettingTab extends PluginSettingTab {
 			.setName('Fleeting memo path')
 			.setDesc('Path to the temporary/fleeting memo file')
 			.addText(text => text
-				.setPlaceholder('5. Zettelkasten/01.Fleeting/99.임시 메모.md')
+				.setPlaceholder('5. zettelkasten/01.fleeting/99.임시 메모.md')
 				.setValue(this.plugin.settings.fleetingMemoPath)
 				.onChange(async (value) => {
 					this.plugin.settings.fleetingMemoPath = value;

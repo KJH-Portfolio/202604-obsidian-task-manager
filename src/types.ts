@@ -1,4 +1,3 @@
-import { moment } from 'obsidian';
 
 export interface MyWorldSettings {
     projectDir: string;

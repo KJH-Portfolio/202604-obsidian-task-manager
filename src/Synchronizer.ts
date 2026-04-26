@@ -413,7 +413,7 @@ export class Synchronizer {
             }
         }
 
-        // 아카이브 파일 작성 (생략: 기존 99번 로직과 유사하게 구현 가능)
+        // 완료 항목 아카이빙 로직 실행
         if (archiveLines.length > 0) {
             const archivePath = `${this.settings.archiveDir}/${now.format("YYYY/YYYY-MM")}.md`;
             await this.utils.ensureFolder(`${this.settings.archiveDir}/${now.format("YYYY")}`);
