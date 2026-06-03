@@ -1,23 +1,27 @@
 {
   "name": "myworld-task-manager",
   "version": "1.0.0",
-  "description": "",
+  "description": "MyWorld 스케줄 및 프로젝트 할 일 양방향 동기화 플러그인",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "obsidian",
+    "tasks",
+    "sync",
+    "schedule",
+    "routines"
+  ],
+  "author": "KJH",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^16.11.21",
-    "esbuild": "0.14.21",
-    "obsidian": "latest",
-    "tslib": "2.3.1",
-    "typescript": "4.5.5"
-  },
-  "dependencies": {
-    "builtin-modules": "^5.1.0"
+    "@types/node": "^18.15.11",
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.19.11",
+    "obsidian": "^1.5.7",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
   }
 }

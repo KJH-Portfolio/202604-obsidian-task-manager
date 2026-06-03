@@ -1,13 +1,26 @@
 /* ========================================================
-   MyWorld Task Manager - Core Styles
-   Includes: Task Indent Fix, Inline Routine UI, Table Fixes
+   1. 스케줄 강조 하이라이트 (fix-task-indent.css)
+   - 마커 두께: 6px (색상 구분 강화)
+   - 일반노트: 컬러 바 + 은은한 배경색 반영
+   - 콜아웃 내부: 컬러 바(6px) + 공통 무채색 음영 (색상 충돌 방지 및 가독성 확보)
    ======================================================== */
 
-/* 1. D-Day Marker & Task Highlighting (from fix-task-indent.css) */
-.tag[href*="D-"], .tag[href*="d-"], .tag[href*="past" i],
-.cm-tag-D-0, .cm-tag-D-1, .cm-tag-D-2, .cm-tag-D-3, .cm-tag-D-7,
-.cm-tag-d-0, .cm-tag-d-1, .cm-tag-d-2, .cm-tag-d-3, .cm-tag-d-7,
-.cm-tag-Past, .cm-tag-past {
+/* 1.1. 태그 숨기기 */
+.tag[href*="D-"],
+.tag[href*="d-"],
+.tag[href*="past" i],
+.cm-tag-D-0,
+.cm-tag-D-1,
+.cm-tag-D-2,
+.cm-tag-D-3,
+.cm-tag-D-7,
+.cm-tag-d-0,
+.cm-tag-d-1,
+.cm-tag-d-2,
+.cm-tag-d-3,
+.cm-tag-d-7,
+.cm-tag-Past,
+.cm-tag-past {
     font-size: 0 !important;
     color: transparent !important;
     padding: 0 !important;
@@ -19,57 +32,336 @@
     height: 0 !important;
 }
 
-.markdown-rendered li:has([href*="D-" i]), .markdown-rendered li:has([href*="past" i]), 
-.cm-line:has([class*="tag-D-" i]), .cm-line:has([class*="tag-past" i]) {
+/* 1.2. 기본 리스트 구조 및 공통 속성 */
+.markdown-rendered li {
+    background-color: transparent !important;
+    border-radius: 4px;
+}
+
+.markdown-rendered li > ul,
+.markdown-rendered li > ol {
+    background: transparent !important;
+    background-image: none !important;
+}
+
+.cm-line {
+    padding-top: 1px !important;
+    padding-bottom: 2px !important;
+    border-radius: 4px;
+}
+
+.markdown-rendered li:has([href*="D-" i]):not(:has(> ul [href*="D-" i], > ol [href*="D-" i])), 
+.markdown-rendered li:has([href*="past" i]):not(:has(> ul [href*="past" i], > ol [href*="past" i])):not(:has(> ul [href*="past" i], > ol [href*="past" i])), 
+.cm-line:has([class*="tag-D-" i]),
+.cm-line:has([class*="tag-past" i]) {
     background-origin: content-box !important;
     background-clip: content-box !important;
     background-repeat: no-repeat !important;
     background-size: 100% 1.5em !important; 
 }
 
-/* Color Bars */
-.markdown-rendered li:has([href*="d-0" i]), .cm-line:has(.cm-tag-D-0) {
-    background-image: linear-gradient(to right, rgba(233, 49, 71, 0.8) 6px, transparent 6px), 
-                      linear-gradient(to right, rgba(233, 49, 71, 0.12) 0%, rgba(233, 49, 71, 0.12) 100%) !important;
-}
-.markdown-rendered li:has([href*="d-1" i]), .cm-line:has(.cm-tag-D-1) {
-    background-image: linear-gradient(to right, rgba(255, 210, 0, 0.8) 6px, transparent 6px), 
-                      linear-gradient(to right, rgba(255, 210, 0, 0.12) 0%, rgba(255, 210, 0, 0.12) 100%) !important;
-}
-.markdown-rendered li:has([href*="past" i]), .cm-line:has(.cm-tag-Past) {
-    background-image: linear-gradient(to right, rgba(140, 0, 40, 0.9) 6px, transparent 6px), 
-                      linear-gradient(to right, rgba(140, 0, 40, 0.15) 0%, rgba(140, 0, 40, 0.15) 100%) !important;
+/* 1.3. [일반 노트] 색상 매핑 */
+/* #D-7 (회색) */
+.markdown-rendered li:has([href*="d-7" i]):not(:has(> ul [href*="d-7" i], > ol [href*="d-7" i])), 
+.cm-line:has(.cm-tag-D-7), 
+.cm-line:has(.cm-tag-d-7) {
+    background-image: 
+        linear-gradient(to right, rgba(150, 150, 150, 0.8) 6px, transparent 6px), 
+        linear-gradient(to right, rgba(150, 150, 150, 0.1) 0%, rgba(150, 150, 150, 0.1) 100%) !important;
 }
 
-/* 2. Inline Routine UI (from inline-routine.css) */
+/* #D-3 (파랑) */
+.markdown-rendered li:has([href*="d-3" i]):not(:has(> ul [href*="d-3" i], > ol [href*="d-3" i])), 
+.cm-line:has(.cm-tag-D-3), 
+.cm-line:has(.cm-tag-d-3) {
+    background-image: 
+        linear-gradient(to right, rgba(8, 109, 221, 0.8) 6px, transparent 6px), 
+        linear-gradient(to right, rgba(8, 109, 221, 0.1) 0%, rgba(8, 109, 221, 0.1) 100%) !important;
+}
+
+/* #D-2 (초록) */
+.markdown-rendered li:has([href*="d-2" i]):not(:has(> ul [href*="d-2" i], > ol [href*="d-2" i])), 
+.cm-line:has(.cm-tag-D-2), 
+.cm-line:has(.cm-tag-d-2) {
+    background-image: 
+        linear-gradient(to right, rgba(68, 207, 110, 0.8) 6px, transparent 6px), 
+        linear-gradient(to right, rgba(68, 207, 110, 0.1) 0%, rgba(68, 207, 110, 0.1) 100%) !important;
+}
+
+/* #D-1 (노랑) */
+.markdown-rendered li:has([href*="d-1" i]):not(:has(> ul [href*="d-1" i], > ol [href*="d-1" i])), 
+.cm-line:has(.cm-tag-D-1), 
+.cm-line:has(.cm-tag-d-1) {
+    background-image: 
+        linear-gradient(to right, rgba(255, 210, 0, 0.8) 6px, transparent 6px), 
+        linear-gradient(to right, rgba(255, 210, 0, 0.12) 0%, rgba(255, 210, 0, 0.12) 100%) !important;
+}
+
+/* #D-0 (빨강) */
+.markdown-rendered li:has([href*="d-0" i]):not(:has(> ul [href*="d-0" i], > ol [href*="d-0" i])), 
+.cm-line:has(.cm-tag-D-0), 
+.cm-line:has(.cm-tag-d-0) {
+    background-image: 
+        linear-gradient(to right, rgba(233, 49, 71, 0.8) 6px, transparent 6px), 
+        linear-gradient(to right, rgba(233, 49, 71, 0.12) 0%, rgba(233, 49, 71, 0.12) 100%) !important;
+}
+
+/* #Past (다크 레드 / 보라빛) */
+.markdown-rendered li:has([href*="past" i]):not(:has(> ul [href*="past" i], > ol [href*="past" i])):not(:has(> ul [href*="past" i], > ol [href*="past" i])), 
+.cm-line:has(.cm-tag-Past), 
+.cm-line:has(.cm-tag-past) {
+    background-image: 
+        linear-gradient(to right, rgba(140, 0, 40, 0.9) 6px, transparent 6px), 
+        linear-gradient(to right, rgba(140, 0, 40, 0.15) 0%, rgba(140, 0, 40, 0.15) 100%) !important;
+}
+
+/* 1.4. [콜아웃 내부] 가독성 개선 (6px 바 + 무채색 음영) */
+/* #D-7 (회색) */
+.callout li:has([href*="d-7" i]):not(:has(> ul [href*="d-7" i], > ol [href*="d-7" i])),
+.callout .cm-line:has(.cm-tag-D-7),
+.callout .cm-line:has(.cm-tag-d-7) {
+    background-image: linear-gradient(to right, rgba(150, 150, 150, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px) !important;
+}
+
+/* #D-3 (파랑) */
+.callout li:has([href*="d-3" i]):not(:has(> ul [href*="d-3" i], > ol [href*="d-3" i])),
+.callout .cm-line:has(.cm-tag-D-3),
+.callout .cm-line:has(.cm-tag-d-3) {
+    background-image: linear-gradient(to right, rgba(8, 109, 221, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px) !important;
+}
+
+/* #D-2 (초록) */
+.callout li:has([href*="d-2" i]):not(:has(> ul [href*="d-2" i], > ol [href*="d-2" i])),
+.callout .cm-line:has(.cm-tag-D-2),
+.callout .cm-line:has(.cm-tag-d-2) {
+    background-image: linear-gradient(to right, rgba(68, 207, 110, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px) !important;
+}
+
+/* #D-1 (노랑) */
+.callout li:has([href*="d-1" i]):not(:has(> ul [href*="d-1" i], > ol [href*="d-1" i])),
+.callout .cm-line:has(.cm-tag-D-1),
+.callout .cm-line:has(.cm-tag-d-1) {
+    background-image: linear-gradient(to right, rgba(255, 210, 0, 0.95) 6px, rgba(128, 128, 128, 0.08) 6px) !important;
+}
+
+/* #D-0 (빨강) */
+.callout li:has([href*="d-0" i]):not(:has(> ul [href*="d-0" i], > ol [href*="d-0" i])),
+.callout .cm-line:has(.cm-tag-D-0),
+.callout .cm-line:has(.cm-tag-d-0) {
+    background-image: linear-gradient(to right, rgba(233, 49, 71, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px) !important;
+}
+
+/* #Past (다크 레드) */
+.callout li:has([href*="past" i]):not(:has(> ul [href*="past" i], > ol [href*="past" i])),
+.callout .cm-line:has(.cm-tag-Past),
+.callout .cm-line:has(.cm-tag-past) {
+    background-image: linear-gradient(to right, rgba(140, 0, 40, 0.95) 6px, rgba(128, 128, 128, 0.08) 6px) !important;
+}
+
+/* 1.5. 완료된 항목 배경색 및 마커 제거 */
+.markdown-rendered li.task-list-item.is-checked,
+.cm-line.HyperMD-task-line[data-task="x"],
+.cm-line.HyperMD-task-line[data-task="X"] {
+    background-image: none !important;
+}
+
+
+/* ========================================================
+   2. 가로형 클릭 버튼 UI (inline-routine.css)
+   - 오직 `> [!routine]` 콜아웃 상자 내부에서만 작동
+   ======================================================== */
+
+/* 2.1. 읽기 모드 (Reading View) 강제 */
 .callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]) {
+.callout[data-callout="routine"] li:has(input[type="checkbox"]) {
     display: inline-flex !important;
     align-items: center !important;
     background-color: var(--background-secondary-alt) !important;
     border: 1px solid var(--background-modifier-border) !important;
     border-radius: 20px !important;
-    padding: 4px 12px !important;
+    padding: 4px 12px 4px 6px !important;
     margin: 4px 8px 4px 0 !important;
     width: auto !important;
     font-size: 0.9em !important;
 }
 
-.callout[data-callout="routine"] ul>li.task-list-item::marker { display: none !important; }
-
-/* 3. Table & Callout Improvements */
-.markdown-rendered table th, .markdown-rendered table td:first-child {
-    white-space: nowrap !important;
+/* 불릿 기호 제거 */
+.callout[data-callout="routine"] ul>li.task-list-item::marker,
+.callout[data-callout="routine"] ul>li:has(input[type="checkbox"])::marker,
+.callout[data-callout="routine"] ul>li.task-list-item .list-bullet,
+.callout[data-callout="routine"] li:has(input[type="checkbox"]) .list-bullet {
+    display: none !important;
+    content: "" !important;
+    font-size: 0 !important;
 }
 
-.callout.is-collapsible {
-  --callout-collapse: expanded;
+/* 체크박스 정렬 */
+.callout[data-callout="routine"] ul input[type="checkbox"] {
+    margin: 0 8px 0 0 !important;
+    cursor: pointer !important;
+    vertical-align: middle !important;
+    position: relative !important;
+    top: -1px !important;
 }
 
-/* Dashboard Style Header (띠지) */
-body .markdown-rendered h1 {
+/* 2.2. 라이브 프리뷰 (Live Preview) 강제 */
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]),
+.callout[data-callout="routine"] .HyperMD-task-line {
+    display: inline-flex !important;
+    align-items: center !important;
+    background-color: var(--background-secondary-alt) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: 20px !important;
+    padding: 0px 12px 0px 6px !important;
+    margin: 4px 8px 4px 0 !important;
+    width: auto !important;
+}
+
+/* 2.3. 완료 시 취소선 및 투명도 */
+.callout[data-callout="routine"] li.is-checked:not([data-task="-"]):not([data-task="/"]),
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]:checked):not(:has(input[data-task="-"])):not(:has(input[data-task="/"])) {
+    opacity: 0.4 !important;
+    background-color: var(--background-primary) !important;
+    text-decoration: line-through !important;
+}
+
+/* 2.4. 취소 시 디자인 (-) */
+.callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="-"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="-"]) {
+    opacity: 0.5 !important;
+    color: #ff5252 !important;
+    font-weight: 700 !important;
+    text-decoration: line-through !important;
+    background-color: rgba(255, 82, 82, 0.2) !important;
+    border: 1px solid rgba(255, 82, 82, 0.5) !important;
+}
+
+/* 2.5. 진행 중 디자인 (/) */
+.callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="/"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="/"]) {
+    opacity: 0.5 !important;
+    color: #ffd04b !important;
+    font-weight: 700 !important;
+    text-decoration: line-through !important;
+    background-color: rgba(255, 208, 75, 0.2) !important;
+    border: 1px solid rgba(255, 208, 75, 0.5) !important;
+}
+
+/* 2.6. 클릭 영역 전체 확장 */
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] ul>li:has(input[type="checkbox"]),
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]),
+.callout[data-callout="routine"] .HyperMD-task-line {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.callout[data-callout="routine"] input[type="checkbox"] {
+    position: relative !important;
+}
+
+.callout[data-callout="routine"] input[type="checkbox"]::after {
+    content: "" !important;
+    position: absolute !important;
+    top: -100px !important;
+    bottom: -100px !important;
+    left: -100px !important;
+    right: -500px !important;
+    cursor: pointer !important;
+    z-index: 100 !important;
+    background-color: transparent !important;
+}
+
+/* 2.7. 대시보드형 헤더 위젯(띠지) 디자인 */
+/* --- 읽기 모드 --- */
+.callout[data-callout="routine"] h1 {
     background: linear-gradient(90deg, rgba(52, 152, 219, 0.25) 0%, rgba(52, 152, 219, 0) 100%) !important;
     border-left: 5px solid #3498db !important;
     padding: 6px 15px !important;
     border-radius: 4px !important;
+    margin-top: 1.0em !important;
+    margin-bottom: 0.5em !important;
+    color: var(--text-normal) !important;
+    font-weight: 800 !important;
+}
+
+/* --- 라이브 프리뷰 --- */
+.callout[data-callout="routine"] .cm-line.HyperMD-header-1 {
+    background: linear-gradient(90deg, rgba(52, 152, 219, 0.25) 0%, rgba(52, 152, 219, 0) 100%) !important;
+    border-left: 5px solid #3498db !important;
+    padding: 10px 15px !important;
+    border-radius: 4px !important;
+    color: var(--text-normal) !important;
+    font-weight: 800 !important;
+}
+
+/* 2.8. 공간 압축 스페이스 (헤더 우측에 태스크 나열) */
+/* --- 읽기 모드 --- */
+.callout[data-callout="routine"] h1,
+.callout[data-callout="routine"] h2,
+.callout[data-callout="routine"] h3,
+.callout[data-callout="routine"] h4 {
+    float: left !important;
+    clear: both !important;
+    width: 60px !important;
+    text-align: right !important;
+    margin: 4px 15px 4px 0 !important;
+    padding: 2px 0 !important;
+    font-size: 1.0em !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.callout[data-callout="routine"] ul {
+    overflow: hidden !important;
+    margin: 2px 0 6px 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+}
+
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] ul>li:has(input[type="checkbox"]) {
+    order: 1 !important;
+}
+
+.callout[data-callout="routine"] ul>li:not(.task-list-item):not(:has(input)) {
+    order: 2 !important;
+    flex-basis: 100% !important;
+    display: inline-block !important;
+    margin: 4px 10px 4px 4px !important;
+    color: var(--text-muted) !important;
+    font-size: 0.85em !important;
+    font-weight: 500 !important;
+}
+
+/* --- 라이브 프리뷰 --- */
+.callout[data-callout="routine"] .cm-line:has(> .cm-header) {
+    display: block !important;
+    float: left !important;
+    clear: both !important;
+    width: 60px !important;
+    text-align: right !important;
+    margin: 4px 15px 4px 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    font-size: 1.0em !important;
+}
+
+.callout[data-callout="routine"] .cm-line:has(> .cm-list-1),
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]) {
+    display: inline-flex !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.callout[data-callout="routine"] .cm-line:not(:has(input))>.cm-list-1 {
+    color: var(--text-muted) !important;
+    font-weight: 500 !important;
+}
+
+.callout[data-callout="routine"] .cm-line:empty {
+    display: none !important;
 }
