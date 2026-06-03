@@ -1,41 +1,26 @@
 ---
-작성일: 2026-04-26T03:16
-수정일: 2026-04-26T03:16
+작성일: 2026-06-03T21:00
+수정일: 2026-06-03T21:00
 ---
 # MyWorld Task Manager
 
-An integrated task and project management plugin for Obsidian, designed to automate complex workflows including daily resets, project synchronization, and statistical analysis.
+**MyWorld Task Manager** is a powerful, highly customized task and routine synchronization plugin for Obsidian.
+It perfectly bridges the gap between individual Project notes and a central Daily Schedule note.
 
 ## Features
+- **Two-way Synchronization**: Seamlessly sync tasks between your Project Execution sections and the central Daily Schedule note.
+- **Daily Routine Reset**: Reset your daily routines, save statistics to archive, and generate weekly/monthly HTML statistics dashboards.
+- **Dynamic Table Mapping**: Automatically map table columns dynamically, allowing you to have different table structures for daily input and long-term archiving.
+- **2-Phase Commit Rollback**: Built-in safety net that caches your original project files and rolls back all changes automatically if an error occurs during routine resets.
+- **PARA & Zettelkasten Auto-Setup**: Create standardized folder structures with a single command.
 
-- **Auto-Sync (98 & 102)**: Automatically synchronizes tasks between daily notes and project files, and pushes project progress to a main schedule.
-- **Daily Task Reset (99)**: Resets daily routines and archives completed tasks to a organized archive structure.
-- **Monthly Stats Archive (103)**: Analyzes checklist tables and generates a visual dashboard of your monthly progress and difficulty indicators.
-- **Quick Capture (100)**: Quickly append fleeting thoughts to a designated memo file with a timestamp.
-- **Fleeting Memo Management (101)**: Dedicated command to jump straight to your temporary notes.
-- **Fully Configurable**: Set your own paths for schedules, projects, archives, and memos.
+## How to use
+- Open the Obsidian Command Palette.
+- Run `MyWorld Task Manager: 양방향 프로젝트 및 스케줄 동기화` to sync your tasks.
+- Run `MyWorld Task Manager: 일간 루틴 리셋 및 회고 기록` at the end of the day.
 
-## Installation
-
-### From Community Plugins (Coming Soon)
-1. Search for "MyWorld Task Manager" in Obsidian's Community Plugins settings.
-2. Click Install and Enable.
-
-### Manual Installation
-1. Download `main.js`, `manifest.json`, and `styles.css` from the latest release.
-2. Create a folder named `myworld-task-manager` in your vault's `.obsidian/plugins/` directory.
-3. Move the downloaded files into that folder.
-4. Enable the plugin in Obsidian settings.
-
-## Configuration
-
-Go to the plugin settings tab to configure the following:
-- **Project Directory**: Where your project files live.
-- **Schedule File Path**: Your central command center markdown file.
-- **Archive Directory**: Where completed tasks and stats will be stored.
-- **Fleeting Memo Path**: Your digital inbox for quick thoughts.
-- **Auto Sync**: Toggle automatic synchronization on/off.
+## Compatibility
+Requires Obsidian v1.5.0 or newer.
 
 ## License
-
-This project is licensed under the MIT License.
+MIT License.
