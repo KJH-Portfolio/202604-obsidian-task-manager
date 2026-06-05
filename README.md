@@ -77,10 +77,10 @@ flowchart TD
     DailyNote <--> |동기화 버튼 클릭| Synchronizer{Synchronizer Engine<br>정규식 In-place 스왑}
     
     Synchronizer <--> |양방향 데이터 스왑| ProjectNote(프로젝트 노트 1)
-    Synchronizer <--> |양방향 데이터 스왑| ResourceNote(리소스 노트 2)
+    Synchronizer <--> |양방향 데이터 스왑| ProjectNoteN(프로젝트 노트 N)
     
     Clock([자정 트리거]) -.-> ResetManager{Reset Manager}
-    ResetManager --> |과거 스케줄 추출| DailyNote
+    ResetManager --> |전날 할 일 통계 스캐닝| DailyNote
     ResetManager --> |월간 백업| Archive(월간 통계 아카이브 노트)
 ```
 
@@ -216,13 +216,13 @@ async processReset(app: App, scheduleFile: TFile, previousDate: string) {
   - 단순히 프레임워크나 라이브러리의 기능(API)을 호출하는 데 그치지 않고, 마크다운이라는 순수 텍스트(Plain Text) 환경의 한계를 직접 구현한 **AST 트리 파싱**과 **정규식 In-place 스왑 알고리즘**을 통해 돌파해냈습니다. 
   - 이를 통해 프레임워크가 가려둔 저수준(Low-level)의 텍스트 처리와 자료구조 설계의 중요성을 깨달았으며, 앞으로도 문제의 본질을 파고드는 엔지니어링 방식을 유지하고자 합니다.
 
-- **🔴 Problem (Defensive Awareness): 런타임 생명주기 및 엣지 케이스 고려 미흡**
-  - 프로젝트 초기에는 '코드가 돌아가는 것(Happy Path)'에만 치중하여 유저가 헤더를 임의로 지우거나(문서 오염), 플러그인 핫 리로드 시 이전 메모리 캐시가 남아 충돌하는 등 런타임 엣지 케이스들을 제대로 제어하지 못했습니다.
-  - 이로 인해 문서 포맷이 붕괴되거나 `TypeError`가 발생하는 등 뼈아픈 시행착오를 겪었습니다.
+- **🔴 Problem (Defensive Awareness): 예외 상황(Edge Case) 및 런타임 환경에 대한 고려 미흡**
+  - 프로젝트 초기에는 '정상적인 동작(Happy Path)'에만 치중하여, 유저가 마크다운 템플릿을 임의로 지우거나 플러그인 핫 리로드 시 이전 메모리 캐시가 남아있는 등의 런타임 엣지 케이스들을 제대로 제어하지 못했습니다.
+  - 이로 인해 소중한 유저의 노트 데이터가 오염되거나 `TypeError`가 터지는 등 오픈소스가 가져야 할 가장 중요한 덕목인 '안정성' 측면에서 뼈아픈 시행착오를 겪었습니다.
 
-- **🔵 Try (Defensive & Automated Planning): 방어적 프로그래밍과 자동화 CI/CD 체화**
-  - 에러 처리 시 단순히 콘솔에 로그만 찍고 넘어가는 것을 지양하고, 시스템 변경을 즉각 차단(Return)하여 **유저 데이터를 최우선으로 보호하는 방어적 프로그래밍 원칙**을 정립했습니다.
-  - 또한 옵시디언 공식 봇(Bot)의 깐깐한 ESLint 검수를 뚫어낸 경험을 바탕으로, 추후 어떤 프로젝트를 하더라도 코드 작성 초기부터 정적 분석기(Linter)와 배포 자동화 파이프라인(CI/CD)을 세팅하는 습관을 들이기로 다짐했습니다.
+- **🔵 Try (Defensive & Automated Planning): 방어적 프로그래밍 및 CI/CD의 체화**
+  - **[코드 레벨]** 단순히 콘솔에 에러 로그만 띄우는 것을 넘어, 예외 발생 시 쓰기 연산을 즉각 차단(Return)하여 **유저 데이터를 최우선으로 보호하는 방어적 프로그래밍 원칙**을 정립했습니다.
+  - **[인프라 레벨]** 옵시디언 봇의 엄격한 검수와 캐싱 충돌을 겪은 후, 앞으로 어떤 프로젝트를 하더라도 코드 작성 초기부터 **정적 분석기(Linter)와 배포 자동화 파이프라인(CI/CD)**을 세팅하여 휴먼 에러를 시스템적으로 차단하는 습관을 들이기로 다짐했습니다.
 
 </details>
 
@@ -231,4 +231,4 @@ async processReset(app: App, scheduleFile: TFile, previousDate: string) {
 ### 📝 License & Contact
 - **License**: MIT License - 누구나 자유롭게 활용하고 기여할 수 있는 오픈소스 프로젝트입니다.
 - **Contact**: GitHub Issue 탭을 통한 버그 제보 및 PR을 환영합니다.
-- **Developer**: [GitHub Profile 링크 입력란] | [Email 주소 입력란]
+- **Developer**: [GitHub Profile](https://github.com/kim50504376) | 📧 kim50504376@gmail.com
