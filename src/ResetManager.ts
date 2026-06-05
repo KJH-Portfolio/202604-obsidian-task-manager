@@ -19,32 +19,71 @@ export class DailyResetModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl("h2", { text: "🌤️ 일간 마감 및 데일리 리셋" });
+        contentEl.setAttribute("style", "padding: 20px 10px;");
 
-        new Setting(contentEl)
-            .setName("오늘의 회고")
-            .setDesc("오늘 하루의 생각이나 소회를 기입하세요.")
-            .addTextArea(text => text
-                .setValue(this.review)
-                .setPlaceholder("여기에 오늘의 회고를 작성하세요...")
-                .onChange(value => this.review = value));
+        contentEl.createEl("h2", { text: "🌤️ 일간 마감 및 데일리 리셋", attr: { style: "margin-top: 0; margin-bottom: 25px;" } });
 
-        new Setting(contentEl)
-            .setName("내일의 Step")
-            .setDesc("내일 실행할 핵심 디데이 목표를 기입하세요.")
-            .addText(text => text
-                .setValue(this.step)
-                .setPlaceholder("계획 따라 움직이기 등...")
-                .onChange(value => this.step = value));
+        // 오늘의 회고
+        const reviewContainer = contentEl.createDiv({ attr: { style: "margin-bottom: 25px;" } });
+        const reviewHeader = reviewContainer.createDiv({ attr: { style: "display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;" } });
+        const reviewLabel = reviewHeader.createEl("h4", { text: "오늘의 회고" });
+        reviewLabel.style.margin = "0";
+        reviewHeader.createEl("span", { text: "오늘 하루의 생각이나 소회를 기입하세요.", attr: { style: "font-size: 0.85em; color: var(--text-muted);" } });
+        
+        const reviewInputEl = reviewContainer.createEl("textarea", { attr: { placeholder: "여기에 오늘의 회고를 작성하세요..." } });
+        reviewInputEl.value = this.review;
+        reviewInputEl.style.width = "100%";
+        reviewInputEl.style.height = "100px";
+        reviewInputEl.style.padding = "12px 15px";
+        reviewInputEl.style.fontSize = "1em";
+        reviewInputEl.style.borderRadius = "6px";
+        reviewInputEl.style.border = "1px solid var(--background-modifier-border)";
+        reviewInputEl.style.resize = "vertical";
+        reviewInputEl.addEventListener("input", (e) => {
+            this.review = (e.target as HTMLTextAreaElement).value;
+        });
 
-        new Setting(contentEl)
-            .addButton(btn => btn
-                .setButtonText("제출 및 마감")
-                .setCta()
-                .onClick(() => {
-                    this.close();
-                    this.onSubmit(this.review, this.step);
-                }));
+        // 내일의 Step
+        const stepContainer = contentEl.createDiv({ attr: { style: "margin-bottom: 35px;" } });
+        const stepHeader = stepContainer.createDiv({ attr: { style: "display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;" } });
+        const stepLabel = stepHeader.createEl("h4", { text: "내일의 Step" });
+        stepLabel.style.margin = "0";
+        stepHeader.createEl("span", { text: "내일 실행할 핵심 디데이 목표를 기입하세요.", attr: { style: "font-size: 0.85em; color: var(--text-muted);" } });
+        
+        const stepInputEl = stepContainer.createEl("input", { type: "text", attr: { placeholder: "예: 계획 따라 움직이기 등..." } });
+        stepInputEl.value = this.step;
+        stepInputEl.style.width = "100%";
+        stepInputEl.style.padding = "12px 15px";
+        stepInputEl.style.fontSize = "1em";
+        stepInputEl.style.borderRadius = "6px";
+        stepInputEl.style.border = "1px solid var(--background-modifier-border)";
+        stepInputEl.addEventListener("input", (e) => {
+            this.step = (e.target as HTMLInputElement).value;
+        });
+        
+        const submitAction = () => {
+            this.close();
+            this.onSubmit(this.review, this.step);
+        };
+
+        // Enter key handling for Step
+        stepInputEl.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                submitAction();
+            }
+        });
+
+        // Submit Button
+        const btnContainer = contentEl.createDiv({ attr: { style: "display: flex; justify-content: flex-end;" } });
+        const btn = btnContainer.createEl("button", { text: "제출 및 마감" });
+        btn.addClass("mod-cta");
+        btn.style.padding = "10px 30px";
+        btn.style.fontSize = "1em";
+        btn.addEventListener("click", submitAction);
+        
+        // Focus review input automatically
+        setTimeout(() => reviewInputEl.focus(), 50);
     }
 
     onClose() {

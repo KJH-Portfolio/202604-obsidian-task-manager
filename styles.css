@@ -160,9 +160,11 @@
 
 /* 1.5. 완료된 항목 배경색 및 마커 제거 */
 .markdown-rendered li.task-list-item.is-checked,
+.markdown-rendered li.task-list-item.is-checked:has(a.tag),
 .cm-line.HyperMD-task-line[data-task="x"],
 .cm-line.HyperMD-task-line[data-task="X"] {
     background-image: none !important;
+    opacity: 0.4 !important;
 }
 
 

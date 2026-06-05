@@ -9,37 +9,94 @@ import { TemplateHelper } from "./TemplateHelper";
 // 1. 빠른 할 일 캡처 모달
 class QuickCaptureModal extends Modal {
     content: string;
+    selectedDate: string;
     onSubmit: (content: string) => void;
 
     constructor(app: App, onSubmit: (content: string) => void) {
         super(app);
         this.content = "";
+        // window.moment is available in Obsidian
+        this.selectedDate = window.moment().format("YYYY-MM-DD");
         this.onSubmit = onSubmit;
     }
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl("h3", { text: "✏️ 빠른 할 일 등록" });
+        
+        // Add padding and spacing to the entire content
+        contentEl.setAttribute("style", "padding: 20px 10px;");
+        
+        // Header with simple description and date picker
+        const headerContainer = contentEl.createDiv({ attr: { style: "display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;" } });
+        
+        // Left part: Title and Subtitle
+        const leftGroup = headerContainer.createDiv({ attr: { style: "display: flex; align-items: baseline; gap: 10px;" } });
+        const title = leftGroup.createEl("h3", { text: "✏️ 할 일 등록" });
+        title.style.margin = "0";
+        leftGroup.createEl("span", { text: "메인 스케줄에 즉시 추가됩니다.", attr: { style: "font-size: 0.9em; color: var(--text-muted);" } });
 
-        new Setting(contentEl)
-            .setName("할 일 내용")
-            .setDesc("메인 스케줄 노트의 할 일 목록에 추가할 내용을 입력하세요.")
-            .addText(text => text
-                .setPlaceholder("예: 물 2L 마시기")
-                .onChange(value => this.content = value));
+        // Right part: Date Picker & Tomorrow Button
+        const rightGroup = headerContainer.createDiv({ attr: { style: "display: flex; align-items: center; gap: 8px;" } });
+        
+        const dateInput = rightGroup.createEl("input", { type: "date" });
+        dateInput.value = this.selectedDate;
+        dateInput.style.padding = "4px";
+        dateInput.style.border = "1px solid var(--background-modifier-border)";
+        dateInput.style.borderRadius = "4px";
+        dateInput.style.backgroundColor = "var(--background-secondary)";
+        dateInput.style.color = "var(--text-normal)";
 
-        new Setting(contentEl)
-            .addButton(btn => btn
-                .setButtonText("추가")
-                .setCta()
-                .onClick(() => {
-                    if (this.content.trim() === "") {
-                        new Notice("내용을 입력해주세요.");
-                        return;
-                    }
-                    this.close();
-                    this.onSubmit(this.content.trim());
-                }));
+        const tomorrowBtn = rightGroup.createEl("button", { text: "+" });
+        tomorrowBtn.style.padding = "4px 10px";
+        tomorrowBtn.style.fontSize = "1.0em";
+        tomorrowBtn.style.boxShadow = "none";
+        
+        dateInput.addEventListener("change", (e) => {
+            this.selectedDate = (e.target as HTMLInputElement).value;
+        });
+
+        tomorrowBtn.addEventListener("click", () => {
+            const nextDay = window.moment(this.selectedDate).add(1, 'days').format("YYYY-MM-DD");
+            this.selectedDate = nextDay;
+            dateInput.value = nextDay;
+        });
+
+        // Full width input box
+        const inputContainer = contentEl.createDiv({ attr: { style: "margin-bottom: 20px;" } });
+        const inputEl = inputContainer.createEl("input", { type: "text", placeholder: "예: 물 2L 마시기" });
+        inputEl.style.width = "100%";
+        inputEl.style.padding = "10px";
+        
+        inputEl.addEventListener("input", (e) => {
+            this.content = (e.target as HTMLInputElement).value;
+        });
+
+        const submitAction = () => {
+            if (this.content.trim() === "") {
+                new Notice("내용을 입력해주세요.");
+                return;
+            }
+            this.close();
+            const finalContent = `${this.content.trim()} 📅 ${this.selectedDate}`;
+            this.onSubmit(finalContent);
+        };
+
+        // Enter key to submit
+        inputEl.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                submitAction();
+            }
+        });
+
+        // Submit button aligned to right
+        const btnContainer = contentEl.createDiv({ attr: { style: "display: flex; justify-content: flex-end;" } });
+        const btn = btnContainer.createEl("button", { text: "추가" });
+        btn.addClass("mod-cta");
+        btn.addEventListener("click", submitAction);
+
+        // Auto-focus the input box
+        setTimeout(() => inputEl.focus(), 50);
     }
 
     onClose() {
@@ -513,7 +570,6 @@ ${checklistTable}
 작성일: "${now.format("YYYY-MM-DDTHH:mm")}"
 수정일: "${now.format("YYYY-MM-DDTHH:mm")}"
 ---
-# 임시 메모
 
 `;
                 memoFile = await this.app.vault.create(memoPath, defaultContent);
