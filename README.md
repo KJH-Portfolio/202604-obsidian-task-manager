@@ -1,6 +1,6 @@
 ---
 작성일: 2026-06-05
-수정일: 2026-06-05T11:59
+수정일: 2026-06-05T12:45
 ---
 # MyWorld Task Manager
 
@@ -58,13 +58,33 @@
 >
 > 기존 스케줄 관리 방식의 한계와 플러그인 도입 당위성은 👉 **[옵시디언 스케줄 시스템 분석 보고서](./docs/1.%20옵시디언_스케줄_시스템_분석_보고서.md)**를 참고해 주세요.
 
-**📊 2. 시스템 아키텍처 및 플러그인 설계 명세**
+**💡 2. 기획 방향성 설계 (Core Strategy)**
+- **결합형 지식 생태계**: 단순한 '할 일 관리'를 넘어, 장기적인 프로젝트(Project)와 일일 루틴(Daily Schedule)이 상호 작용하며 함께 성장하는 지식 생태계 구축
+- **마찰력(Friction) 제로**: 사용자가 설정과 스크립트 오류 해결에 시간을 낭비하지 않고, 즉시 본연의 '기록과 사고'에 집중할 수 있도록 완벽히 캡슐화된 자동화 기능 제공
+
+**📊 3. 시스템 아키텍처 및 플러그인 설계 명세**
 - **데이터 동기화 (Synchronizer)**: 옵시디언 File I/O 및 메타데이터 캐시 API를 활용하여, 스케줄 노트와 프로젝트 노트 간의 할 일 데이터 불일치를 감지하고 완벽하게 동기화합니다.
 - **구조 생성기 (TemplateHelper)**: 정규표현식을 통해 일관된 서식을 유지하며, PARA 구조와 제텔카스텐 폴더 체계를 자동으로 생성합니다.
 - **초기화 엔진 (ResetManager)**: 매일 자정을 기점으로 과거 데이터를 통계 노트로 아카이빙하고 새로운 스케줄 뷰를 렌더링합니다.
 - 🔗 상세한 클래스 구조와 데이터 흐름도는 👉 **[플러그인 설계 및 구현 명세서](./docs/3.%20플러그인_설계_및_구현_명세서.md)**에서 확인하실 수 있습니다.
 
-**💡 3. 사용자 메뉴얼 및 가이드**
+```mermaid
+flowchart TD
+    User([사용자]) --> |할 일 등록 및 수정| DailyNote(데일리 스케줄 노트)
+    User --> |빠른 캡처 핫키| Modal(Quick Capture 모달)
+    Modal --> |내용 주입| DailyNote
+    
+    DailyNote <--> |동기화 버튼 클릭| Synchronizer{Synchronizer Engine<br>정규식 In-place 스왑}
+    
+    Synchronizer <--> |양방향 데이터 스왑| ProjectNote(프로젝트 노트 1)
+    Synchronizer <--> |양방향 데이터 스왑| ResourceNote(리소스 노트 2)
+    
+    Clock([자정 트리거]) -.-> ResetManager{Reset Manager}
+    ResetManager --> |과거 스케줄 추출| DailyNote
+    ResetManager --> |월간 백업| Archive(월간 통계 아카이브 노트)
+```
+
+**💡 4. 사용자 메뉴얼 및 가이드**
 - **초기 셋업**: 플러그인 설정 탭에서 `[PARA 구조 생성]` 및 `[스케줄 관리 노트 생성]` 버튼을 눌러 지식 관리 기반을 즉시 구축합니다.
 - **일일 스케줄 관리**: 스케줄 노트에 할 일을 입력하고 캘린더 모양의 버튼을 활용하여 마감일(D-Day)을 손쉽게 지정합니다.
 - **빠른 캡처**: 어느 노트에 있든 상단의 번개 모양 아이콘을 눌러 빠른 등록 모달창을 띄우고, 떠오른 할 일을 즉시 스케줄에 편입시킵니다.
@@ -104,19 +124,74 @@
 
 ---
 <details id="technical-deepdive">
-<summary><b>4. 기술적 깊이 - 문제 해결 및 개발 정책 🛠️</b></summary>
+<summary><b>4. 기술적 깊이 - 핵심 로직 분석 및 트러블슈팅 사례 🛠️</b></summary>
 <br>
 
-본 프로젝트는 견고한 코드 컨벤션과 아키텍처 원칙(👉 **[옵시디언 플러그인 개발 정책](./docs/2.%20옵시디언_플러그인_개발_정책.md)**)을 바탕으로 구축되었습니다. 개발 과정에서 겪었던 수많은 옵시디언 API 한계점과 동시성 문제들을 돌파한 사례는 👉 **[트러블슈팅(기술적 깊이) 보고서](./docs/6.%20트러블슈팅.md)**를 참고하세요.
+본 프로젝트는 견고한 코드 컨벤션과 아키텍처 원칙(👉 **[옵시디언 플러그인 개발 정책](./docs/2.%20옵시디언_플러그인_개발_정책.md)**)을 바탕으로 구축되었습니다. 
 
-**1️⃣ [Data Integrity] 동기화 중 파일 훼손 방지를 위한 트랜잭션 및 롤백 시스템**
-- 비동기로 파일을 읽고 쓰는 과정(`processFrontMatter` 및 `vault.modify`)에서 타이밍 에러로 인해 사용자 데이터가 날아가는 현상을 방지하기 위해, 수정 전 데이터를 메모리에 저장하고 실패 시 즉각 **롤백(Rollback)**하는 안전 장치를 구현했습니다.
+### 🔍 핵심 로직 분석 (Core Logic Analysis)
 
-**2️⃣ [CSS Specificity] 읽기 모드(Reading View) 스타일링 충돌 해결**
-- 옵시디언 기본 테마의 강력한 CSS가 커스텀 스타일을 무시하는 현상을 극복하고자, `.markdown-rendered li.task-list-item.is-checked` 등 상세한 체이닝과 DOM 셀렉터를 분석하여 완벽한 크로스 뷰(라이브 프리뷰 - 읽기 모드) 경험을 제공했습니다.
+**1️⃣ [Data Architecture] 마크다운 계층 보존을 위한 AST 파싱 엔진**
+- **기능 구현:** 플랫(Flat)한 마크다운 텍스트 라인들을 단순 배열 정렬할 경우 하위 들여쓰기(Indent)가 파괴되는 문제를 막기 위해, 텍스트 스크림을 읽고 부모-자식 관계를 가지는 `TaskNode` 트리(Tree) 구조로 파싱하는 커스텀 AST 변환 로직을 설계했습니다.
 
-**3️⃣ [UX Optimization] 모달창 입력 편의성 개선**
-- 빠른 캡처 창에서 날짜 지정이 번거로운 문제를 해결하기 위해, 모달창 렌더링 시 **기본값을 '오늘'로 자동 지정**하고 `[+]` 버튼 하나만으로 날짜를 하루씩 슉슉 늘릴 수 있는 직관적 UI를 설계했습니다.
+```typescript
+// TaskUtils.ts 中 (들여쓰기 뎁스를 기반으로 트리 구조 형성)
+parseTasksToTree(lines: string[]): TaskNode[] {
+    const nodes: TaskNode[] = [];
+    const stack: { indent: number, children: TaskNode[] }[] = [{ indent: -1, children: nodes }];
+
+    lines.forEach(line => {
+        const indent = (line.match(REGEX.INDENT) || [""])[0].length;
+        const node: TaskNode = { line, indent, children: [] };
+        
+        while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop();
+        stack[stack.length - 1].children.push(node);
+        stack.push(node);
+    });
+    return nodes;
+}
+```
+
+**2️⃣ [Sync Engine] 블록 ID 정규표현식을 활용한 In-place 동기화**
+- **기능 구현:** 양방향 데이터 동기화 시 `replace`로 통째로 텍스트를 갈아끼우면 유저가 작성한 다른 데이터가 유실(Lost Update)될 수 있습니다. 이를 방지하고자 라인 후미에 달린 고유 블록 ID(`^1a2b3c`)만을 정규식으로 추출하여 해당 라인의 상태 괄호(`[x]`)만 핀포인트로 교체(Swap)하는 안전 장치를 구현했습니다.
+
+```typescript
+// Synchronizer.ts 中 (ID 매칭을 통한 상태 괄호 스왑 로직)
+if (id && execMap.has(id)) {
+    const updatedExecTask = execMap.get(id);
+    const status = (updatedExecTask.line.match(REGEX.STATUS_MATCH))[1];
+    // 원본 텍스트(pMatch[1] 등)는 보존하고 상태만 최신으로 교체
+    newPlanLines.push(`${pMatch[1]} [${status}] ${text} ^${id}`);
+}
+```
+
+**3️⃣ [UX & Lifecycle] 자정 리셋 및 데일리 아카이빙 엔진**
+- **기능 구현:** 매일 밤 12시가 지났을 때 사용자가 첫 옵시디언 실행을 하면, 과거 스케줄을 스캐닝하여 완료/미완료 통계를 산출한 뒤 월간 아카이브 노트로 백업(Append)하고 데일리 노트를 초기화하는 LifeCycle 매니저를 구축했습니다.
+
+```typescript
+// ResetManager.ts 中 (통계 산출 후 월간 노트 백업)
+async processReset(app: App, scheduleFile: TFile, previousDate: string) {
+    const content = await app.vault.read(scheduleFile);
+    const stats = this.calculateCompletionStats(content);
+    
+    const archiveContent = `## ${previousDate}\n- 완료: ${stats.done}\n- 미완료: ${stats.undone}\n\n`;
+    await app.vault.append(archiveFile, archiveContent);
+    await this.resetDailySchedule(app, scheduleFile); // 오늘 날짜 뷰로 초기화
+}
+```
+
+> [!TIP]
+> **더 방대하고 치열한 기술적 페인 포인트와 해결 과정(디버깅 기록)은 👉 [트러블슈팅(기술적 깊이) 보고서](./docs/6.%20트러블슈팅.md) 문서에서 확인하실 수 있습니다.**
+
+**🔥 Troubleshooting: 문제 해결 및 설계적 방어 사례 (Key Highlights)**
+
+1. **[Data Structure] AST 기반 정렬 알고리즘:** 들여쓰기로 이뤄진 마크다운 태스크의 계층이 정렬 시 파괴되는 문제를, 텍스트를 트리(Tree) 노드로 파싱하고 재귀적으로 정렬하는 엔진을 구현하여 원천 차단했습니다.
+2. **[Optimization] 상태 하향 전파(Propagation) 스캐너:** 부모 태스크에만 상태/마감일을 부여해도, Indent 스코프를 추적하여 자식 태스크로 속성을 O(N) 속도로 하향 전파하는 논리적 스캐너를 구축했습니다.
+3. **[Data Integrity] 정규식 기반 In-place 동기화:** 양방향 데이터 스왑 시 블록 캐시 ID(`^id`) 앵커만을 추출하여 핀포인트로 업데이트하는 안전성을 확보했습니다.
+4. **[Defensive Programming] 마크다운 오염 방지 가드:** 캡처 대상 섹션을 찾지 못할 시 하드코딩으로 무분별하게 문서를 Append하는 대신, 즉시 런타임을 중단하고 사용자에게 피드백을 주어 노트 생태계를 보호했습니다.
+5. **[CI/CD & Lint] 엄격한 정적 분석 파이프라인 돌파:** 글로벌 오픈소스 스토어 배포를 위해, `builtin-modules` 패키지 충돌을 제어하고 수십 개의 ESLint 타입 에러를 통제하여 CI/CD를 통과했습니다.
+6. **[Deep Debugging] 원시 타입 속성 오염 추적:** `Cannot create property on string` 에러의 원인이 파라미터 매핑 누락으로 인한 String 객체화 실패임을 콜스택 단에서 추적하고, 인터페이스를 완벽히 교정했습니다.
+7. **[Lifecycle Management] 핫 리로드(Hot Reload) 캐싱 충돌 제어:** 플러그인 빌드 갱신 시 메모리에 잔존한 구버전 인스턴스와 신규 모듈 간의 충돌 원인을 생명주기 관점에서 분석하고 클린 릴리즈 파이프라인을 구축했습니다.
 
 </details>
 
@@ -131,3 +206,29 @@
 * **[플러그인 검증 및 배포 가이드](./docs/7.%20플러그인_검증_및_배포_가이드.md)**: 소스 코드를 빌드하고 새로운 버전을 릴리즈할 때 거쳐야 하는 내부 검증 프로세스와 버전 관리 규칙을 담고 있습니다.
 
 </details>
+
+---
+<details id="retrospective-growth">
+<summary><b>6. 회고 - 프로젝트 성찰 및 향후 기술적 지향점 📈</b></summary>
+<br>
+
+- **🟢 Keep (Continuous Learning): 텍스트 환경에서의 자료구조 활용과 알고리즘적 사고**
+  - 단순히 프레임워크나 라이브러리의 기능(API)을 호출하는 데 그치지 않고, 마크다운이라는 순수 텍스트(Plain Text) 환경의 한계를 직접 구현한 **AST 트리 파싱**과 **정규식 In-place 스왑 알고리즘**을 통해 돌파해냈습니다. 
+  - 이를 통해 프레임워크가 가려둔 저수준(Low-level)의 텍스트 처리와 자료구조 설계의 중요성을 깨달았으며, 앞으로도 문제의 본질을 파고드는 엔지니어링 방식을 유지하고자 합니다.
+
+- **🔴 Problem (Defensive Awareness): 런타임 생명주기 및 엣지 케이스 고려 미흡**
+  - 프로젝트 초기에는 '코드가 돌아가는 것(Happy Path)'에만 치중하여 유저가 헤더를 임의로 지우거나(문서 오염), 플러그인 핫 리로드 시 이전 메모리 캐시가 남아 충돌하는 등 런타임 엣지 케이스들을 제대로 제어하지 못했습니다.
+  - 이로 인해 문서 포맷이 붕괴되거나 `TypeError`가 발생하는 등 뼈아픈 시행착오를 겪었습니다.
+
+- **🔵 Try (Defensive & Automated Planning): 방어적 프로그래밍과 자동화 CI/CD 체화**
+  - 에러 처리 시 단순히 콘솔에 로그만 찍고 넘어가는 것을 지양하고, 시스템 변경을 즉각 차단(Return)하여 **유저 데이터를 최우선으로 보호하는 방어적 프로그래밍 원칙**을 정립했습니다.
+  - 또한 옵시디언 공식 봇(Bot)의 깐깐한 ESLint 검수를 뚫어낸 경험을 바탕으로, 추후 어떤 프로젝트를 하더라도 코드 작성 초기부터 정적 분석기(Linter)와 배포 자동화 파이프라인(CI/CD)을 세팅하는 습관을 들이기로 다짐했습니다.
+
+</details>
+
+---
+
+### 📝 License & Contact
+- **License**: MIT License - 누구나 자유롭게 활용하고 기여할 수 있는 오픈소스 프로젝트입니다.
+- **Contact**: GitHub Issue 탭을 통한 버그 제보 및 PR을 환영합니다.
+- **Developer**: [GitHub Profile 링크 입력란] | [Email 주소 입력란]
