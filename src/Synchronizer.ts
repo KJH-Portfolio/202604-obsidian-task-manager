@@ -19,9 +19,9 @@ export class Synchronizer {
             new Notice("⏳ 프로젝트 동기화 시작...");
             const originalContent = await this.app.vault.read(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
             const now = moment();
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
             const todayObj = now.clone().startOf('day').toDate();
 
             // 데일리 노트 내의 프로젝트 맵 파싱
@@ -73,9 +73,9 @@ export class Synchronizer {
         try {
             const noteName = projectFile.basename;
             new Notice("⏳ 스케줄 반영 및 대시보드 갱신 중...");
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
             const now = moment();
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
             const todayObj = now.clone().startOf('day').toDate();
 
             let content = this.utils.preprocessContent(originalActive);
@@ -137,19 +137,19 @@ export class Synchronizer {
                         if (id) {
                             originalIds.add(id);
                             if (execMap.has(id)) {
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Type inference limitation
                                 const et = execMap.get(id);
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Type inference limitation
                                 const tM = et.line.match(REGEX.TASK_LINE);
                                 if (tM) {
                                     const { text: execText } = this.utils.extractIdAndText(tM[3]);
-                                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+                                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                                     newPlanLines.push(`${pMatch[1]} [${et.status}] ${execText} ^${id}`);
                                 } else {
                                     newPlanLines.push(l);
                                 }
                                 planTasksTotal++;
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument -- Type inference limitation
                                 if (REGEX.MATCH_TASK_COMPLETED.test(et.line)) planTasksDone++;
                             } else {
                                 newPlanLines.push(l);

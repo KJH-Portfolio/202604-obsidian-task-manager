@@ -293,7 +293,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 }
                                 
                                 // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                                 const todayObj = moment().startOf('day').toDate();
                                 text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
                                 
@@ -392,10 +392,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             await this.utils.ensureFolder(projectDir);
             
             const projectFilePath = `${projectDir}/${projectName}.md`;
-            if (this.app.vault.getAbstractFileByPath(projectFilePath)) {
+            const existing = this.app.vault.getAbstractFileByPath(projectFilePath);
+            if (existing) {
                 new Notice("⚠️ 동일한 이름의 프로젝트가 이미 존재합니다.");
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-                return this.app.vault.getAbstractFileByPath(projectFilePath) as TFile;
+                return existing instanceof TFile ? existing : null;
             }
 
             // 템플릿 텍스트 가져오기
@@ -431,13 +431,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 }
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
             const now = moment();
             const replacements = {
                 projectName: projectName,
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                 date: now.format("YYYY-MM-DD"),
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                 time: now.format("HH:mm")
             };
 
@@ -560,14 +560,14 @@ ${checklistTable}
                 }
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
             const now = moment();
             const replacements = {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                 date: now.format("YYYY-MM-DD"),
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                 time: now.format("HH:mm"),
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                 currentDay: now.date().toString(),
                 defaultStep: "계획 따라 움직이기. 1:30 취침하기.",
                 defaultAffirmation: "시작이 반 이다."
@@ -597,14 +597,14 @@ ${checklistTable}
 
             let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
             if (!memoFile) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
                 const now = moment();
                 const defaultContent = `---
 작성일: "${
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                     now.format("YYYY-MM-DDTHH:mm")}"
 수정일: "${
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
                     now.format("YYYY-MM-DDTHH:mm")}"
 ---
 
@@ -627,7 +627,7 @@ ${checklistTable}
     }
 
     async loadSettings() {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Load default settings handling
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 

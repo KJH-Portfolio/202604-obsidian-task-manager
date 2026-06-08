@@ -40,7 +40,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
     private refresh(): void {
         const { containerEl } = this;
         containerEl.empty();
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
         this.display();
     }
 
@@ -266,7 +265,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName("설정값 초기화")
             .setDesc("플러그인의 모든 설정을 기본값으로 되돌립니다. (주의: 기존 설정 정보가 소실되며, 되돌릴 수 없습니다.)")
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- Obsidian API internal type
             .addButton(btn =>
                 btn.setButtonText("초기화 실행").buttonEl.addClass("mod-warning")
                     .onClick(async () => {

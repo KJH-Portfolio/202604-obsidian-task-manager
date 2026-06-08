@@ -78,15 +78,15 @@ export class TaskUtils {
     getEmojiMap() { return EMOJI_MAP; }
 
     getAdjustedNow(): moment.Moment {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Type inference limitation
         const now = moment();
         const offset = this.settings.midnightOffsetHour ?? 4;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         if (now.hour() < offset) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Type inference limitation
             return now.subtract(1, 'days');
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- Type inference limitation
         return now;
     }
 
@@ -124,8 +124,8 @@ export class TaskUtils {
             return { start: sIdx, end: eIdx };
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-        const file = fileOrContent as TFile;
+        if (!(fileOrContent instanceof TFile)) return null;
+        const file = fileOrContent;
         let useFallback = false;
         const cache = this.getCache(file);
         if (cache && cache.headings) {
@@ -611,7 +611,7 @@ export class TaskUtils {
 
                 let colText = parts[i];
                 parts[i] = colText.replace(/^\s*([1-4])\s*$/, (match, p1) => {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                     return EMOJI_MAP[p1] ? match.replace(p1, EMOJI_MAP[p1]) : match;
                 });
             }
@@ -626,23 +626,23 @@ export class TaskUtils {
             for (const key in data.byText) textQueues[key] = [...data.byText[key]];
 
             const tasks = data.orderedTasks.map((ot: { id: string; status: string; text: string }) => {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                 if (ot.type === 'id') return data.byId[ot.key];
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                 if (textQueues[ot.key] && textQueues[ot.key].length > 0) return textQueues[ot.key].shift();
                 return null;
             });
             for (let i = 0; i < tasks.length; i++) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                 if (tasks[i] && tasks[i].checked) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                     const pInd = (tasks[i].indent || "").length;
                     for (let j = i + 1; j < tasks.length; j++) {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                         if (!tasks[j] || (tasks[j].indent || "").length <= pInd) break;
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                         tasks[j].checked = true;
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                         if (!tasks[j].status || tasks[j].status === ' ') tasks[j].status = tasks[i].status;
                     }
                 }
@@ -1073,15 +1073,15 @@ export class TaskUtils {
                             deleted: isDeleted 
                         };
                         if (id) {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                             dailyMap[currNote].byId[id] = taskData;
                         } else {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                             if (!dailyMap[currNote].byText[cleanText]) dailyMap[currNote].byText[cleanText] = [];
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Type inference limitation
                             dailyMap[currNote].byText[cleanText].push(taskData);
                         }
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Type inference limitation
                         dailyMap[currNote].orderedTasks.push(id ? { type: 'id', key: id } : { type: 'text', key: cleanText });
                     }
                 }
@@ -1291,16 +1291,16 @@ export class TaskUtils {
                         let tM = l.match(REGEX.TASK_LINE);
                         if (tM) {
                             let { text, id } = this.extractIdAndText(tM[3]); 
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                             let data = (id && dailyData.byId[id]) ? dailyData.byId[id] : (dailyData.byText[text] && dailyData.byText[text].length > 0 ? dailyData.byText[text].shift() : null);
                             if (data) handledInFile.add(id || text);
                             let currentStat = tM[2], newStat = currentStat;
                             if (data) { 
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                                 if (data.deleted) { skipIndent = currentIndent; mod = true; continue; } 
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                                 if (data.status && data.status !== ' ') newStat = data.status; 
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                                 else if (data.checked) newStat = 'x'; 
                                 else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat; 
                             } else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat;
@@ -1310,7 +1310,7 @@ export class TaskUtils {
                                 skipCheckStatus = newStat; 
                             }
                             if (data && (currentStat !== newStat || text !== data.text)) { 
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                                 l = `${tM[1]} [${newStat}] ${data.text}${id ? ` ^${id}` : ''}`; 
                                 mod = true; 
                             } else if (currentStat !== newStat) { 
@@ -1376,11 +1376,11 @@ export class TaskUtils {
                     const tasksToInsert = [];
                     if (dailyData.orderedTasks) { 
                         for (let ot of dailyData.orderedTasks) { 
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                             if (ot.type === 'id') lastAnchorId = ot.key; 
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                             else if (dailyData.byText[ot.key] && dailyData.byText[ot.key].length > 0) {
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Type inference limitation
                                 tasksToInsert.push({ anchorId: lastAnchorId, task: { ...dailyData.byText[ot.key].shift(), id: this.generateBlockId(collisionFiles) } }); 
                             }
                         } 
@@ -1421,7 +1421,7 @@ export class TaskUtils {
                                             const tl = ins.get(id)!; 
                                             let ia = i + 1; 
                                             const ntl = tl.map(nt => {
-                                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
                                                 return `${nt.indent} [${nt.status || (nt.checked ? 'x' : ' ')}] ${nt.text} ^${nt.id}`;
                                             }); 
                                             finalSLines.splice(ia, 0, ...ntl); 
