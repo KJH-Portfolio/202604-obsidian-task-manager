@@ -52,8 +52,8 @@
 
 .markdown-rendered li:has(> .tag[href*="D-" i], .markdown-rendered li:has(> p > .tag[href*="D-" i], 
 .tag[href*="past" i], .tag[href*="past" i], 
-.cm-line:has([class*="tag-D-" i],
-.cm-line:has([class*="tag-past" i] {
+.cm-line:has([class*="tag-D-" i]),
+.cm-line:has([class*="tag-past" i]) {
     background-origin: content-box;
     background-clip: content-box;
     background-repeat: no-repeat;
@@ -108,8 +108,8 @@
 
 /* #Past (다크 레드 / 보라빛) */
 .tag[href*="past" i], .tag[href*="past" i], 
-.cm-line:has(.cm-tag-Past, 
-.cm-line:has(.cm-tag-past {
+.cm-line:has(.cm-tag-Past), 
+.cm-line:has(.cm-tag-past) {
     background-image: 
         linear-gradient(to right, rgba(140, 0, 40, 0.9) 6px, transparent 6px), 
         linear-gradient(to right, rgba(140, 0, 40, 0.15) 0%, rgba(140, 0, 40, 0.15) 100%);
@@ -153,14 +153,14 @@
 
 /* #Past (다크 레드) */
 .callout li:has(> .tag[href*="past" i], .callout li:has(> p > .tag[href*="past" i],
-.callout .cm-line:has(.cm-tag-Past,
-.callout .cm-line:has(.cm-tag-past {
+.callout .cm-line:has(.cm-tag-Past),
+.callout .cm-line:has(.cm-tag-past) {
     background-image: linear-gradient(to right, rgba(140, 0, 40, 0.95) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* 1.5. 완료된 항목 배경색 및 마커 제거 */
 .markdown-rendered li.task-list-item.is-checked,
-.markdown-rendered li.task-list-item.is-checked:has(a.tag,
+.markdown-rendered li.task-list-item.is-checked:has(a.tag),
 .cm-line.HyperMD-task-line[data-task="x"],
 .cm-line.HyperMD-task-line[data-task="X"] {
     background-image: none;
@@ -175,7 +175,7 @@
 
 /* 2.1. 읽기 모드 (Reading View) 강제 */
 .callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] li:has(input[type="checkbox"] {
+.callout[data-callout="routine"] li:has(input[type="checkbox"]) {
     display: inline-flex;
     align-items: center;
     background-color: var(--background-secondary-alt);
@@ -207,7 +207,7 @@
 }
 
 /* 2.2. 라이브 프리뷰 (Live Preview) 강제 */
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"],
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]),
 .callout[data-callout="routine"] .HyperMD-task-line {
     display: inline-flex;
     align-items: center;
@@ -221,7 +221,7 @@
 
 /* 2.3. 완료 시 취소선 및 투명도 */
 .callout[data-callout="routine"] li.is-checked:not([data-task="-"]):not([data-task="/"]),
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]:checked):not(:has(input[data-task="-"])):not(:has(input[data-task="/"]) {
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]:checked):not(:has(input[data-task="-"])):not(:has(input[data-task="/"])) {
     opacity: 0.4;
     background-color: var(--background-primary);
     text-decoration: line-through;
@@ -229,7 +229,7 @@
 
 /* 2.4. 취소 시 디자인 (-) */
 .callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="-"],
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="-"] {
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="-"]) {
     opacity: 0.5;
     color: #ff5252;
     font-weight: 700;
@@ -240,7 +240,7 @@
 
 /* 2.5. 진행 중 디자인 (/) */
 .callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="/"],
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="/"] {
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="/"]) {
     opacity: 0.5;
     color: #ffd04b;
     font-weight: 700;
@@ -251,8 +251,8 @@
 
 /* 2.6. 클릭 영역 전체 확장 */
 .callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] ul>li:has(input[type="checkbox"],
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"],
+.callout[data-callout="routine"] ul>li:has(input[type="checkbox"]),
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]),
 .callout[data-callout="routine"] .HyperMD-task-line {
     position: relative;
     overflow: hidden;
@@ -324,11 +324,11 @@
 }
 
 .callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] ul>li:has(input[type="checkbox"] {
+.callout[data-callout="routine"] ul>li:has(input[type="checkbox"]) {
     order: 1;
 }
 
-.callout[data-callout="routine"] ul>li:not(.task-list-item):not(:has(input) {
+.callout[data-callout="routine"] ul>li:not(.task-list-item):not(:has(input)) {
     order: 2;
     flex-basis: 100%;
     display: inline-block;
@@ -339,7 +339,7 @@
 }
 
 /* --- 라이브 프리뷰 --- */
-.callout[data-callout="routine"] .cm-line:has(> .cm-header {
+.callout[data-callout="routine"] .cm-line:has(> .cm-header) {
     display: block;
     float: left;
     clear: both;
@@ -352,8 +352,8 @@
     font-size: 1.0em;
 }
 
-.callout[data-callout="routine"] .cm-line:has(> .cm-list-1,
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"] {
+.callout[data-callout="routine"] .cm-line:has(> .cm-list-1),
+.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]) {
     display: inline-flex;
     margin-top: 0;
     margin-bottom: 0;
@@ -367,3 +367,36 @@
 .callout[data-callout="routine"] .cm-line:empty {
     display: none;
 }
+
+.myworld-padding-20-10 { padding: 20px 10px; }
+.myworld-mt-0-mb-25 { margin-top: 0; margin-bottom: 25px; }
+.myworld-mb-25 { margin-bottom: 25px; }
+.myworld-flex-baseline-gap10-mb10 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.myworld-text-muted-sm { font-size: 0.85em; color: var(--text-muted); }
+.myworld-mb-35 { margin-bottom: 35px; }
+.myworld-flex-end { display: flex; justify-content: flex-end; }
+.myworld-flex-center-between-mb20 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.myworld-flex-baseline-gap10 { display: flex; align-items: baseline; gap: 10px; }
+.myworld-text-muted-md { font-size: 0.9em; color: var(--text-muted); }
+.myworld-flex-center-gap8 { display: flex; align-items: center; gap: 8px; }
+.myworld-mb-20 { margin-bottom: 20px; }
+
+
+.myworld-margin-0 { margin: 0; }
+.myworld-w-100 { width: 100%; }
+.myworld-h-100px { height: 100px; }
+.myworld-p-12-15 { padding: 12px 15px; }
+.myworld-text-1em { font-size: 1em; }
+.myworld-rounded-6 { border-radius: 6px; }
+.myworld-border-std { border: 1px solid var(--background-modifier-border); }
+.myworld-resize-v { resize: vertical; }
+.myworld-p-10-30 { padding: 10px 30px; }
+.myworld-p-4 { padding: 4px; }
+.myworld-rounded-4 { border-radius: 4px; }
+.myworld-bg-secondary { background-color: var(--background-secondary); }
+.myworld-text-normal { color: var(--text-normal); }
+.myworld-p-4-10 { padding: 4px 10px; }
+.myworld-text-10em { font-size: 1.0em; }
+.myworld-shadow-none { box-shadow: none; }
+.myworld-p-10 { padding: 10px; }
+.myworld-d-none { display: none; }

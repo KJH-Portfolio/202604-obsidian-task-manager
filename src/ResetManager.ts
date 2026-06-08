@@ -1,6 +1,6 @@
 import { App, Modal, TFile, Notice, MarkdownView } from "obsidian";
 import { PluginSettings } from "./settings";
-import { TaskUtils, REGEX } from "./TaskUtils";
+import { TaskUtils } from "./TaskUtils";
 // 1. 일간 마감 입력 팝업 모달 정의
 export class DailyResetModal extends Modal {
     review: string;
@@ -16,44 +16,44 @@ export class DailyResetModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.setAttribute("style", "padding: 20px 10px;");
+        contentEl.addClass("myworld-padding-20-10");
 
-        contentEl.createEl("h2", { text: "🌤️ 일간 마감 및 데일리 리셋", attr: { style: "margin-top: 0; margin-bottom: 25px;" } });
+        contentEl.createEl("h2", { text: "🌤️ 일간 마감 및 데일리 리셋", cls: "myworld-mt-0-mb-25" });
 
         // 오늘의 회고
-        const reviewContainer = contentEl.createDiv({ attr: { style: "margin-bottom: 25px;" } });
-        const reviewHeader = reviewContainer.createDiv({ attr: { style: "display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;" } });
+        const reviewContainer = contentEl.createDiv({ cls: "myworld-mb-25" });
+        const reviewHeader = reviewContainer.createDiv({ cls: "myworld-flex-baseline-gap10-mb10" });
         const reviewLabel = reviewHeader.createEl("h4", { text: "오늘의 회고" });
-        reviewLabel.setCssStyles({ margin: "0" });
-        reviewHeader.createEl("span", { text: "오늘 하루의 생각이나 소회를 기입하세요.", attr: { style: "font-size: 0.85em; color: var(--text-muted);" } });
+        reviewLabel.addClass("myworld-margin-0");
+        reviewHeader.createEl("span", { text: "오늘 하루의 생각이나 소회를 기입하세요.", cls: "myworld-text-muted-sm" });
         
         const reviewInputEl = reviewContainer.createEl("textarea", { attr: { placeholder: "여기에 오늘의 회고를 작성하세요..." } });
         reviewInputEl.value = this.review;
-        reviewInputEl.setCssStyles({ width: "100%" });
-        reviewInputEl.setCssStyles({ height: "100px" });
-        reviewInputEl.setCssStyles({ padding: "12px 15px" });
-        reviewInputEl.setCssStyles({ fontSize: "1em" });
-        reviewInputEl.setCssStyles({ borderRadius: "6px" });
-        reviewInputEl.setCssStyles({ border: "1px solid var(--background-modifier-border)" });
-        reviewInputEl.setCssStyles({ resize: "vertical" });
+        reviewInputEl.addClass("myworld-w-100");
+        reviewInputEl.addClass("myworld-h-100px");
+        reviewInputEl.addClass("myworld-p-12-15");
+        reviewInputEl.addClass("myworld-text-1em");
+        reviewInputEl.addClass("myworld-rounded-6");
+        reviewInputEl.addClass("myworld-border-std");
+        reviewInputEl.addClass("myworld-resize-v");
         reviewInputEl.addEventListener("input", (e) => {
             this.review = (e.target as HTMLTextAreaElement).value;
         });
 
         // 내일의 Step
-        const stepContainer = contentEl.createDiv({ attr: { style: "margin-bottom: 35px;" } });
-        const stepHeader = stepContainer.createDiv({ attr: { style: "display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;" } });
+        const stepContainer = contentEl.createDiv({ cls: "myworld-mb-35" });
+        const stepHeader = stepContainer.createDiv({ cls: "myworld-flex-baseline-gap10-mb10" });
         const stepLabel = stepHeader.createEl("h4", { text: "내일의 Step" });
-        stepLabel.setCssStyles({ margin: "0" });
-        stepHeader.createEl("span", { text: "내일 실행할 핵심 디데이 목표를 기입하세요.", attr: { style: "font-size: 0.85em; color: var(--text-muted);" } });
+        stepLabel.addClass("myworld-margin-0");
+        stepHeader.createEl("span", { text: "내일 실행할 핵심 디데이 목표를 기입하세요.", cls: "myworld-text-muted-sm" });
         
         const stepInputEl = stepContainer.createEl("input", { type: "text", attr: { placeholder: "예: 계획 따라 움직이기 등..." } });
         stepInputEl.value = this.step;
-        stepInputEl.setCssStyles({ width: "100%" });
-        stepInputEl.setCssStyles({ padding: "12px 15px" });
-        stepInputEl.setCssStyles({ fontSize: "1em" });
-        stepInputEl.setCssStyles({ borderRadius: "6px" });
-        stepInputEl.setCssStyles({ border: "1px solid var(--background-modifier-border)" });
+        stepInputEl.addClass("myworld-w-100");
+        stepInputEl.addClass("myworld-p-12-15");
+        stepInputEl.addClass("myworld-text-1em");
+        stepInputEl.addClass("myworld-rounded-6");
+        stepInputEl.addClass("myworld-border-std");
         stepInputEl.addEventListener("input", (e) => {
             this.step = (e.target as HTMLInputElement).value;
         });
@@ -72,11 +72,11 @@ export class DailyResetModal extends Modal {
         });
 
         // Submit Button
-        const btnContainer = contentEl.createDiv({ attr: { style: "display: flex; justify-content: flex-end;" } });
+        const btnContainer = contentEl.createDiv({ cls: "myworld-flex-end" });
         const btn = btnContainer.createEl("button", { text: "제출 및 마감" });
         btn.addClass("mod-cta");
-        btn.setCssStyles({ padding: "10px 30px" });
-        btn.setCssStyles({ fontSize: "1em" });
+        btn.addClass("myworld-p-10-30");
+        btn.addClass("myworld-text-1em");
         btn.addEventListener("click", submitAction);
         
         // Focus review input automatically

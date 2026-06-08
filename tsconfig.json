@@ -2,7 +2,10 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "CommonJS",
-    "lib": ["DOM", "ES6"],
+    "lib": [
+      "DOM",
+      "ES6"
+    ],
     "strict": false,
     "moduleResolution": "node",
     "esModuleInterop": true,
@@ -10,7 +13,10 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "sourceMap": true,
-    "inlineSources": true
+    "inlineSources": true,
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

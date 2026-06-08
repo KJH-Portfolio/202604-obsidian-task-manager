@@ -23,32 +23,32 @@ class QuickCaptureModal extends Modal {
         const { contentEl } = this;
         
         // Add padding and spacing to the entire content
-        contentEl.setAttribute("style", "padding: 20px 10px;");
+        contentEl.addClass("myworld-padding-20-10");
         
         // Header with simple description and date picker
-        const headerContainer = contentEl.createDiv({ attr: { style: "display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;" } });
+        const headerContainer = contentEl.createDiv({ cls: "myworld-flex-center-between-mb20" });
         
         // Left part: Title and Subtitle
-        const leftGroup = headerContainer.createDiv({ attr: { style: "display: flex; align-items: baseline; gap: 10px;" } });
+        const leftGroup = headerContainer.createDiv({ cls: "myworld-flex-baseline-gap10" });
         const title = leftGroup.createEl("h3", { text: "✏️ 할 일 등록" });
-        title.setCssStyles({ margin: "0" });
-        leftGroup.createEl("span", { text: "메인 스케줄에 즉시 추가됩니다.", attr: { style: "font-size: 0.9em; color: var(--text-muted);" } });
+        title.addClass("myworld-margin-0");
+        leftGroup.createEl("span", { text: "메인 스케줄에 즉시 추가됩니다.", cls: "myworld-text-muted-md" });
 
         // Right part: Date Picker & Tomorrow Button
-        const rightGroup = headerContainer.createDiv({ attr: { style: "display: flex; align-items: center; gap: 8px;" } });
+        const rightGroup = headerContainer.createDiv({ cls: "myworld-flex-center-gap8" });
         
         const dateInput = rightGroup.createEl("input", { type: "date" });
         dateInput.value = this.selectedDate;
-        dateInput.setCssStyles({ padding: "4px" });
-        dateInput.setCssStyles({ border: "1px solid var(--background-modifier-border)" });
-        dateInput.setCssStyles({ borderRadius: "4px" });
-        dateInput.setCssStyles({ backgroundColor: "var(--background-secondary)" });
-        dateInput.setCssStyles({ color: "var(--text-normal)" });
+        dateInput.addClass("myworld-p-4");
+        dateInput.addClass("myworld-border-std");
+        dateInput.addClass("myworld-rounded-4");
+        dateInput.addClass("myworld-bg-secondary");
+        dateInput.addClass("myworld-text-normal");
 
         const tomorrowBtn = rightGroup.createEl("button", { text: "+" });
-        tomorrowBtn.setCssStyles({ padding: "4px 10px" });
-        tomorrowBtn.setCssStyles({ fontSize: "1.0em" });
-        tomorrowBtn.setCssStyles({ boxShadow: "none" });
+        tomorrowBtn.addClass("myworld-p-4-10");
+        tomorrowBtn.addClass("myworld-text-10em");
+        tomorrowBtn.addClass("myworld-shadow-none");
         
         dateInput.addEventListener("change", (e) => {
             this.selectedDate = (e.target as HTMLInputElement).value;
@@ -61,10 +61,10 @@ class QuickCaptureModal extends Modal {
         });
 
         // Full width input box
-        const inputContainer = contentEl.createDiv({ attr: { style: "margin-bottom: 20px;" } });
+        const inputContainer = contentEl.createDiv({ cls: "myworld-mb-20" });
         const inputEl = inputContainer.createEl("input", { type: "text", placeholder: "예: 물 2L 마시기" });
-        inputEl.setCssStyles({ width: "100%" });
-        inputEl.setCssStyles({ padding: "10px" });
+        inputEl.addClass("myworld-w-100");
+        inputEl.addClass("myworld-p-10");
         
         inputEl.addEventListener("input", (e) => {
             this.content = (e.target as HTMLInputElement).value;
@@ -89,7 +89,7 @@ class QuickCaptureModal extends Modal {
         });
 
         // Submit button aligned to right
-        const btnContainer = contentEl.createDiv({ attr: { style: "display: flex; justify-content: flex-end;" } });
+        const btnContainer = contentEl.createDiv({ cls: "myworld-flex-end" });
         const btn = btnContainer.createEl("button", { text: "추가" });
         btn.addClass("mod-cta");
         btn.addEventListener("click", submitAction);
@@ -160,10 +160,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         const noticeObserver = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
-                    if (node.instanceOf(HTMLElement) && node.classList.contains("notice")) {
+                    if (node instanceof HTMLElement && node.classList.contains("notice")) {
                         const text = node.innerText || "";
                         if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
-                            node.setCssStyles({ display: "none" });
+                            node.addClass("myworld-d-none");
                         }
                     }
                 });
