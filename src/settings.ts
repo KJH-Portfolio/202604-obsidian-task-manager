@@ -40,6 +40,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
     private refresh(): void {
         const { containerEl } = this;
         containerEl.empty();
+        // @ts-expect-error: display is deprecated in Obsidian 1.13.0 but required for older compatibility
         this.display();
     }
 

@@ -3,7 +3,6 @@ import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
-import { REGEX, HEADERS } from "./Constants";
 // 1. 일간 마감 입력 팝업 모달 정의
 export class DailyResetModal extends Modal {
     review: string;

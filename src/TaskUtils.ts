@@ -704,7 +704,7 @@ export class TaskUtils {
             if (!this.app.vault.getAbstractFileByPath(current)) {
                 try {
                     await this.app.vault.createFolder(current);
-                } catch (e) {}
+                } catch { /* ignore */ }
             }
         }
     }

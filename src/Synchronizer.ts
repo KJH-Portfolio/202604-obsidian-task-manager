@@ -3,7 +3,6 @@ import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
-import { REGEX, HEADERS } from "./Constants";
 
 export class Synchronizer {
     app: App;
