@@ -301,11 +301,18 @@ export class TaskUtils {
 
         return lineInfos.map((d) => {
             if (!d.isTask) return d.line;
-            let l = d.line.replace(REGEX.BLOCK_MARKER_REPLACE, '$1 ').replace(REGEX.MARKER_REPLACE_2, `$1 ${d.m}`);
-            if (d.isCompleted) {
-                const s = (d as { propStatus?: string }).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", "x"])[1];
-                l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${s}]`);
+            let l = d.line;
+            
+            // Clean legacy #D- and #Past tags to completely migrate to new markers
+            l = l.replace(/\s*#(?:D-\d+|Past)\s*/ig, ' ');
+            
+            let status = (d as { propStatus?: string }).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", " "])[1];
+            
+            if (!d.isCompleted && d.m) {
+                status = d.m.trim();
             }
+            
+            l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${status}]`);
             return l;
         });
     }
