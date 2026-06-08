@@ -1,7 +1,7 @@
 {
   "name": "myworld-task-manager",
-  "version": "1.0.6",
-  "description": "MyWorld 스케줄 및 프로젝트 할 일 양방향 동기화 플러그인",
+  "version": "1.0.7",
+  "description": "MyWorld \uc2a4\ucf00\uc904 \ubc0f \ud504\ub85c\uc81d\ud2b8 \ud560 \uc77c \uc591\ubc29\ud5a5 \ub3d9\uae30\ud654 \ud50c\ub7ec\uadf8\uc778",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
