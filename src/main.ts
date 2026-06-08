@@ -157,6 +157,24 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     async onload() {
         console.log("Loading MyWorld Task Manager...");
 
+        // --- [Tasks 플러그인 특정 경고창 차단 옵저버] ---
+        const noticeObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node instanceof HTMLElement && node.classList.contains("notice")) {
+                        const text = node.innerText || "";
+                        if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
+                            node.style.display = "none";
+                        }
+                    }
+                });
+            });
+        });
+
+        noticeObserver.observe(document.body, { childList: true, subtree: true });
+        this.register(() => noticeObserver.disconnect());
+        // ------------------------------------------------
+
         // 1. 설정 불러오기
         await this.loadSettings();
 

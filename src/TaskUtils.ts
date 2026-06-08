@@ -58,6 +58,8 @@ export interface TaskNode {
         marker: string;
         date: string;
         statusGroup: number;
+        effectiveMarker?: string;
+        effectiveDate?: string;
     };
     children: TaskNode[];
     originalIdx?: number;
@@ -367,6 +369,32 @@ export class TaskUtils {
         return nodes;
     }
 
+    calculateEffectivePriority(node: TaskNode): { marker: string, date: string } {
+        let bestMarker = node.metadata.marker;
+        let bestDate = node.metadata.date;
+        let bestPri = MARKER_PRI[bestMarker.trim()] || 99;
+
+        for (const child of node.children) {
+            const childEff = this.calculateEffectivePriority(child);
+            const childPri = MARKER_PRI[childEff.marker.trim()] || 99;
+
+            if (childPri < bestPri) {
+                bestPri = childPri;
+                bestMarker = childEff.marker;
+                bestDate = childEff.date;
+            } else if (childPri === bestPri) {
+                if (childEff.date.localeCompare(bestDate) < 0) {
+                    bestDate = childEff.date;
+                }
+            }
+        }
+
+        node.metadata.effectiveMarker = bestMarker;
+        node.metadata.effectiveDate = bestDate;
+
+        return { marker: bestMarker, date: bestDate };
+    }
+
     sortTaskTree(nodes: TaskNode[], shouldSort = true) {
         if (!shouldSort) return;
 
@@ -377,10 +405,10 @@ export class TaskUtils {
             if (a.metadata.isBlank && b.metadata.isBlank) return (a.originalIdx || 0) - (b.originalIdx || 0);
 
             const ma = a.metadata, mb = b.metadata;
-            const pa = MARKER_PRI[ma.marker.trim()] || 99;
-            const pb = MARKER_PRI[mb.marker.trim()] || 99;
+            const pa = MARKER_PRI[ma.effectiveMarker?.trim() || ma.marker.trim()] || 99;
+            const pb = MARKER_PRI[mb.effectiveMarker?.trim() || mb.marker.trim()] || 99;
             if (pa !== pb) return pa - pb;
-            return ma.date.localeCompare(mb.date);
+            return (ma.effectiveDate || ma.date).localeCompare(mb.effectiveDate || mb.date);
         });
         nodes.forEach(n => { if (n.children.length > 0) this.sortTaskTree(n.children, shouldSort); });
     }
@@ -454,6 +482,9 @@ export class TaskUtils {
                 finalTasks = this.applyMarkersToLines(finalTasks, todayObj);
 
                 const tree = this.parseTasksToTree(finalTasks);
+                if (shouldSort) {
+                    tree.forEach(n => this.calculateEffectivePriority(n));
+                }
                 this.sortTaskTree(tree, shouldSort);
                 return this.flattenTreeToMarkdown(tree);
             });

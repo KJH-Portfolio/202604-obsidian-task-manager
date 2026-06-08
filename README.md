@@ -192,6 +192,9 @@ async processReset(app: App, scheduleFile: TFile, previousDate: string) {
 5. **[CI/CD & Lint] 엄격한 정적 분석 파이프라인 돌파:** 글로벌 오픈소스 스토어 배포를 위해, `builtin-modules` 패키지 충돌을 제어하고 수십 개의 ESLint 타입 에러를 통제하여 CI/CD를 통과했습니다.
 6. **[Deep Debugging] 원시 타입 속성 오염 추적:** `Cannot create property on string` 에러의 원인이 파라미터 매핑 누락으로 인한 String 객체화 실패임을 콜스택 단에서 추적하고, 인터페이스를 완벽히 교정했습니다.
 7. **[Lifecycle Management] 핫 리로드(Hot Reload) 캐싱 충돌 제어:** 플러그인 빌드 갱신 시 메모리에 잔존한 구버전 인스턴스와 신규 모듈 간의 충돌 원인을 생명주기 관점에서 분석하고 클린 릴리즈 파이프라인을 구축했습니다.
+8. **[DOM Manipulation] 타사 플러그인(Obsidian Tasks) 경고창 스팸 방어:** 순수 CSS만으로는 팝업 내용 필터링이 불가능하다는 한계를 인지하고, `MutationObserver`를 도입하여 특정 텍스트("obsidian-tasks-plugin warning")가 포함된 에러창만 실시간으로 은닉하는 핀포인트 예외 처리 로직을 구현했습니다.
+9. **[CSS Optimization] 읽기 모드(Reading View) 렌더링 충돌 해결:** 마크다운 파서가 생성하는 HTML 리스트(DOM Tree) 구조를 분석하여, 불필요해진 자식 노드 검사 방어 코드(`:not(:has(...))`)를 폐기하고 직계 자식 결합자(`> .tag`)를 사용함으로써 부모-자식 간 배경색 증발 현상을 완벽히 해결했습니다.
+10. **[Algorithm] 하위 작업 우선순위 상향 전파(Upward Propagation):** 부모 작업의 일정이 여유롭더라도 하위 자식 작업 중 단 하나라도 급박한 일정이 있다면, 재귀 순회를 통해 자식의 최고 우선순위를 부모에게 상향 전파하여 덩어리 전체를 스케줄 최상단으로 끌어올리는 지능형 정렬 시스템을 구현했습니다.
 
 </details>
 
