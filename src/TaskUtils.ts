@@ -37,12 +37,12 @@ export const REGEX = {
 };
 
 export const MARKER_PRI: Record<string, number> = { 
-    '#Past': 1, 
-    '#D-0': 2, 
-    '#D-1': 3, 
-    '#D-2': 4, 
-    '#D-3': 5, 
-    '#D-7': 6, 
+    '!': 1, 
+    '0': 2, 
+    '1': 3, 
+    '2': 4, 
+    '3': 5, 
+    '7': 6, 
     '': 99 
 };
 
@@ -242,12 +242,12 @@ export class TaskUtils {
         const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         const diff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-        if (diff < 0) return "#Past ";
-        if (diff === 0) return "#D-0 ";
-        if (diff === 1) return "#D-1 ";
-        if (diff === 2) return "#D-2 ";
-        if (diff === 3) return "#D-3 ";
-        if (diff >= 4 && diff <= 7) return "#D-7 ";
+        if (diff < 0) return "!";
+        if (diff === 0) return "0";
+        if (diff === 1) return "1";
+        if (diff === 2) return "2";
+        if (diff === 3) return "3";
+        if (diff >= 4 && diff <= 7) return "7";
         return "";
     }
 
