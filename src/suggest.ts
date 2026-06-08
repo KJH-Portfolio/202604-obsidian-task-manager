@@ -11,7 +11,7 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
         // 엔터 키 입력 시 첫 번째 제안 자동 선택 리스너 추가
         this.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter") {
-                const activeItem = document.querySelector(".suggestion-item.is-active");
+                const activeItem = activeDocument.querySelector(".suggestion-item.is-active");
                 if (activeItem) return; // 이미 사용자가 방향키로 선택 중인 경우 기본 동작 유지
 
                 const suggestions = this.getSuggestions(this.inputEl.value);
@@ -64,7 +64,7 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
         // 엔터 키 입력 시 첫 번째 제안 자동 선택 리스너 추가
         this.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter") {
-                const activeItem = document.querySelector(".suggestion-item.is-active");
+                const activeItem = activeDocument.querySelector(".suggestion-item.is-active");
                 if (activeItem) return; // 이미 사용자가 방향키로 선택 중인 경우 기본 동작 유지
 
                 const suggestions = this.getSuggestions(this.inputEl.value);

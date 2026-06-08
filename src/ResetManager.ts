@@ -5,7 +5,7 @@ import { TaskUtils } from "./TaskUtils";
 export class DailyResetModal extends Modal {
     review: string;
     step: string;
-    onSubmit: (review: string, step: string) => void;
+    onSubmit: (review: string, step: string) => Promise<void> | void;
 
     constructor(app: App, defaultReview: string, onSubmit: (review: string, step: string) => void) {
         super(app);

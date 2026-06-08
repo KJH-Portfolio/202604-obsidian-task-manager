@@ -50,8 +50,10 @@
     border-radius: 4px;
 }
 
-.markdown-rendered li:has(> .tag[href*="D-" i], .markdown-rendered li:has(> p > .tag[href*="D-" i], 
-.tag[href*="past" i], .tag[href*="past" i], 
+.markdown-rendered li:has(> .tag[href*="D-" i]),
+.markdown-rendered li:has(> p > .tag[href*="D-" i]),
+.markdown-rendered li:has(> .tag[href*="past" i]),
+.markdown-rendered li:has(> p > .tag[href*="past" i]),
 .cm-line:has([class*="tag-D-" i]),
 .cm-line:has([class*="tag-past" i]) {
     background-origin: content-box;
@@ -117,42 +119,48 @@
 
 /* 1.4. [콜아웃 내부] 가독성 개선 (6px 바 + 무채색 음영) */
 /* #D-7 (회색) */
-.callout li:has(> .tag[href*="d-7" i], .callout li:has(> p > .tag[href*="d-7" i],
+.callout li:has(> .tag[href*="d-7" i]),
+.callout li:has(> p > .tag[href*="d-7" i]),
 .callout .cm-tag-D-7,
 .callout .cm-tag-d-7 {
     background-image: linear-gradient(to right, rgba(150, 150, 150, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-3 (파랑) */
-.callout li:has(> .tag[href*="d-3" i], .callout li:has(> p > .tag[href*="d-3" i],
+.callout li:has(> .tag[href*="d-3" i]),
+.callout li:has(> p > .tag[href*="d-3" i]),
 .callout .cm-tag-D-3,
 .callout .cm-tag-d-3 {
     background-image: linear-gradient(to right, rgba(8, 109, 221, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-2 (초록) */
-.callout li:has(> .tag[href*="d-2" i], .callout li:has(> p > .tag[href*="d-2" i],
+.callout li:has(> .tag[href*="d-2" i]),
+.callout li:has(> p > .tag[href*="d-2" i]),
 .callout .cm-tag-D-2,
 .callout .cm-tag-d-2 {
     background-image: linear-gradient(to right, rgba(68, 207, 110, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-1 (노랑) */
-.callout li:has(> .tag[href*="d-1" i], .callout li:has(> p > .tag[href*="d-1" i],
+.callout li:has(> .tag[href*="d-1" i]),
+.callout li:has(> p > .tag[href*="d-1" i]),
 .callout .cm-tag-D-1,
 .callout .cm-tag-d-1 {
     background-image: linear-gradient(to right, rgba(255, 210, 0, 0.95) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-0 (빨강) */
-.callout li:has(> .tag[href*="d-0" i], .callout li:has(> p > .tag[href*="d-0" i],
+.callout li:has(> .tag[href*="d-0" i]),
+.callout li:has(> p > .tag[href*="d-0" i]),
 .callout .cm-tag-D-0,
 .callout .cm-tag-d-0 {
     background-image: linear-gradient(to right, rgba(233, 49, 71, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #Past (다크 레드) */
-.callout li:has(> .tag[href*="past" i], .callout li:has(> p > .tag[href*="past" i],
+.callout li:has(> .tag[href*="past" i]),
+.callout li:has(> p > .tag[href*="past" i]),
 .callout .cm-line:has(.cm-tag-Past),
 .callout .cm-line:has(.cm-tag-past) {
     background-image: linear-gradient(to right, rgba(140, 0, 40, 0.95) 6px, rgba(128, 128, 128, 0.08) 6px);

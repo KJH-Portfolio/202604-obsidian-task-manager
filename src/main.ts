@@ -9,7 +9,7 @@ import { TemplateHelper } from "./TemplateHelper";
 class QuickCaptureModal extends Modal {
     content: string;
     selectedDate: string;
-    onSubmit: (content: string) => void;
+    onSubmit: (content: string) => Promise<void> | void;
 
     constructor(app: App, onSubmit: (content: string) => void) {
         super(app);
@@ -160,10 +160,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         const noticeObserver = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
-                    if (node instanceof HTMLElement && node.classList.contains("notice")) {
-                        const text = node.innerText || "";
-                        if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
-                            node.addClass("myworld-d-none");
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const el = node as HTMLElement;
+                        if (el.classList.contains("notice")) {
+                            const text = el.innerText || "";
+                            if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
+                                el.addClass("myworld-d-none");
+                            }
                         }
                     }
                 });
@@ -251,57 +254,58 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             id: "quick-capture",
             name: "빠른 할 일 등록",
             callback: () => {
-                new QuickCaptureModal(this.app, async (content) => {
-                    const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
-                    if (scheduleFile && scheduleFile instanceof TFile) {
-                        try {
-                            const original = await this.app.vault.read(scheduleFile);
-                            let text = this.utils.preprocessContent(original);
-                            
-                            // # Todo 섹션 하단의 #### 할 일 아래에 추가 시도
-                            const todoHeader = "#### 할 일";
-                            const todoRange = this.utils.getSectionRange(text, todoHeader, 4);
-                            
-                            const newTaskLine = `- [ ] ${content}`;
-                            
-                            if (todoRange) {
-                                // #### 할 일 바로 아랫줄에 추가
-                                const startIdx = (todoRange as { start: number; end: number }).start;
-                                const endIdx = (todoRange as { start: number; end: number }).end;
+                new QuickCaptureModal(this.app, (content) => {
+                    void (async () => {
+                        const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
+                        if (scheduleFile && scheduleFile instanceof TFile) {
+                            try {
+                                const original = await this.app.vault.read(scheduleFile);
+                                let text = this.utils.preprocessContent(original);
                                 
-                                const before = text.substring(0, startIdx + todoHeader.length);
-                                const after = text.substring(startIdx + todoHeader.length);
+                                // # Todo 섹션 하단의 #### 할 일 아래에 추가 시도
+                                const todoHeader = "#### 할 일";
+                                const todoRange = this.utils.getSectionRange(text, todoHeader, 4);
                                 
-                                text = before + "\n" + newTaskLine + after;
-                            } else {
-                                // # Todo 섹션 아래에 추가
-                                const mainTodoHeader = "# Todo";
-                                const mainTodoRange = this.utils.getSectionRange(text, mainTodoHeader, 1);
-                                if (mainTodoRange) {
-                                    const startIdx = (mainTodoRange as { start: number; end: number }).start;
-                                    const before = text.substring(0, startIdx + mainTodoHeader.length);
-                                    const after = text.substring(startIdx + mainTodoHeader.length);
+                                const newTaskLine = `- [ ] ${content}`;
+                                
+                                if (todoRange) {
+                                    // #### 할 일 바로 아랫줄에 추가
+                                    const startIdx = (todoRange as { start: number; end: number }).start;
+                                    
+                                    const before = text.substring(0, startIdx + todoHeader.length);
+                                    const after = text.substring(startIdx + todoHeader.length);
                                     
                                     text = before + "\n" + newTaskLine + after;
                                 } else {
-                                    // 섹션이 전혀 없으면 파일 끝에 추가
-                                    text = text.trimEnd() + "\n\n" + newTaskLine;
+                                    // # Todo 섹션 아래에 추가
+                                    const mainTodoHeader = "# Todo";
+                                    const mainTodoRange = this.utils.getSectionRange(text, mainTodoHeader, 1);
+                                    if (mainTodoRange) {
+                                        const startIdx = (mainTodoRange as { start: number; end: number }).start;
+                                        const before = text.substring(0, startIdx + mainTodoHeader.length);
+                                        const after = text.substring(startIdx + mainTodoHeader.length);
+                                        
+                                        text = before + "\n" + newTaskLine + after;
+                                    } else {
+                                        // 섹션이 전혀 없으면 파일 끝에 추가
+                                        text = text.trimEnd() + "\n\n" + newTaskLine;
+                                    }
                                 }
+                                
+                                // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
+                                const todayObj = moment().startOf('day').toDate();
+                                text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
+                                
+                                await this.utils.saveIfChanged(scheduleFile, text, original);
+                                new Notice(`✅ 할 일이 메인 스케줄에 추가되었습니다: "${content}"`);
+                            } catch (err) {
+                                console.error(err);
+                                new Notice("🚨 할 일 추가 도중 에러가 발생했습니다.");
                             }
-                            
-                            // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
-                            const todayObj = moment().startOf('day').toDate();
-                            text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
-                            
-                            await this.utils.saveIfChanged(scheduleFile, text, original);
-                            new Notice(`✅ 할 일이 메인 스케줄에 추가되었습니다: "${content}"`);
-                        } catch (err) {
-                            console.error(err);
-                            new Notice("🚨 할 일 추가 도중 에러가 발생했습니다.");
+                        } else {
+                            new Notice(`🚨 스케줄 관리 노트를 찾을 수 없습니다: ${this.settings.mainSchedulePath}`);
                         }
-                    } else {
-                        new Notice(`🚨 스케줄 관리 노트를 찾을 수 없습니다: ${this.settings.mainSchedulePath}`);
-                    }
+                    })();
                 }).open();
             }
         });
@@ -320,12 +324,14 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             id: "create-new-project",
             name: "새 프로젝트 노트 생성",
             callback: () => {
-                new CreateProjectModal(this.app, async (projectName) => {
-                    const file = await this.createNewProjectFile(projectName);
-                    if (file) {
-                        const leaf = this.app.workspace.getLeaf(false);
-                        await leaf.openFile(file);
-                    }
+                new CreateProjectModal(this.app, (projectName) => {
+                    void (async () => {
+                        const file = await this.createNewProjectFile(projectName);
+                        if (file) {
+                            const leaf = this.app.workspace.getLeaf(false);
+                            await leaf.openFile(file);
+                        }
+                    })();
                 }).open();
             }
         });

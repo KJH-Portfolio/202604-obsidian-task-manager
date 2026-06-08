@@ -36,6 +36,13 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    // 설정 탭 새로고침 메서드 (this.display() deprecated 대체)
+    private refresh(): void {
+        const { containerEl } = this;
+        containerEl.empty();
+        this.display();
+    }
+
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
@@ -193,7 +200,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                             await this.plugin.templateHelper.createDefaultTemplatesFolderAndFiles(resultPath);
                             this.plugin.settings.templatesDirectory = resultPath;
                             await this.plugin.saveSettings();
-                            this.display();
+                            this.refresh();
                             new Notice(`✅ ${resultPath} 하위에 기본 템플릿 파일들이 생성되었습니다!`);
                         } catch (err) {
                             console.error(err);
@@ -264,7 +271,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                     new ConfirmModal(this.app, "정말로 모든 설정값을 초기 상태로 되돌리시겠습니까?", async () => {
                         this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);
                         await this.plugin.saveSettings();
-                        this.display();
+                        this.refresh();
                         new Notice("✅ 모든 설정값이 초기화되었습니다!");
                     }).open();
                 }));
