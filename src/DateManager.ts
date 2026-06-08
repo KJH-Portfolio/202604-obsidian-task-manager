@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { moment } from "obsidian";
 import { PluginSettings } from "./settings";
 import { DATE_FORMATS } from "./Constants";

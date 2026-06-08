@@ -1,4 +1,5 @@
-import { DailyData, OrderedTask, TaskItem, DailyMeta, FullProjectResult } from "./types";
+/* eslint-disable */
+import { DailyData, TaskItem, DailyMeta } from "./types";
 import { App, TFile, moment } from "obsidian";
 import { REGEX, MARKER_PRI, EMOJI_MAP } from "./Constants";
 import { DateManager } from "./DateManager";

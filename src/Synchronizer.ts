@@ -1,5 +1,5 @@
 import { SyncTask } from "./types";
-import { App, TFile, Notice, moment } from "obsidian";
+import { App, TFile, Notice } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
 import { DateManager } from "./DateManager";

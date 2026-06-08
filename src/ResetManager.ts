@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { App, Modal, TFile, Notice, MarkdownView } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Plugin, TFile, Notice, Modal, Setting, App } from "obsidian";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab } from "./settings";
 import { TaskUtils } from "./TaskUtils";

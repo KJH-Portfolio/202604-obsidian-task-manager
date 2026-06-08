@@ -38,13 +38,14 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
 
     // 설정 탭 새로고침 메서드 (this.display() deprecated 대체)
     private refresh(): void {
-        const { containerEl } = this;
-        containerEl.empty();
-        // @ts-expect-error: display is deprecated in Obsidian 1.13.0 but required for older compatibility
-        this.display();
+        this.renderSettings();
     }
 
     display(): void {
+        this.renderSettings();
+    }
+
+    private renderSettings(): void {
         const { containerEl } = this;
         containerEl.empty();
         new Setting(containerEl).setName("일반 설정").setHeading();
