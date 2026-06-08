@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any -- Type inference limitations */
 import { App, TFile, moment } from "obsidian";
-import { REGEX, MARKER_PRI, EMOJI_MAP, HEADERS } from "./Constants";
+import { REGEX, MARKER_PRI, EMOJI_MAP } from "./Constants";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 
@@ -705,7 +704,7 @@ export class TaskUtils {
             if (!this.app.vault.getAbstractFileByPath(current)) {
                 try {
                     await this.app.vault.createFolder(current);
-                } catch (_e) {}
+                } catch (e) {}
             }
         }
     }
