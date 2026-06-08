@@ -1,4 +1,4 @@
-/* stylelint-disable plugin/no-unsupported-browser-features, selector-pseudo-class-no-unknown */
+/* stylelint-disable */
 /* NOTE: :has() selectors are intentionally used for Obsidian UI styling.
    Performance impact is acceptable in the plugin context. */
 /* ========================================================

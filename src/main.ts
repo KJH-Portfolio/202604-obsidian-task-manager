@@ -303,7 +303,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 await this.utils.saveIfChanged(scheduleFile, text, original);
                                 new Notice(`✅ 할 일이 메인 스케줄에 추가되었습니다: "${content}"`);
                             } catch (err) {
-                                console.error(err);
+            console.error(err instanceof Error ? err.message : String(err));
                                 new Notice("🚨 할 일 추가 도중 에러가 발생했습니다.");
                             }
                         } else {
@@ -362,7 +362,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     await this.templateHelper.setupParaStructure();
                     new Notice("✅ PARA 시스템 폴더 구조 및 가이드 문서가 생성되었습니다.");
                 } catch (err) {
-                    console.error(err);
+            console.error(err instanceof Error ? err.message : String(err));
                     new Notice("🚨 PARA 시스템 구조 생성 중 에러가 발생했습니다.");
                 }
             }
@@ -377,7 +377,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     await this.templateHelper.setupZettelkastenStructure();
                     new Notice("✅ 제텔카스텐 폴더 구조 및 가이드 문서가 생성되었습니다.");
                 } catch (err) {
-                    console.error(err);
+            console.error(err instanceof Error ? err.message : String(err));
                     new Notice("🚨 제텔카스텐 구조 생성 중 에러가 발생했습니다.");
                 }
             }
@@ -445,7 +445,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             new Notice(`✅ 새 프로젝트 노트가 생성되었습니다: ${projectName}`);
             return newFile;
         } catch (err) {
-            console.error(err);
+            console.error(err instanceof Error ? err.message : String(err));
             new Notice("🚨 프로젝트 생성 중 에러가 발생했습니다.");
             return null;
         }
@@ -572,7 +572,7 @@ ${checklistTable}
             new Notice("✅ 오늘의 스케줄 관리 노트가 성공적으로 생성되었습니다!");
             return newFile;
         } catch (err) {
-            console.error(err);
+            console.error(err instanceof Error ? err.message : String(err));
             new Notice("🚨 스케줄 관리 노트 생성 중 에러가 발생했습니다.");
             return null;
         }
@@ -611,7 +611,7 @@ ${checklistTable}
             }
             return null;
         } catch (err) {
-            console.error(err);
+            console.error(err instanceof Error ? err.message : String(err));
             new Notice("🚨 임시 메모를 생성하거나 여는 도중 에러가 발생했습니다.");
             return null;
         }
