@@ -1,16 +1,24 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any -- Type inference limitations */
 import { App, TFile, Notice, moment } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
+import { DateManager } from "./DateManager";
+import { FileManager } from "./FileManager";
+import { REGEX, HEADERS } from "./Constants";
 
 export class Synchronizer {
     app: App;
     settings: PluginSettings;
     utils: TaskUtils;
+    dateManager: DateManager;
+    fileManager: FileManager;
 
-    constructor(app: App, settings: PluginSettings, utils: TaskUtils) {
+    constructor(app: App, settings: PluginSettings, utils: TaskUtils, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
         this.settings = settings;
         this.utils = utils;
+        this.dateManager = dateManager;
+        this.fileManager = fileManager;
     }
 
     // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
@@ -18,10 +26,8 @@ export class Synchronizer {
         try {
             new Notice("⏳ 프로젝트 동기화 시작...");
             const originalContent = await this.app.vault.read(dailyFile);
-            let content = this.utils.preprocessContent(originalContent);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
-            const now = moment();
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
+            let content = this.utils.preprocessContent(originalContent);
+            const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
 
             // 데일리 노트 내의 프로젝트 맵 파싱
@@ -72,10 +78,8 @@ export class Synchronizer {
         
         try {
             const noteName = projectFile.basename;
-            new Notice("⏳ 스케줄 반영 및 대시보드 갱신 중...");
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
-            const now = moment();
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
+            new Notice("⏳ 스케줄 반영 및 대시보드 갱신 중...");
+            const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
 
             let content = this.utils.preprocessContent(originalActive);
@@ -136,20 +140,16 @@ export class Synchronizer {
                         let { id } = this.utils.extractIdAndText(pMatch[3]);
                         if (id) {
                             originalIds.add(id);
-                            if (execMap.has(id)) {
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Type inference limitation
-                                const et = execMap.get(id);
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Type inference limitation
+                            if (execMap.has(id)) {
+                                const et = execMap.get(id);
                                 const tM = et.line.match(REGEX.TASK_LINE);
                                 if (tM) {
-                                    const { text: execText } = this.utils.extractIdAndText(tM[3]);
-                                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
+                                    const { text: execText } = this.utils.extractIdAndText(tM[3]);
                                     newPlanLines.push(`${pMatch[1]} [${et.status}] ${execText} ^${id}`);
                                 } else {
                                     newPlanLines.push(l);
                                 }
-                                planTasksTotal++;
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument -- Type inference limitation
+                                planTasksTotal++;
                                 if (REGEX.MATCH_TASK_COMPLETED.test(et.line)) planTasksDone++;
                             } else {
                                 newPlanLines.push(l);

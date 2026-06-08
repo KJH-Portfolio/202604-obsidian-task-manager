@@ -1,16 +1,24 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any -- Type inference limitations */
 import { App } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
+import { DateManager } from "./DateManager";
+import { FileManager } from "./FileManager";
+import { REGEX, HEADERS } from "./Constants";
 
 export class TemplateHelper {
     app: App;
     settings: PluginSettings;
     utils: TaskUtils;
+    dateManager: DateManager;
+    fileManager: FileManager;
 
-    constructor(app: App, settings: PluginSettings, utils: TaskUtils) {
+    constructor(app: App, settings: PluginSettings, utils: TaskUtils, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
         this.settings = settings;
         this.utils = utils;
+        this.dateManager = dateManager;
+        this.fileManager = fileManager;
     }
 
     async createDefaultTemplatesFolderAndFiles(templatesDir: string): Promise<void> {

@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any -- Type inference limitations */
 import { Plugin, TFile, Notice, Modal, Setting, App, moment } from "obsidian";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { Synchronizer } from "./Synchronizer";
 import { ResetManager } from "./ResetManager";
 import { TemplateHelper } from "./TemplateHelper";
+import { DateManager } from "./DateManager";
+import { FileManager } from "./FileManager";
 
 // 1. 빠른 할 일 캡처 모달
 class QuickCaptureModal extends Modal {
@@ -148,6 +151,8 @@ class CreateProjectModal extends Modal {
 
 export default class MyWorldTaskManagerPlugin extends Plugin {
     settings: PluginSettings;
+    dateManager: DateManager;
+    fileManager: FileManager;
     utils: TaskUtils;
     synchronizer: Synchronizer;
     resetManager: ResetManager;
@@ -292,9 +297,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     }
                                 }
                                 
-                                // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
-                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
-                                const todayObj = moment().startOf('day').toDate();
+                                // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
+                                const todayObj = this.dateManager.getTodayStart();
                                 text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
                                 
                                 await this.utils.saveIfChanged(scheduleFile, text, original);
@@ -429,15 +433,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 # 세부 사항
 `;
                 }
-            }
-
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
-            const now = moment();
+            }
+            const now = this.dateManager.getAdjustedNow();
             const replacements = {
-                projectName: projectName,
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
-                date: now.format("YYYY-MM-DD"),
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
+                projectName: projectName,
+                date: now.format("YYYY-MM-DD"),
                 time: now.format("HH:mm")
             };
 
@@ -558,16 +558,11 @@ ${checklistTable}
 > 📈 루틴 집계 및 아카이브 통계가 10일 구간별로 렌더링됩니다.
 `;
                 }
-            }
-
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
-            const now = moment();
-            const replacements = {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
-                date: now.format("YYYY-MM-DD"),
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
-                time: now.format("HH:mm"),
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
+            }
+            const now = this.dateManager.getAdjustedNow();
+            const replacements = {
+                date: now.format("YYYY-MM-DD"),
+                time: now.format("HH:mm"),
                 currentDay: now.date().toString(),
                 defaultStep: "계획 따라 움직이기. 1:30 취침하기.",
                 defaultAffirmation: "시작이 반 이다."
@@ -596,15 +591,12 @@ ${checklistTable}
             await this.utils.ensureFolder(folderPath);
 
             let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
-            if (!memoFile) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Obsidian moment API usage
-                const now = moment();
+            if (!memoFile) {
+                const now = this.dateManager.getAdjustedNow();
                 const defaultContent = `---
-작성일: "${
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
+작성일: "${
                     now.format("YYYY-MM-DDTHH:mm")}"
-수정일: "${
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Obsidian moment API usage
+수정일: "${
                     now.format("YYYY-MM-DDTHH:mm")}"
 ---
 
@@ -626,8 +618,7 @@ ${checklistTable}
         }
     }
 
-    async loadSettings() {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Load default settings handling
+    async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 
