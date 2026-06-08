@@ -39,7 +39,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-        new Setting(containerEl).setName("MyWorld Task Manager 설정").setHeading();
+        new Setting(containerEl).setName("일반 설정").setHeading();
 
         // 1. 경로 설정 섹션
         new Setting(containerEl).setName("1. 경로 설정").setHeading();
@@ -259,8 +259,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             .setName("설정값 초기화")
             .setDesc("플러그인의 모든 설정을 기본값으로 되돌립니다. (주의: 기존 설정 정보가 소실되며, 되돌릴 수 없습니다.)")
             .addButton(btn => btn
-                .setButtonText("초기화 실행")
-                .setDestructive()
+                .setButtonText("초기화 실행").buttonEl.addClass("mod-warning")
                 .onClick(async () => {
                     new ConfirmModal(this.app, "정말로 모든 설정값을 초기 상태로 되돌리시겠습니까?", async () => {
                         this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);

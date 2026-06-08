@@ -31,7 +31,7 @@ class QuickCaptureModal extends Modal {
         // Left part: Title and Subtitle
         const leftGroup = headerContainer.createDiv({ attr: { style: "display: flex; align-items: baseline; gap: 10px;" } });
         const title = leftGroup.createEl("h3", { text: "✏️ 할 일 등록" });
-        title.style.margin = "0";
+        title.setCssStyles({ margin: "0" });
         leftGroup.createEl("span", { text: "메인 스케줄에 즉시 추가됩니다.", attr: { style: "font-size: 0.9em; color: var(--text-muted);" } });
 
         // Right part: Date Picker & Tomorrow Button
@@ -39,16 +39,16 @@ class QuickCaptureModal extends Modal {
         
         const dateInput = rightGroup.createEl("input", { type: "date" });
         dateInput.value = this.selectedDate;
-        dateInput.style.padding = "4px";
-        dateInput.style.border = "1px solid var(--background-modifier-border)";
-        dateInput.style.borderRadius = "4px";
-        dateInput.style.backgroundColor = "var(--background-secondary)";
-        dateInput.style.color = "var(--text-normal)";
+        dateInput.setCssStyles({ padding: "4px" });
+        dateInput.setCssStyles({ border: "1px solid var(--background-modifier-border)" });
+        dateInput.setCssStyles({ borderRadius: "4px" });
+        dateInput.setCssStyles({ backgroundColor: "var(--background-secondary)" });
+        dateInput.setCssStyles({ color: "var(--text-normal)" });
 
         const tomorrowBtn = rightGroup.createEl("button", { text: "+" });
-        tomorrowBtn.style.padding = "4px 10px";
-        tomorrowBtn.style.fontSize = "1.0em";
-        tomorrowBtn.style.boxShadow = "none";
+        tomorrowBtn.setCssStyles({ padding: "4px 10px" });
+        tomorrowBtn.setCssStyles({ fontSize: "1.0em" });
+        tomorrowBtn.setCssStyles({ boxShadow: "none" });
         
         dateInput.addEventListener("change", (e) => {
             this.selectedDate = (e.target as HTMLInputElement).value;
@@ -63,8 +63,8 @@ class QuickCaptureModal extends Modal {
         // Full width input box
         const inputContainer = contentEl.createDiv({ attr: { style: "margin-bottom: 20px;" } });
         const inputEl = inputContainer.createEl("input", { type: "text", placeholder: "예: 물 2L 마시기" });
-        inputEl.style.width = "100%";
-        inputEl.style.padding = "10px";
+        inputEl.setCssStyles({ width: "100%" });
+        inputEl.setCssStyles({ padding: "10px" });
         
         inputEl.addEventListener("input", (e) => {
             this.content = (e.target as HTMLInputElement).value;
@@ -95,7 +95,7 @@ class QuickCaptureModal extends Modal {
         btn.addEventListener("click", submitAction);
 
         // Auto-focus the input box
-        setTimeout(() => inputEl.focus(), 50);
+        window.setTimeout(() => inputEl.focus(), 50);
     }
 
     onClose() {
@@ -160,17 +160,17 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         const noticeObserver = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
-                    if (node instanceof HTMLElement && node.classList.contains("notice")) {
+                    if (node.instanceOf(HTMLElement) && node.classList.contains("notice")) {
                         const text = node.innerText || "";
                         if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
-                            node.style.display = "none";
+                            node.setCssStyles({ display: "none" });
                         }
                     }
                 });
             });
         });
 
-        noticeObserver.observe(document.body, { childList: true, subtree: true });
+        noticeObserver.observe(activeDocument.body, { childList: true, subtree: true });
         this.register(() => noticeObserver.disconnect());
         // ------------------------------------------------
 

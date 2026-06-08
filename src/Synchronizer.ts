@@ -1,4 +1,4 @@
-import { App, TFile, Notice } from "obsidian";
+import { App, TFile, Notice, moment } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
 
@@ -81,7 +81,7 @@ export class Synchronizer {
             let planTasks: { id: string; line: string }[] = [];
             let planTasksTotal = 0, planTasksDone = 0;
             let originalPlanLines: string[] = [];
-            let finalStatBar = "";
+            
 
             let planStartLine = -1;
             

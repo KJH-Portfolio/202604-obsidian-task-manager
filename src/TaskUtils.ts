@@ -1,4 +1,4 @@
-import { App, TFile, MetadataCache, moment } from "obsidian";
+import { App, TFile, moment } from "obsidian";
 
 export interface PluginSettings {
     projectDirectory: string;
