@@ -191,10 +191,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         await this.loadSettings();
 
         // 2. 핵심 모듈 인스턴스 생성
-        this.utils = new TaskUtils(this.app, this.settings);
-        this.synchronizer = new Synchronizer(this.app, this.settings, this.utils);
-        this.resetManager = new ResetManager(this.app, this.settings, this.utils);
-        this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils);
+        this.dateManager = new DateManager(this.settings);
+        this.fileManager = new FileManager(this.app);
+        this.utils = new TaskUtils(this.app, this.settings, this.dateManager, this.fileManager);
+        this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
+        this.resetManager = new ResetManager(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
+        this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
 
         // 3. 설정 탭 등록
         this.addSettingTab(new MyWorldTaskManagerSettingTab(this.app, this));
