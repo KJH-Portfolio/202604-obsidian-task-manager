@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
 import { App, TFile, MetadataCache, moment } from "obsidian";
 
 export interface PluginSettings {
@@ -78,7 +77,7 @@ export class TaskUtils {
     getMarkerPri() { return MARKER_PRI; }
     getEmojiMap() { return EMOJI_MAP; }
 
-    getAdjustedNow(): any {
+    getAdjustedNow(): moment.Moment {
         const now = moment();
         const offset = this.settings.midnightOffsetHour ?? 4;
         if (now.hour() < offset) {
@@ -94,14 +93,14 @@ export class TaskUtils {
             .replace(/\n{3,}/g, '\n\n');
     }
 
-    getCache(file: TFile): any {
+    getCache(file: TFile): import("obsidian").CachedMetadata | null {
         return this.app.metadataCache.getFileCache(file);
     }
 
     hasSection(file: TFile, sectionName: string, level = 1): boolean {
         const cache = this.getCache(file);
         if (!cache || !cache.headings) return true;
-        return cache.headings.some((h: any) => h.heading === sectionName && h.level === level);
+        return cache.headings.some((h: import("obsidian").HeadingCache) => h.heading === sectionName && h.level === level);
     }
 
     getSectionRange(fileOrContent: TFile | string, sectionName: string, level = 1, fallbackLines: string[] | null = null): { start: number, end: number } | { startLine: number, endLine: number } | null {
@@ -125,7 +124,7 @@ export class TaskUtils {
         let useFallback = false;
         const cache = this.getCache(file);
         if (cache && cache.headings) {
-            const hIdx = cache.headings.findIndex((h: any) => h.heading === sectionName && h.level === level);
+            const hIdx = cache.headings.findIndex((h: import("obsidian").HeadingCache) => h.heading === sectionName && h.level === level);
             if (hIdx !== -1) {
                 const startLine = cache.headings[hIdx].position.start.line;
                 
@@ -163,7 +162,7 @@ export class TaskUtils {
         return null;
     }
 
-    getMonthlyArchivePath(dateMoment: any) {
+    getMonthlyArchivePath(dateMoment: moment.Moment) {
         const root = this.settings.archiveDirectory;
         const yyyy = dateMoment.format("YYYY");
         const quarter = `Q${dateMoment.quarter()}`;
@@ -177,7 +176,7 @@ export class TaskUtils {
         };
     }
 
-    getWeeklyArchivePath(dateMoment: any) {
+    getWeeklyArchivePath(dateMoment: moment.Moment) {
         const root = this.settings.archiveDirectory;
         const gggg = dateMoment.format("gggg");
         const weekStr = dateMoment.format("gggg-[W]ww"); 
@@ -284,7 +283,7 @@ export class TaskUtils {
                         if (!lineInfos[j].isCompleted) {
                             lineInfos[j].isCompleted = true;
                             const pStatus = (lineInfos[i].line.match(REGEX.STATUS_MATCH) || ["", "x"])[1];
-                            (lineInfos[j] as any).propStatus = pStatus;
+                            (lineInfos[j] as { propStatus?: string }).propStatus = pStatus;
                         }
                     }
                 }
@@ -295,7 +294,7 @@ export class TaskUtils {
             if (!d.isTask) return d.line;
             let l = d.line.replace(REGEX.BLOCK_MARKER_REPLACE, '$1 ').replace(REGEX.MARKER_REPLACE_2, `$1 ${d.m}`);
             if (d.isCompleted) {
-                const s = (d as any).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", "x"])[1];
+                const s = (d as { propStatus?: string }).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", "x"])[1];
                 l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${s}]`);
             }
             return l;
@@ -417,7 +416,7 @@ export class TaskUtils {
         return nodes.flatMap(n => [n.line, ...this.flattenTreeToMarkdown(n.children)]);
     }
 
-    processSectionLogic(cContent: string, hName: string, todayObj: Date, isReset = false, shouldSort = true, options: any = {}): string {
+    processSectionLogic(cContent: string, hName: string, todayObj: Date, isReset = false, shouldSort = true, options: Record<string, unknown> = {}): string {
         const escapedHName = hName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const safeRegex = new RegExp(`(^|\\n)${escapedHName}[ \\t]*(?=\\n|$)`);
         const sMatch = safeRegex.exec(cContent);
@@ -612,13 +611,13 @@ export class TaskUtils {
         }).join("\n");
     }
 
-    syncDailyMap(dailyMap: any) {
+    syncDailyMap(dailyMap: Record<string, string[]>) {
         for (const noteName in dailyMap) {
             const data = dailyMap[noteName];
-            const textQueues: Record<string, any[]> = {};
+            const textQueues: Record<string, string[]> = {};
             for (const key in data.byText) textQueues[key] = [...data.byText[key]];
 
-            const tasks = data.orderedTasks.map((ot: any) => {
+            const tasks = data.orderedTasks.map((ot: { id: string; status: string; text: string }) => {
                 if (ot.type === 'id') return data.byId[ot.key];
                 if (textQueues[ot.key] && textQueues[ot.key].length > 0) return textQueues[ot.key].shift();
                 return null;
@@ -705,7 +704,7 @@ export class TaskUtils {
         }
     }
 
-    sortProjectResults(items: any[]): any[] {
+    sortProjectResults(items: Record<string, unknown>[]): Record<string, unknown>[] {
         if (!items || !Array.isArray(items)) return [];
         return items.sort((a, b) => {
             if (a.sortPri !== b.sortPri) return a.sortPri - b.sortPri;
@@ -717,7 +716,7 @@ export class TaskUtils {
         });
     }
 
-    generateProjectDashboard(projects: any[]): string {
+    generateProjectDashboard(projects: Record<string, unknown>[]): string {
         if (!projects || projects.length === 0) return "";
         
         let html = `<div style="padding: 16px; background: var(--background-secondary); border-radius: 12px; border: 1px solid var(--background-modifier-border); margin: 10px 0 25px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">\n`;
@@ -853,7 +852,7 @@ export class TaskUtils {
         return { step, review };
     }
 
-    renderProjectDashboardSection(projectResults: any[]): string {
+    renderProjectDashboardSection(projectResults: Record<string, unknown>[]): string {
         if (!projectResults || projectResults.length === 0) return "";
         const dashboardHtml = this.generateProjectDashboard(projectResults);
         const calloutsHtml = projectResults.map(i => i.calloutText).filter(t => t.trim() !== "").join("\n\n");
@@ -876,7 +875,7 @@ export class TaskUtils {
         return false;
     }
 
-    getActualDate(nowMoment: any, dayNum: number): any {
+    getActualDate(nowMoment: moment.Moment, dayNum: number): moment.Moment {
         return nowMoment.clone().date(dayNum);
     }
 
@@ -916,7 +915,7 @@ export class TaskUtils {
         return { nodes: pruned, hasD0: hasD0Any };
     }
 
-    renderTodayProjectTasks(projectResults: any[], todayObj: Date): string {
+    renderTodayProjectTasks(projectResults: Record<string, unknown>[], todayObj: Date): string {
         if (!projectResults) return "";
         let finalLines: string[] = [];
         
@@ -958,7 +957,7 @@ export class TaskUtils {
         return finalLines.join('\n');
     }
 
-    async getAllProjectResults(todayObj: Date, overrideData: Record<string, any> = {}, isReset = false): Promise<any[]> {
+    async getAllProjectResults(todayObj: Date, overrideData: Record<string, unknown> = {}, isReset = false): Promise<Record<string, unknown>[]> {
         const projectFiles = this.getProjectFiles();
         
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
@@ -1025,13 +1024,13 @@ export class TaskUtils {
     }
 
     // 1. [포팅] 데일리 노트 내의 프로젝트 맵 파싱
-    parseDailyProjectMap(content: string): Record<string, any> | null {
+    parseDailyProjectMap(content: string): Record<string, string[]> | null {
         const range = this.getSectionRange(content, "# Project") as { start: number, end: number };
         if (!range) return null;
 
         const pLines = content.substring(range.start, range.end).split("\n");
         let currNote: string | null = null;
-        const dailyMap: Record<string, any> = {};
+        const dailyMap: Record<string, string[]> = {};
 
         for (let l of pLines) {
             const calloutMatch = l.match(/^>\s*\[![a-zA-Z]+\]-?\s+.*?\*\*([^*]+)\*\*/);
@@ -1074,7 +1073,7 @@ export class TaskUtils {
     }
 
     // 2. [포팅] 주간 아카이브 요약 표 및 기록 갱신
-    async updateWeeklyNoteStats(app: App, targetDate: any, tableHeader: string, weekRows: string[], dailyRecord = ""): Promise<void> {
+    async updateWeeklyNoteStats(app: App, targetDate: moment.Moment, tableHeader: string, weekRows: string[], dailyRecord = ""): Promise<void> {
         const weeklyInfo = this.getWeeklyArchivePath(targetDate);
         await this.ensureFolder(weeklyInfo.folder);
         let wFile = app.vault.getAbstractFileByPath(weeklyInfo.path);
@@ -1202,7 +1201,7 @@ export class TaskUtils {
     }
 
     // 3. [포팅] 월간 아카이브 통계 수치 및 HTML 갱신
-    async updateMonthlyArchiveStats(app: App, targetMonthMoment: any, dashboardStr: string): Promise<string | null> {
+    async updateMonthlyArchiveStats(app: App, targetMonthMoment: moment.Moment, dashboardStr: string): Promise<string | null> {
         const monthlyInfo = this.getMonthlyArchivePath(targetMonthMoment);
         await this.ensureFolder(monthlyInfo.folder);
         let mFile = app.vault.getAbstractFileByPath(monthlyInfo.path);
@@ -1226,8 +1225,8 @@ export class TaskUtils {
     }
 
     // 4. [포팅] 일일 스케줄 변경사항을 개별 프로젝트 파일로 전파 동기화
-    async syncDailyToProjects(app: App, dailyMap: any, allFiles: TFile[], collisionFiles: TFile[], isReset = false): Promise<Record<string, any>> {
-        const overrideData: Record<string, any> = {};
+    async syncDailyToProjects(app: App, dailyMap: Record<string, string[]>, allFiles: TFile[], collisionFiles: TFile[], isReset = false): Promise<Record<string, unknown>> {
+        const overrideData: Record<string, unknown> = {};
 
         await Promise.all(allFiles.map(async (file) => {
             try {
@@ -1360,7 +1359,7 @@ export class TaskUtils {
                         } 
                     }
                     for (const [id, d] of Object.entries(dailyData.byId)) { 
-                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...(d as any), id } }); 
+                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...(d as { text?: string; status?: string }), id } }); 
                     }
                     if (tasksToInsert.length > 0) {
                         let exStart = -1, exEnd = finalSLines.length, inExSec = false;
@@ -1374,7 +1373,7 @@ export class TaskUtils {
                             } 
                         }
                         if (exStart !== -1) {
-                            const ins = new Map<string, any[]>(); 
+                            const ins = new Map<string, unknown[]>(); 
                             const fbt = [];
                             for (let item of tasksToInsert) { 
                                 if (item.anchorId) { 

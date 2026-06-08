@@ -39,10 +39,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl("h2", { text: "MyWorld Task Manager 설정" });
+        new Setting(containerEl).setName("MyWorld Task Manager 설정").setHeading();
 
         // 1. 경로 설정 섹션
-        containerEl.createEl("h3", { text: "1. 경로 설정" });
+        new Setting(containerEl).setName("1. 경로 설정").setHeading();
         
         new Setting(containerEl)
             .setName("프로젝트 폴더 경로")
@@ -131,7 +131,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         // 2. 지식 관리 시스템 구축 헬퍼 섹션
-        containerEl.createEl("h3", { text: "2. 지식 관리 시스템 구축 헬퍼 (PARA & 제텔카스텐)" });
+        new Setting(containerEl).setName("2. 지식 관리 시스템 구축 헬퍼 (PARA & 제텔카스텐)").setHeading();
 
         new Setting(containerEl)
             .setName("PARA 구조 생성")
@@ -140,19 +140,19 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 .setButtonText("PARA 구조 생성")
                 .setCta()
                 .onClick(async () => {
-                    const confirmAction = window.confirm("정말 PARA 지식 관리 폴더 구조를 보관소 최상단에 일괄 생성하시겠습니까?\n(이미 존재하는 폴더는 안전하게 건너뜁니다.)");
-                    if (!confirmAction) return;
-                    try {
-                        const count = await this.plugin.templateHelper.setupParaStructure();
-                        if (count > 0) {
-                            new Notice(`✅ PARA 시스템 폴더/설명서 ${count}개가 신규 생성되었습니다!`);
-                        } else {
-                            new Notice("✅ 이미 모든 PARA 구조가 존재하여 파일 생성을 건너뛰었습니다.");
+                    new ConfirmModal(this.app, "정말 PARA 지식 관리 폴더 구조를 보관소 최상단에 일괄 생성하시겠습니까?\n(이미 존재하는 폴더는 안전하게 건너뜁니다.)", async () => {
+                        try {
+                            const count = await this.plugin.templateHelper.setupParaStructure();
+                            if (count > 0) {
+                                new Notice(`✅ PARA 시스템 폴더/설명서 ${count}개가 신규 생성되었습니다!`);
+                            } else {
+                                new Notice("✅ 이미 모든 PARA 구조가 존재하여 파일 생성을 건너뛰었습니다.");
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            new Notice("🚨 PARA 시스템 구조 생성 중 오류가 발생했습니다.");
                         }
-                    } catch (err) {
-                        console.error(err);
-                        new Notice("🚨 PARA 시스템 구조 생성 중 오류가 발생했습니다.");
-                    }
+                    }).open();
                 }));
 
         new Setting(containerEl)
@@ -162,23 +162,23 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 .setButtonText("제텔카스텐 구조 생성")
                 .setCta()
                 .onClick(async () => {
-                    const confirmAction = window.confirm("정말 제텔카스텐 지식 관리 폴더 구조를 보관소 최상단에 일괄 생성하시겠습니까?\n(이미 존재하는 폴더는 안전하게 건너뜁니다.)");
-                    if (!confirmAction) return;
-                    try {
-                        const count = await this.plugin.templateHelper.setupZettelkastenStructure();
-                        if (count > 0) {
-                            new Notice(`✅ 제텔카스텐 폴더/설명서 ${count}개가 신규 생성되었습니다!`);
-                        } else {
-                            new Notice("✅ 이미 모든 제텔카스텐 구조가 존재하여 파일 생성을 건너뛰었습니다.");
+                    new ConfirmModal(this.app, "정말 제텔카스텐 지식 관리 폴더 구조를 보관소 최상단에 일괄 생성하시겠습니까?\n(이미 존재하는 폴더는 안전하게 건너뜁니다.)", async () => {
+                        try {
+                            const count = await this.plugin.templateHelper.setupZettelkastenStructure();
+                            if (count > 0) {
+                                new Notice(`✅ 제텔카스텐 폴더/설명서 ${count}개가 신규 생성되었습니다!`);
+                            } else {
+                                new Notice("✅ 이미 모든 제텔카스텐 구조가 존재하여 파일 생성을 건너뛰었습니다.");
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            new Notice("🚨 제텔카스텐 구조 생성 중 오류가 발생했습니다.");
                         }
-                    } catch (err) {
-                        console.error(err);
-                        new Notice("🚨 제텔카스텐 구조 생성 중 오류가 발생했습니다.");
-                    }
+                    }).open();
                 }));
 
         // 3. 기본 환경 및 파일 생성 헬퍼 섹션
-        containerEl.createEl("h3", { text: "3. 기본 환경 및 파일 생성 헬퍼" });
+        new Setting(containerEl).setName("3. 기본 환경 및 파일 생성 헬퍼").setHeading();
 
         new Setting(containerEl)
             .setName("기본 템플릿 노트 생성")
@@ -229,7 +229,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 }));
 
         // 4. 커스텀 템플릿 에디터 섹션
-        containerEl.createEl("h3", { text: "4. 커스텀 노트 템플릿 본문 정의" });
+        new Setting(containerEl).setName("4. 커스텀 노트 템플릿 본문 정의").setHeading();
         
         new Setting(containerEl)
             .setName("커스텀 데일리 스케줄 템플릿")
@@ -254,20 +254,20 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 }));
 
         // 5. 설정 초기화 섹션
-        containerEl.createEl("h3", { text: "5. 설정 초기화" });
+        new Setting(containerEl).setName("5. 설정 초기화").setHeading();
         new Setting(containerEl)
             .setName("설정값 초기화")
             .setDesc("플러그인의 모든 설정을 기본값으로 되돌립니다. (주의: 기존 설정 정보가 소실되며, 되돌릴 수 없습니다.)")
             .addButton(btn => btn
                 .setButtonText("초기화 실행")
-                .setWarning()
+                .setDestructive()
                 .onClick(async () => {
-                    if (confirm("정말로 모든 설정값을 초기 상태로 되돌리시겠습니까?")) {
+                    new ConfirmModal(this.app, "정말로 모든 설정값을 초기 상태로 되돌리시겠습니까?", async () => {
                         this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);
                         await this.plugin.saveSettings();
                         this.display();
                         new Notice("✅ 모든 설정값이 초기화되었습니다!");
-                    }
+                    }).open();
                 }));
     }
 }
@@ -311,6 +311,45 @@ export class TemplatePathModal extends Modal {
                     }
                     this.close();
                     await this.onSubmit(this.resultPath);
+                })
+            )
+            .addButton(btn => btn
+                .setButtonText("취소")
+                .onClick(() => {
+                    this.close();
+                })
+            );
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
+export class ConfirmModal extends Modal {
+    message: string;
+    onConfirm: () => Promise<void>;
+
+    constructor(app: App, message: string, onConfirm: () => Promise<void>) {
+        super(app);
+        this.message = message;
+        this.onConfirm = onConfirm;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        
+        contentEl.createEl("p", { text: this.message });
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText("확인")
+                .setCta()
+                .onClick(async () => {
+                    this.close();
+                    await this.onConfirm();
                 })
             )
             .addButton(btn => btn

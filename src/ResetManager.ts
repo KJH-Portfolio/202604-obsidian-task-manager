@@ -1,9 +1,6 @@
-import { App, Modal, Setting, TFile, Notice, MarkdownView } from "obsidian";
+import { App, Modal, Setting, TFile, Notice, MarkdownView, moment } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
-
-declare const moment: any; // 옵시디언 전역 moment 전언
-
 // 1. 일간 마감 입력 팝업 모달 정의
 export class DailyResetModal extends Modal {
     review: string;

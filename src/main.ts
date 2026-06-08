@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-floating-promises, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
 import { Plugin, TFile, Notice, Modal, Setting, App, moment } from "obsidian";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab } from "./settings";
 import { TaskUtils } from "./TaskUtils";
@@ -267,8 +266,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             
                             if (todoRange) {
                                 // #### 할 일 바로 아랫줄에 추가
-                                const startIdx = (todoRange as any).start;
-                                const endIdx = (todoRange as any).end;
+                                const startIdx = (todoRange as { start: number; end: number }).start;
+                                const endIdx = (todoRange as { start: number; end: number }).end;
                                 
                                 const before = text.substring(0, startIdx + todoHeader.length);
                                 const after = text.substring(startIdx + todoHeader.length);
@@ -279,7 +278,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 const mainTodoHeader = "# Todo";
                                 const mainTodoRange = this.utils.getSectionRange(text, mainTodoHeader, 1);
                                 if (mainTodoRange) {
-                                    const startIdx = (mainTodoRange as any).start;
+                                    const startIdx = (mainTodoRange as { start: number; end: number }).start;
                                     const before = text.substring(0, startIdx + mainTodoHeader.length);
                                     const after = text.substring(startIdx + mainTodoHeader.length);
                                     

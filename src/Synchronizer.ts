@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
 import { App, TFile, Notice } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
@@ -78,7 +77,8 @@ export class Synchronizer {
             let content = this.utils.preprocessContent(originalActive);
             let lines = content.split("\n");
             let inExec = false, inPlan = false;
-            let execTasks: any[] = [], planTasks: any[] = [];
+            let execTasks: { id: string | null; status?: string; indent?: number; line: string; type?: string }[] = [];
+            let planTasks: { id: string; line: string }[] = [];
             let planTasksTotal = 0, planTasksDone = 0;
             let originalPlanLines: string[] = [];
             let finalStatBar = "";
@@ -239,7 +239,7 @@ export class Synchronizer {
             if (scheduleFile && scheduleFile instanceof TFile) {
                 originalSchedule = await this.app.vault.read(scheduleFile);
                 
-                const overrideData: Record<string, any> = {};
+                const overrideData: Record<string, { execTasks: string[]; planTasksDone: number; planTasksTotal: number }> = {};
                 overrideData[noteName] = { 
                     execTasks: (() => {
                         let buf: string[] = [], inEx = false;
