@@ -8,7 +8,7 @@
    - 콜아웃 내부: 컬러 바(6px) + 공통 무채색 음영 (색상 충돌 방지 및 가독성 확보)
    ======================================================== */
 
-/* 1.1. 태그 숨기기 */
+/* 1.1. 레거시 태그 숨기기 */
 .tag[href*="D-"],
 .tag[href*="d-"],
 .tag[href*="past" i],
@@ -53,12 +53,18 @@
     border-radius: 4px;
 }
 
-.markdown-rendered li:has(> .tag[href*="D-" i]),
-.markdown-rendered li:has(> p > .tag[href*="D-" i]),
-.markdown-rendered li:has(> .tag[href*="past" i]),
-.markdown-rendered li:has(> p > .tag[href*="past" i]),
-.cm-line:has([class*="tag-D-" i]),
-.cm-line:has([class*="tag-past" i]) {
+.markdown-rendered li[data-task="0"],
+.markdown-rendered li[data-task="1"],
+.markdown-rendered li[data-task="2"],
+.markdown-rendered li[data-task="3"],
+.markdown-rendered li[data-task="7"],
+.markdown-rendered li[data-task="!"],
+.cm-line.HyperMD-task-line[data-task="0"],
+.cm-line.HyperMD-task-line[data-task="1"],
+.cm-line.HyperMD-task-line[data-task="2"],
+.cm-line.HyperMD-task-line[data-task="3"],
+.cm-line.HyperMD-task-line[data-task="7"],
+.cm-line.HyperMD-task-line[data-task="!"] {
     background-origin: content-box;
     background-clip: content-box;
     background-repeat: no-repeat;
@@ -112,9 +118,8 @@
 }
 
 /* #Past (다크 레드 / 보라빛) */
-.tag[href*="past" i], .tag[href*="past" i], 
-.cm-line:has(.cm-tag-Past), 
-.cm-line:has(.cm-tag-past) {
+.markdown-rendered li[data-task="!"],
+.cm-line.HyperMD-task-line[data-task="!"] {
     background-image: 
         linear-gradient(to right, rgba(140, 0, 40, 0.9) 6px, transparent 6px), 
         linear-gradient(to right, rgba(140, 0, 40, 0.15) 0%, rgba(140, 0, 40, 0.15) 100%);
@@ -122,56 +127,44 @@
 
 /* 1.4. [콜아웃 내부] 가독성 개선 (6px 바 + 무채색 음영) */
 /* #D-7 (회색) */
-.callout li:has(> .tag[href*="d-7" i]),
-.callout li:has(> p > .tag[href*="d-7" i]),
-.callout .cm-tag-D-7,
-.callout .cm-tag-d-7 {
+.callout li[data-task="7"],
+.callout .cm-line.HyperMD-task-line[data-task="7"] {
     background-image: linear-gradient(to right, rgba(150, 150, 150, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-3 (파랑) */
-.callout li:has(> .tag[href*="d-3" i]),
-.callout li:has(> p > .tag[href*="d-3" i]),
-.callout .cm-tag-D-3,
-.callout .cm-tag-d-3 {
+.callout li[data-task="3"],
+.callout .cm-line.HyperMD-task-line[data-task="3"] {
     background-image: linear-gradient(to right, rgba(8, 109, 221, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-2 (초록) */
-.callout li:has(> .tag[href*="d-2" i]),
-.callout li:has(> p > .tag[href*="d-2" i]),
-.callout .cm-tag-D-2,
-.callout .cm-tag-d-2 {
+.callout li[data-task="2"],
+.callout .cm-line.HyperMD-task-line[data-task="2"] {
     background-image: linear-gradient(to right, rgba(68, 207, 110, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-1 (노랑) */
-.callout li:has(> .tag[href*="d-1" i]),
-.callout li:has(> p > .tag[href*="d-1" i]),
-.callout .cm-tag-D-1,
-.callout .cm-tag-d-1 {
+.callout li[data-task="1"],
+.callout .cm-line.HyperMD-task-line[data-task="1"] {
     background-image: linear-gradient(to right, rgba(255, 210, 0, 0.95) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #D-0 (빨강) */
-.callout li:has(> .tag[href*="d-0" i]),
-.callout li:has(> p > .tag[href*="d-0" i]),
-.callout .cm-tag-D-0,
-.callout .cm-tag-d-0 {
+.callout li[data-task="0"],
+.callout .cm-line.HyperMD-task-line[data-task="0"] {
     background-image: linear-gradient(to right, rgba(233, 49, 71, 0.9) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* #Past (다크 레드) */
-.callout li:has(> .tag[href*="past" i]),
-.callout li:has(> p > .tag[href*="past" i]),
-.callout .cm-line:has(.cm-tag-Past),
-.callout .cm-line:has(.cm-tag-past) {
+.callout li[data-task="!"],
+.callout .cm-line.HyperMD-task-line[data-task="!"] {
     background-image: linear-gradient(to right, rgba(140, 0, 40, 0.95) 6px, rgba(128, 128, 128, 0.08) 6px);
 }
 
 /* 1.5. 완료된 항목 배경색 및 마커 제거 */
 .markdown-rendered li.task-list-item.is-checked,
-.markdown-rendered li.task-list-item.is-checked:has(a.tag),
+
 .cm-line.HyperMD-task-line[data-task="x"],
 .cm-line.HyperMD-task-line[data-task="X"] {
     background-image: none;
@@ -186,7 +179,7 @@
 
 /* 2.1. 읽기 모드 (Reading View) 강제 */
 .callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] li:has(input[type="checkbox"]) {
+.callout[data-callout="routine"] li.task-list-item {
     display: inline-flex;
     align-items: center;
     background-color: var(--background-secondary-alt);
@@ -200,9 +193,9 @@
 
 /* 불릿 기호 제거 */
 .callout[data-callout="routine"] ul>li.task-list-item::marker,
-.callout[data-callout="routine"] ul>li:has(input[type="checkbox"])::marker,
+.callout[data-callout="routine"] ul>li.task-list-item::marker,
 .callout[data-callout="routine"] ul>li.task-list-item .list-bullet,
-.callout[data-callout="routine"] li:has(input[type="checkbox"]) .list-bullet {
+.callout[data-callout="routine"] li.task-list-item .list-bullet {
     display: none;
     content: "";
     font-size: 0;
@@ -218,7 +211,7 @@
 }
 
 /* 2.2. 라이브 프리뷰 (Live Preview) 강제 */
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]),
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line,
 .callout[data-callout="routine"] .HyperMD-task-line {
     display: inline-flex;
     align-items: center;
@@ -232,7 +225,8 @@
 
 /* 2.3. 완료 시 취소선 및 투명도 */
 .callout[data-callout="routine"] li.is-checked:not([data-task="-"]):not([data-task="/"]),
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]:checked):not(:has(input[data-task="-"])):not(:has(input[data-task="/"])) {
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
     opacity: 0.4;
     background-color: var(--background-primary);
     text-decoration: line-through;
@@ -240,7 +234,7 @@
 
 /* 2.4. 취소 시 디자인 (-) */
 .callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="-"],
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="-"]) {
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="-"] {
     opacity: 0.5;
     color: #ff5252;
     font-weight: 700;
@@ -251,7 +245,7 @@
 
 /* 2.5. 진행 중 디자인 (/) */
 .callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="/"],
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line:has(input[data-task="/"]) {
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="/"] {
     opacity: 0.5;
     color: #ffd04b;
     font-weight: 700;
@@ -262,8 +256,8 @@
 
 /* 2.6. 클릭 영역 전체 확장 */
 .callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] ul>li:has(input[type="checkbox"]),
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]),
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line,
 .callout[data-callout="routine"] .HyperMD-task-line {
     position: relative;
     overflow: hidden;
@@ -335,11 +329,11 @@
 }
 
 .callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] ul>li:has(input[type="checkbox"]) {
+.callout[data-callout="routine"] ul>li.task-list-item {
     order: 1;
 }
 
-.callout[data-callout="routine"] ul>li:not(.task-list-item):not(:has(input)) {
+.callout[data-callout="routine"] ul>li:not(.task-list-item) {
     order: 2;
     flex-basis: 100%;
     display: inline-block;
@@ -350,7 +344,7 @@
 }
 
 /* --- 라이브 프리뷰 --- */
-.callout[data-callout="routine"] .cm-line:has(> .cm-header) {
+.callout[data-callout="routine"] .cm-line.HyperMD-header {
     display: block;
     float: left;
     clear: both;
@@ -363,14 +357,14 @@
     font-size: 1.0em;
 }
 
-.callout[data-callout="routine"] .cm-line:has(> .cm-list-1),
-.callout[data-callout="routine"] .cm-line:has(input[type="checkbox"]) {
+.callout[data-callout="routine"] .cm-line.HyperMD-list-line,
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line {
     display: inline-flex;
     margin-top: 0;
     margin-bottom: 0;
 }
 
-.callout[data-callout="routine"] .cm-line:not(:has(input))>.cm-list-1 {
+.callout[data-callout="routine"] .cm-line:not(.HyperMD-task-line)>.cm-list-1 {
     color: var(--text-muted);
     font-weight: 500;
 }

@@ -21,12 +21,12 @@ export const REGEX = {
 };
 
 export const MARKER_PRI: Record<string, number> = { 
-    '#Past': 1, 
-    '#D-0': 2, 
-    '#D-1': 3, 
-    '#D-2': 4, 
-    '#D-3': 5, 
-    '#D-7': 6, 
+    '!': 1, 
+    '0': 2, 
+    '1': 3, 
+    '2': 4, 
+    '3': 5, 
+    '7': 6, 
     '': 99 
 };
 
