@@ -91,13 +91,8 @@ export class TaskUtils {
     getMarkerPri() { return MARKER_PRI; }
     getEmojiMap() { return EMOJI_MAP; }
 
-    getAdjustedNow(): moment.Moment {
-        const now = this.dateManager.getAdjustedNow();
-        const offset = this.settings.midnightOffsetHour ?? 4;
-        if (now.hour() < offset) {
-            return now.subtract(1, 'days');
-        }
-        return now;
+    getAdjustedNow(): moment.Moment {
+        return this.dateManager.getAdjustedNow();
     }
 
     preprocessContent(content: string): string {
