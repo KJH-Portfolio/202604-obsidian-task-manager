@@ -7,7 +7,7 @@ export class DailyResetModal extends Modal {
     step: string;
     onSubmit: (review: string, step: string) => Promise<void> | void;
 
-    constructor(app: App, defaultReview: string, onSubmit: (review: string, step: string) => void) {
+    constructor(app: App, defaultReview: string, onSubmit: (review: string, step: string) => Promise<void> | void) {
         super(app);
         this.review = defaultReview;
         this.step = "";
@@ -60,7 +60,7 @@ export class DailyResetModal extends Modal {
         
         const submitAction = () => {
             this.close();
-            this.onSubmit(this.review, this.step);
+            void this.onSubmit(this.review, this.step);
         };
 
         // Enter key handling for Step

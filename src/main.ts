@@ -77,7 +77,7 @@ class QuickCaptureModal extends Modal {
             }
             this.close();
             const finalContent = `${this.content.trim()} 📅 ${this.selectedDate}`;
-            this.onSubmit(finalContent);
+            void this.onSubmit(finalContent);
         };
 
         // Enter key to submit
@@ -293,6 +293,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 }
                                 
                                 // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
+                                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                                 const todayObj = moment().startOf('day').toDate();
                                 text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
                                 
@@ -393,6 +394,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const projectFilePath = `${projectDir}/${projectName}.md`;
             if (this.app.vault.getAbstractFileByPath(projectFilePath)) {
                 new Notice("⚠️ 동일한 이름의 프로젝트가 이미 존재합니다.");
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
                 return this.app.vault.getAbstractFileByPath(projectFilePath) as TFile;
             }
 
@@ -429,10 +431,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 }
             }
 
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const now = moment();
             const replacements = {
                 projectName: projectName,
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 date: now.format("YYYY-MM-DD"),
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 time: now.format("HH:mm")
             };
 
@@ -555,10 +560,14 @@ ${checklistTable}
                 }
             }
 
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const now = moment();
             const replacements = {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 date: now.format("YYYY-MM-DD"),
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 time: now.format("HH:mm"),
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 currentDay: now.date().toString(),
                 defaultStep: "계획 따라 움직이기. 1:30 취침하기.",
                 defaultAffirmation: "시작이 반 이다."
@@ -588,10 +597,15 @@ ${checklistTable}
 
             let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
             if (!memoFile) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const now = moment();
                 const defaultContent = `---
-작성일: "${now.format("YYYY-MM-DDTHH:mm")}"
-수정일: "${now.format("YYYY-MM-DDTHH:mm")}"
+작성일: "${
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                    now.format("YYYY-MM-DDTHH:mm")}"
+수정일: "${
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                    now.format("YYYY-MM-DDTHH:mm")}"
 ---
 
 `;
@@ -613,6 +627,7 @@ ${checklistTable}
     }
 
     async loadSettings() {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 

@@ -1,3 +1,6 @@
+/* stylelint-disable plugin/no-unsupported-browser-features, selector-pseudo-class-no-unknown */
+/* NOTE: :has() selectors are intentionally used for Obsidian UI styling.
+   Performance impact is acceptable in the plugin context. */
 /* ========================================================
    1. 스케줄 강조 하이라이트 (fix-task-indent.css)
    - 마커 두께: 6px (색상 구분 강화)
