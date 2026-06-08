@@ -1491,9 +1491,9 @@ export class TaskUtils {
 }
 
 
-/* eslint-enable @typescript-eslint/no-unsafe-assignment */
-/* eslint-enable @typescript-eslint/no-unsafe-member-access */
-/* eslint-enable @typescript-eslint/no-unsafe-call */
-/* eslint-enable @typescript-eslint/no-unsafe-argument */
-/* eslint-enable @typescript-eslint/no-unsafe-return */
-/* eslint-enable @typescript-eslint/no-unnecessary-type-assertion */
+/* eslint-enable @typescript-eslint/no-unsafe-assignment -- Re-enable strict rules */
+/* eslint-enable @typescript-eslint/no-unsafe-member-access -- Re-enable strict rules */
+/* eslint-enable @typescript-eslint/no-unsafe-call -- Re-enable strict rules */
+/* eslint-enable @typescript-eslint/no-unsafe-argument -- Re-enable strict rules */
+/* eslint-enable @typescript-eslint/no-unsafe-return -- Re-enable strict rules */
+/* eslint-enable @typescript-eslint/no-unnecessary-type-assertion -- Re-enable strict rules */
