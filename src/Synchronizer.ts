@@ -1,3 +1,4 @@
+import { SyncTask } from "./types";
 import { App, TFile, Notice, moment } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
@@ -46,7 +47,7 @@ export class Synchronizer {
                 );
 
                 // 메인 스케줄의 # Project 대시보드 갱신
-                const projectResults = await this.utils.getAllProjectResults(todayObj, overrideData, false);
+                const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
                 if (newSectionText) {
                     content = this.utils.replaceSection(content, "# Project", newSectionText);
@@ -126,11 +127,11 @@ export class Synchronizer {
             // In-place 계획 섹션 업데이트
             if (planStartLine !== -1) {
                 let newPlanLines: string[] = [];
-                const execMap = new Map();
+                const execMap = new Map<string, SyncTask>();
                 execTasks.forEach(et => {
                     if (et.id) execMap.set(et.id, et);
                 });
-                const originalIds = new Set();
+                const originalIds = new Set<string>();
                 
                 originalPlanLines.forEach(l => {
                     const pMatch = l.match(REGEX.TASK_LINE);
@@ -262,7 +263,7 @@ export class Synchronizer {
                     planTasksTotal 
                 };
                 
-                const projectResults = await this.utils.getAllProjectResults(todayObj, overrideData, false);
+                const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
                 
                 if (newSectionText) {

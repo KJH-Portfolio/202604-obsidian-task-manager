@@ -266,17 +266,18 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName("설정값 초기화")
             .setDesc("플러그인의 모든 설정을 기본값으로 되돌립니다. (주의: 기존 설정 정보가 소실되며, 되돌릴 수 없습니다.)")
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- Obsidian API internal type
-            .addButton(btn =>
-                btn.setButtonText("초기화 실행").buttonEl.addClass("mod-warning")
-                    .onClick(async () => {
+            .addButton(btn => {
+                btn.setButtonText("초기화 실행");
+                btn.buttonEl.addClass("mod-warning");
+                btn.onClick(async () => {
                         new ConfirmModal(this.app, "정말로 모든 설정값을 초기 상태로 되돌리시겠습니까?", async () => {
                             this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);
                             await this.plugin.saveSettings();
                             this.refresh();
                             new Notice("✅ 모든 설정값이 초기화되었습니다!");
                         }).open();
-                    }));
+                });
+            });
     }
 }
 

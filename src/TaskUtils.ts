@@ -1,3 +1,4 @@
+import { DailyData, OrderedTask, TaskItem, DailyMeta, FullProjectResult } from "./types";
 import { App, TFile, moment } from "obsidian";
 import { REGEX, MARKER_PRI, EMOJI_MAP } from "./Constants";
 import { DateManager } from "./DateManager";
@@ -70,6 +71,8 @@ export interface TaskNode {
 export class TaskUtils {
     app: App;
     settings: PluginSettings;
+    dateManager: DateManager;
+    fileManager: FileManager;
 
     constructor(app: App, settings: PluginSettings, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
@@ -518,9 +521,9 @@ export class TaskUtils {
 
                     if (hw && hw !== "" && hw !== "날짜") {
                         if (!cs[hw]) cs[hw] = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 };
-                        if (cs[hw].hasOwnProperty(emoji)) cs[hw][emoji]++;
+                        if (Object.prototype.hasOwnProperty.call(cs[hw], emoji)) cs[hw][emoji]++;
                     }
-                    if (sq.hasOwnProperty(emoji)) sq[emoji]++;
+                    if (Object.prototype.hasOwnProperty.call(sq, emoji)) sq[emoji]++;
                 }
             }
         });
@@ -619,11 +622,11 @@ export class TaskUtils {
     syncDailyMap(dailyMap: Record<string, string[]>) {
         for (const noteName in dailyMap) {
             const data = dailyMap[noteName];
-            const textQueues: Record<string, string[]> = {};
-            for (const key in data.byText) textQueues[key] = [...data.byText[key]];
+            const textQueues: Record<string, TaskItem[]> = {};
+            for (const key in (data as DailyData).byText) textQueues[key] = [...(data as DailyData).byText[key]];
 
-            const tasks = data.orderedTasks.map((ot: { id: string; status: string; text: string }) => {
-                if (ot.type === 'id') return data.byId[ot.key];
+            const tasks = (data as DailyData).orderedTasks.map((ot: { id: string; status: string; text: string }) => {
+                if (ot.type === 'id') return (data as DailyData).byId[ot.key];
                 if (textQueues[ot.key] && textQueues[ot.key].length > 0) return textQueues[ot.key].shift();
                 return null;
             });
@@ -709,7 +712,7 @@ export class TaskUtils {
         }
     }
 
-    sortProjectResults(items: Record<string, unknown>[]): Record<string, unknown>[] {
+    sortFullProjectResults(items: Record<string, unknown>[]): Record<string, unknown>[] {
         if (!items || !Array.isArray(items)) return [];
         return items.sort((a, b) => {
             if (a.sortPri !== b.sortPri) return a.sortPri - b.sortPri;
@@ -846,7 +849,7 @@ export class TaskUtils {
         return tableLines.join('\n');
     }
 
-    extractDailyMetadata(content: string): { step: string, review: string } {
+    extractDailyMetadata(content: string): DailyMeta {
         let step = "미작성", review = "미작성";
         const stepMatch = content.match(/^((?:>|\s*[-*+])\s*.*?(?:[Ss]tep|도전)\s*:\s*)(.*)$/m);
         if (stepMatch && stepMatch[2].trim()) step = stepMatch[2].trim();
@@ -962,7 +965,7 @@ export class TaskUtils {
         return finalLines.join('\n');
     }
 
-    async getAllProjectResults(todayObj: Date, overrideData: Record<string, unknown> = {}, isReset = false): Promise<Record<string, unknown>[]> {
+    async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, unknown> = {}, isReset = false): Promise<Record<string, unknown>[]> {
         const projectFiles = this.getProjectFiles();
         
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
@@ -1018,13 +1021,13 @@ export class TaskUtils {
                 
                 return { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
             } catch (err) {
-                console.error(`Error in getAllProjectResults for ${file.path}:`, err);
+                console.error(`Error in getAllFullProjectResults for ${file.path}:`, err);
                 return null;
             }
         }));
 
         const validResults = projectResults.filter(r => r !== null && r !== undefined);
-        this.sortProjectResults(validResults);
+        this.sortFullProjectResults(validResults);
         return validResults;
     }
 

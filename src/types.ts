@@ -34,3 +34,51 @@ export interface TableStats {
     cs: Record<string, Record<string, number>>;
     tableHeaders: string[];
 }
+
+export interface SyncTask {
+    id: string;
+    line: string;
+    status?: string;
+}
+
+export interface OrderedTask {
+    type: "id" | "text";
+    key: string;
+    status: string;
+    text: string;
+}
+
+export interface DailyData {
+    orderedTasks: OrderedTask[];
+    byId: Record<string, TaskItem>;
+    byText: Record<string, TaskItem[]>;
+}
+
+export interface TaskItem {
+    id: string | null;
+    status: string;
+    text: string;
+    line: string;
+    checked: boolean;
+    indent?: string;
+    anchorId?: string;
+    task?: string;
+    deleted?: boolean;
+}
+
+export interface DailyMeta {
+    step: string;
+    review: string;
+}
+
+export interface FullProjectResult {
+    file: import("obsidian").TFile;
+    done: number;
+    total: number;
+    dDayStr: string | null;
+    pastStr: string | null;
+    isTodayPast: boolean;
+    todayDone: number;
+    todayTotal: number;
+    tasks: string[];
+}
