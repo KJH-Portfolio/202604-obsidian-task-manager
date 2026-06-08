@@ -48,7 +48,7 @@ Utilize the icon buttons at the top of the Schedule Management note and the butt
     1. Reads the links written under `# Project` in the schedule note (e.g., `[[Project A]]`) to find the original project files.
     2. Any text edits or completion marks (`[x]`) you made in the schedule note will be identically **overwritten (reflected)** in the original project.
     3. Conversely, if new tasks are added to the `# Execution` section of the original project file, it **imports** those contents into the schedule note.
-    4. Calculates the task dates to append D-Day markers (like `#D-0`), and elegantly sorts all tasks based on priority.
+    4. Calculates the task dates to apply custom D-Day markers (like `[0]`), and elegantly sorts all tasks based on priority.
 
 ### ✏️ Quick Task Capture Button (Pencil Icon)
 *   **Where to click?**: Top of the Daily Schedule note
@@ -112,7 +112,7 @@ Looking at the schedule note, there are two tables: **① The thin mini table at
 Understanding the plugin's smart internal logic makes it much easier to use.
 
 ### 📅 D-Day Auto Calculation and Downward Propagation
-*   If you write a calendar emoji and date like `📅 2026-06-10` after a task and press ⚡️Sync, the plugin automatically attaches a deadline marker (`- [ ] #D-3 Read book`).
+*   If you write a calendar emoji and date like `📅 2026-06-10` after a task and press ⚡️Sync, the plugin automatically attaches a deadline marker (`- [3] Read book`).
 *   **[Core]**: If a parent task has a deadline attached, the child tasks indented below it will identically inherit the parent's deadline!
 
 ### 🗑️ Simple Complete Deletion Magic (`//`)
@@ -120,7 +120,7 @@ Understanding the plugin's smart internal logic makes it much easier to use.
 *   When you press ⚡️Sync or 🌤️Daily Reset, it will be permanently deleted without a trace from both the main schedule and the original project.
 
 ### 🎯 Urgency-based Auto Sorting
-*   The moment you execute Sync or Quick Capture, the plugin reads the deadline markers and automatically sorts them neatly in the order of **`#Past ➡️ #D-0(Today) ➡️ #D-1(Tomorrow) ➡️ ... No Deadline`**.
+*   The moment you execute Sync or Quick Capture, the plugin reads the deadline markers and automatically sorts them neatly in the order of **`[!] (Past) ➡️ [0] (Today) ➡️ [1] (Tomorrow) ➡️ ... No Deadline`**.
 
 ---
 
