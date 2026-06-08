@@ -517,11 +517,11 @@ export class TaskUtils {
 
                     if (hw && hw !== "" && hw !== "날짜") {
                         if (!cs[hw]) cs[hw] = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 };
-                        // eslint-disable-next-line no-prototype-builtins
+                        // eslint-disable-next-line no-prototype-builtins -- Simple object property check
                         if (cs[hw].hasOwnProperty(emoji)) cs[hw][emoji]++;
                     }
 
-                    // eslint-disable-next-line no-prototype-builtins
+                    // eslint-disable-next-line no-prototype-builtins -- Simple object property check
                     if (sq.hasOwnProperty(emoji)) sq[emoji]++;
                 }
             }
