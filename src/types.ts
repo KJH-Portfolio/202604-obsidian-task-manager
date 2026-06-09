@@ -91,10 +91,10 @@ export interface FullProjectResult {
     tasks: string[];
 }
 
-import { Moment } from "moment";
+import { moment } from "obsidian";
 
 declare global {
     interface Window {
-        moment: () => Moment;
+        moment: typeof moment;
     }
 }

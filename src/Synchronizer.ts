@@ -91,8 +91,6 @@ export class Synchronizer {
             
 
             let planStartLine = -1;
-            let finalStatBar = "";
-            
             // 데이터 수집
             for (let i = 0; i < lines.length; i++) {
                 let l = lines[i];
@@ -209,9 +207,6 @@ export class Synchronizer {
                 
                 const updatedContent = this.utils.replaceSection(lines.join("\n"), "# 계획", newPlanBody);
                 lines = updatedContent.split("\n");
-                finalStatBar = statBar; 
-            } else {
-                finalStatBar = this.utils.renderProgressBar(planTasksDone, planTasksTotal, noteName);
             }
 
             // 실행 섹션 내 완료 항목(및 하위 자식) 삭제
