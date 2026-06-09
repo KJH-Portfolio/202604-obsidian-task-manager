@@ -91,6 +91,7 @@ export class Synchronizer {
             
 
             let planStartLine = -1;
+            let finalStatBar = "";
             
             // 데이터 수집
             for (let i = 0; i < lines.length; i++) {

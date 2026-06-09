@@ -4,9 +4,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { DailyData, TaskItem, DailyMeta } from "./types";
+import { DailyData, TaskItem, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
 import { App, TFile, moment } from "obsidian";
-import { REGEX, MARKER_PRI, EMOJI_MAP } from "./Constants";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 
@@ -457,7 +456,7 @@ export class TaskUtils {
         subSections.push(currentSub);
 
         const processed = subSections.map(sub => {
-            if (options.excludeSubSections && sub.header && options.excludeSubSections.some((ex: string) => sub.header.includes(ex))) {
+            if (options.excludeSubSections && sub.header && (options.excludeSubSections as string[]).some((ex: string) => sub.header.includes(ex))) {
                 return (sub.header ? [sub.header, ...sub.content] : sub.content).join('\n');
             }
 
@@ -627,14 +626,14 @@ export class TaskUtils {
         }).join("\n");
     }
 
-    syncDailyMap(dailyMap: Record<string, string[]>) {
+    syncDailyMap(dailyMap: Record<string, DailyData>) {
         for (const noteName in dailyMap) {
             const data = dailyMap[noteName];
-            const textQueues: Record<string, TaskItem[]> = {};
+            const textQueues: Record<string, TaskData[]> = {};
             for (const key in (data as DailyData).byText) textQueues[key] = [...(data as DailyData).byText[key]];
 
-            const tasks = (data as DailyData).orderedTasks.map((ot: { id: string; status: string; text: string }) => {
-                if (ot.type === 'id') return (data as DailyData).byId[ot.key];
+            const tasks = data.orderedTasks.map((ot) => {
+                if (ot.type === 'id') return data.byId[ot.key];
                 if (textQueues[ot.key] && textQueues[ot.key].length > 0) return textQueues[ot.key].shift();
                 return null;
             });
@@ -720,7 +719,7 @@ export class TaskUtils {
         }
     }
 
-    sortFullProjectResults(items: Record<string, unknown>[]): Record<string, unknown>[] {
+    sortFullProjectResults(items: ProjectResult[]): ProjectResult[] {
         if (!items || !Array.isArray(items)) return [];
         return items.sort((a, b) => {
             if (a.sortPri !== b.sortPri) return a.sortPri - b.sortPri;
@@ -732,7 +731,7 @@ export class TaskUtils {
         });
     }
 
-    generateProjectDashboard(projects: Record<string, unknown>[]): string {
+    generateProjectDashboard(projects: ProjectResult[]): string {
         if (!projects || projects.length === 0) return "";
         
         let html = `<div style="padding: 16px; background: var(--background-secondary); border-radius: 12px; border: 1px solid var(--background-modifier-border); margin: 10px 0 25px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">\n`;
@@ -868,7 +867,7 @@ export class TaskUtils {
         return { step, review };
     }
 
-    renderProjectDashboardSection(projectResults: Record<string, unknown>[]): string {
+    renderProjectDashboardSection(projectResults: ProjectResult[]): string {
         if (!projectResults || projectResults.length === 0) return "";
         const dashboardHtml = this.generateProjectDashboard(projectResults);
         const calloutsHtml = projectResults.map(i => i.calloutText).filter(t => t.trim() !== "").join("\n\n");
@@ -931,7 +930,7 @@ export class TaskUtils {
         return { nodes: pruned, hasD0: hasD0Any };
     }
 
-    renderTodayProjectTasks(projectResults: Record<string, unknown>[], todayObj: Date): string {
+    renderTodayProjectTasks(projectResults: ProjectResult[], todayObj: Date): string {
         if (!projectResults) return "";
         let finalLines: string[] = [];
         
@@ -973,7 +972,7 @@ export class TaskUtils {
         return finalLines.join('\n');
     }
 
-    async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, unknown> = {}, isReset = false): Promise<Record<string, unknown>[]> {
+    async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
         const projectFiles = this.getProjectFiles();
         
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
@@ -1040,13 +1039,13 @@ export class TaskUtils {
     }
 
     // 1. [포팅] 데일리 노트 내의 프로젝트 맵 파싱
-    parseDailyProjectMap(content: string): Record<string, string[]> | null {
+    parseDailyProjectMap(content: string): Record<string, DailyData> | null {
         const range = this.getSectionRange(content, "# Project") as { start: number, end: number };
         if (!range) return null;
 
         const pLines = content.substring(range.start, range.end).split("\n");
         let currNote: string | null = null;
-        const dailyMap: Record<string, string[]> = {};
+        const dailyMap: Record<string, DailyData> = {};
 
         for (let l of pLines) {
             const calloutMatch = l.match(/^>\s*\[![a-zA-Z]+\]-?\s+.*?\*\*([^*]+)\*\*/);
@@ -1241,8 +1240,8 @@ export class TaskUtils {
     }
 
     // 4. [포팅] 일일 스케줄 변경사항을 개별 프로젝트 파일로 전파 동기화
-    async syncDailyToProjects(app: App, dailyMap: Record<string, string[]>, allFiles: TFile[], collisionFiles: TFile[], isReset = false): Promise<Record<string, unknown>> {
-        const overrideData: Record<string, unknown> = {};
+    async syncDailyToProjects(app: App, dailyMap: Record<string, DailyData>, allFiles: TFile[], collisionFiles: TFile[], isReset = false): Promise<Record<string, ProjectOverrideData>> {
+        const overrideData: Record<string, ProjectOverrideData> = {};
 
         await Promise.all(allFiles.map(async (file) => {
             try {
@@ -1375,7 +1374,7 @@ export class TaskUtils {
                         } 
                     }
                     for (const [id, d] of Object.entries(dailyData.byId)) { 
-                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...(d as { text?: string; status?: string }), id } }); 
+                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...(d as TaskData), id } }); 
                     }
                     if (tasksToInsert.length > 0) {
                         let exStart = -1, exEnd = finalSLines.length, inExSec = false;
@@ -1389,8 +1388,8 @@ export class TaskUtils {
                             } 
                         }
                         if (exStart !== -1) {
-                            const ins = new Map<string, unknown[]>(); 
-                            const fbt = [];
+                            const ins = new Map<string, TaskData[]>(); 
+                            const fbt: TaskData[] = [];
                             for (let item of tasksToInsert) { 
                                 if (item.anchorId) { 
                                     if (!ins.has(item.anchorId)) ins.set(item.anchorId, []); 

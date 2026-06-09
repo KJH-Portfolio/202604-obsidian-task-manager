@@ -220,13 +220,13 @@ export class ResetManager {
                     if (dailyMap) {
                         this.utils.syncDailyMap(dailyMap);
                         const overrideData = await this.utils.syncDailyToProjects(this.app, dailyMap, allFiles, filesForCollisionCheck, true); // isReset: true
-                        const newProjSectionText = this.utils.renderProjectDashboardSection(await this.utils.getAllProjectResults(todayObj, overrideData, true));
+                        const newProjSectionText = this.utils.renderProjectDashboardSection(await this.utils.getAllFullProjectResults(todayObj, overrideData, true));
                         if (newProjSectionText) {
                             content = this.utils.replaceSection(content, "# Project", newProjSectionText);
                         }
 
                         // #### 프로젝트 섹션 (오늘의 프로젝트 할 일 리스트)
-                        const projectResults = await this.utils.getAllProjectResults(todayObj, overrideData, true);
+                        const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, true);
                         const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
                         content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
                     }
@@ -263,7 +263,7 @@ export class ResetManager {
                         mainContent = mainContent.substring(0, fullStatsRange.start).trimEnd();
                     }
 
-                    // --- [Step 5] 체크리스트 달성도 통계 그래프 대시보드 재생성 ---
+                    // --- [Step 5] 체크리스트 달성도 통계 그래프 대시보 재생성 ---
                     const tableStr = this.utils.getChecklistTable(mainContent);
                     let archiveStatsDashboard = "";
                     const archiveDayLabel = now.format("YYYY-MM-DD (ddd)");

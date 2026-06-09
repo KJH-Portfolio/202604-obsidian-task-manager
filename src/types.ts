@@ -8,6 +8,7 @@ export interface MyWorldSettings {
 }
 
 export interface TaskData {
+    status: string;
     checked: boolean;
     text: string;
     indent: string;
@@ -26,6 +27,15 @@ export interface ProjectResult {
     minDiff: number;
     noteName: string;
     calloutText: string;
+    planTasksDone: number;
+    planTasksTotal: number;
+    execTasks: string[];
+}
+
+export interface ProjectOverrideData {
+    execTasks: string[];
+    planTasksDone: number;
+    planTasksTotal: number;
 }
 
 export interface TableStats {
@@ -44,14 +54,12 @@ export interface SyncTask {
 export interface OrderedTask {
     type: "id" | "text";
     key: string;
-    status: string;
-    text: string;
 }
 
 export interface DailyData {
     orderedTasks: OrderedTask[];
-    byId: Record<string, TaskItem>;
-    byText: Record<string, TaskItem[]>;
+    byId: Record<string, TaskData>;
+    byText: Record<string, TaskData[]>;
 }
 
 export interface TaskItem {

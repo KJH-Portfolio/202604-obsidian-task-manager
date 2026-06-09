@@ -19,6 +19,15 @@ export class TemplateHelper {
         this.fileManager = fileManager;
     }
 
+    
+    replacePlaceholder(templateText: string, replacements: Record<string, string>): string {
+        let content = templateText;
+        for (const [key, value] of Object.entries(replacements)) {
+            content = content.replace(new RegExp(`\\{\\{(?:\\s*)${key}(?:\\s*)\\}\\}`, 'g'), value);
+        }
+        return content;
+    }
+
     async createDefaultTemplatesFolderAndFiles(templatesDir: string): Promise<void> {
         await this.utils.ensureFolder(templatesDir);
 
