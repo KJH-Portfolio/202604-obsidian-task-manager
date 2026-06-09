@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { DailyData, TaskItem, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
+import { DailyData, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
 import { App, TFile, moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";

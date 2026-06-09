@@ -90,3 +90,11 @@ export interface FullProjectResult {
     todayTotal: number;
     tasks: string[];
 }
+
+import { Moment } from "moment";
+
+declare global {
+    interface Window {
+        moment: () => Moment;
+    }
+}

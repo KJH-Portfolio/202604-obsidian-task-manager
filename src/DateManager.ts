@@ -20,7 +20,7 @@ export class DateManager {
      */
     getAdjustedNow(): moment.Moment {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Type inference limitation
-        const now = (window as any).moment();
+        const now = window.moment();
         const offset = this.settings.midnightOffsetHour ?? 4;
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         if (now.hour() < offset) {
