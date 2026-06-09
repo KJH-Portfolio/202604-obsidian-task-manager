@@ -367,3 +367,71 @@
 .myworld-shadow-none { box-shadow: none; }
 .myworld-p-10 { padding: 10px; }
 .myworld-d-none { display: none; }
+
+
+/* ========================================================
+   [체크박스 옆 그라데이션 하이라이트 효과]
+   체크박스 우측으로 텍스트를 은은하게 덮는 페이드 아웃 형광펜 효과
+   ======================================================== */
+.markdown-rendered li[data-task="0"] > input[type="checkbox"],
+.markdown-rendered li[data-task="1"] > input[type="checkbox"],
+.markdown-rendered li[data-task="2"] > input[type="checkbox"],
+.markdown-rendered li[data-task="3"] > input[type="checkbox"],
+.markdown-rendered li[data-task="7"] > input[type="checkbox"],
+.markdown-rendered li[data-task="!"] > input[type="checkbox"],
+.cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"],
+.cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"],
+.cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"],
+.cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"],
+.cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"],
+.cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
+    position: relative; 
+}
+
+.markdown-rendered li[data-task="0"] > input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"]::before {
+    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+    left: calc(100% + 6px); width: 140px; height: 1.3em;
+    background: linear-gradient(to right, rgba(233, 49, 71, 0.25), transparent);
+    pointer-events: none; border-radius: 4px;
+}
+
+.markdown-rendered li[data-task="1"] > input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"]::before {
+    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+    left: calc(100% + 6px); width: 140px; height: 1.3em;
+    background: linear-gradient(to right, rgba(255, 210, 0, 0.25), transparent);
+    pointer-events: none; border-radius: 4px;
+}
+
+.markdown-rendered li[data-task="2"] > input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"]::before {
+    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+    left: calc(100% + 6px); width: 140px; height: 1.3em;
+    background: linear-gradient(to right, rgba(68, 207, 110, 0.25), transparent);
+    pointer-events: none; border-radius: 4px;
+}
+
+.markdown-rendered li[data-task="3"] > input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"]::before {
+    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+    left: calc(100% + 6px); width: 140px; height: 1.3em;
+    background: linear-gradient(to right, rgba(8, 109, 221, 0.25), transparent);
+    pointer-events: none; border-radius: 4px;
+}
+
+.markdown-rendered li[data-task="7"] > input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"]::before {
+    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+    left: calc(100% + 6px); width: 140px; height: 1.3em;
+    background: linear-gradient(to right, rgba(150, 150, 150, 0.25), transparent);
+    pointer-events: none; border-radius: 4px;
+}
+
+.markdown-rendered li[data-task="!"] > input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::before {
+    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+    left: calc(100% + 6px); width: 140px; height: 1.3em;
+    background: linear-gradient(to right, rgba(140, 0, 40, 0.3), transparent);
+    pointer-events: none; border-radius: 4px;
+}
