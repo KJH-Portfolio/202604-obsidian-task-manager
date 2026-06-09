@@ -26,43 +26,130 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] {
 }
 
 /* 체크박스 외형을 미완료(진행중) 상태로 렌더링 (체크마크 제거, 테두리 색상 유지) */
-.markdown-rendered li[data-task="0"] > input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="1"] > input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="2"] > input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="3"] > input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="7"] > input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="!"] > input[type="checkbox"]:checked,
+.markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
+.markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
+.markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
+.markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
+.markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
+.markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
 .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"],
 .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"],
 .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"],
 .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"],
 .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"],
 .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
-    background-color: var(--background-primary);
     border-color: var(--text-muted);
 }
-.markdown-rendered li[data-task="0"] > input[type="checkbox"]:checked::after,
-.markdown-rendered li[data-task="1"] > input[type="checkbox"]:checked::after,
-.markdown-rendered li[data-task="2"] > input[type="checkbox"]:checked::after,
-.markdown-rendered li[data-task="3"] > input[type="checkbox"]:checked::after,
-.markdown-rendered li[data-task="7"] > input[type="checkbox"]:checked::after,
-.markdown-rendered li[data-task="!"] > input[type="checkbox"]:checked::after,
+
+/* 마커별 체크박스 안쪽 배경색 채우기 */
+body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
+    background-color: rgba(233, 49, 71, 0.18);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] {
+    background-color: rgba(255, 210, 0, 0.18);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] {
+    background-color: rgba(68, 207, 110, 0.18);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] {
+    background-color: rgba(8, 109, 221, 0.18);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] {
+    background-color: rgba(150, 150, 150, 0.15);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
+    background-color: rgba(140, 0, 40, 0.22);
+}
+
+.markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked::after,
 .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"]::after,
 .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"]::after,
 .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"]::after,
 .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"]::after,
 .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"]::after,
 .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::after {
-    display: none; /* 체크마크 숨김 */
+    display: none;
+    /* 체크마크 숨김 */
 }
 
-/* 마커별 테두리(체크박스) 색상 입히기 (선택사항이나 가시성을 위해 추가) */
-body .workspace-leaf-content .markdown-rendered li[data-task="0"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] { border-color: rgba(233, 49, 71, 0.8); }
-body .workspace-leaf-content .markdown-rendered li[data-task="1"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] { border-color: rgba(255, 210, 0, 0.8); }
-body .workspace-leaf-content .markdown-rendered li[data-task="2"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] { border-color: rgba(68, 207, 110, 0.8); }
-body .workspace-leaf-content .markdown-rendered li[data-task="3"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] { border-color: rgba(8, 109, 221, 0.8); }
-body .workspace-leaf-content .markdown-rendered li[data-task="7"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] { border-color: rgba(150, 150, 150, 0.8); }
-body .workspace-leaf-content .markdown-rendered li[data-task="!"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] { border-color: rgba(140, 0, 40, 0.9); }
+/* 마커별 테두리(체크박스) 색상 + 두께 증가 — border 숏핸드로 한 번에 지정 */
+body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
+    border: 2px solid rgba(233, 49, 71, 0.8);
+}
+
+body .workspace-leaf-content .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] {
+    border: 2px solid rgba(255, 210, 0, 0.8);
+}
+
+body .workspace-leaf-content .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] {
+    border: 2px solid rgba(68, 207, 110, 0.8);
+}
+
+body .workspace-leaf-content .markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] {
+    border: 2px solid rgba(8, 109, 221, 0.8);
+}
+
+body .workspace-leaf-content .markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] {
+    border: 2px solid rgba(150, 150, 150, 0.8);
+}
+
+body .workspace-leaf-content .markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
+    border: 2px solid rgba(140, 0, 40, 0.9);
+}
+
+/* ========================================================
+   [가독성 개선 스타일]
+   ======================================================== */
+
+/* 1. 긴급 마커([0], [!])만 글씨 굵게 */
+.markdown-rendered li[data-task="0"],
+.markdown-rendered li[data-task="!"] {
+    font-weight: 600;
+}
+.cm-line.HyperMD-task-line[data-task="0"],
+.cm-line.HyperMD-task-line[data-task="!"] {
+    font-weight: 600;
+}
+
+/* 2. 하위 항목 투명도 낮춰서 계층 구분 */
+.markdown-rendered li > ul > li,
+.markdown-rendered li > ol > li {
+    opacity: 0.75;
+}
+
+/* 3. 날짜(📅) 텍스트 시선 분리
+   날짜는 일반 텍스트이므로 li 전체의 ::after 보다는
+   task-manager 플러그인이 렌더링하는 span 클래스를 직접 타겟팅.
+   클래스가 확인되면 아래 셀렉터를 교체할 것. */
+.markdown-rendered li[data-task] .task-due,
+.markdown-rendered li[data-task] .task-date,
+.markdown-rendered li[data-task] time {
+    font-size: 0.82em;
+    color: var(--text-muted);
+}
+.cm-line.HyperMD-task-line .cm-task-due,
+.cm-line.HyperMD-task-line .cm-task-date,
+.cm-line.HyperMD-task-line time {
+    font-size: 0.82em;
+    color: var(--text-muted);
+}
 
 /* ========================================================
    1. 스케줄 강조 하이라이트 (fix-task-indent.css)
@@ -104,8 +191,8 @@ body .workspace-leaf-content .markdown-rendered li[data-task="!"] > input[type="
     border-radius: 4px;
 }
 
-.markdown-rendered li > ul,
-.markdown-rendered li > ol {
+.markdown-rendered li>ul,
+.markdown-rendered li>ol {
     background: transparent;
     background-image: none;
 }
@@ -335,44 +422,159 @@ body .workspace-leaf-content .markdown-rendered li[data-task="!"] > input[type="
     display: none;
 }
 
-.myworld-padding-20-10 { padding: 20px 10px; }
-.myworld-mt-0-mb-25 { margin-top: 0; margin-bottom: 25px; }
-.myworld-mb-25 { margin-bottom: 25px; }
-.myworld-flex-baseline-gap10-mb10 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-.myworld-text-muted-sm { font-size: 0.85em; color: var(--text-muted); }
-.myworld-mb-35 { margin-bottom: 35px; }
-.myworld-flex-end { display: flex; justify-content: flex-end; }
-.myworld-flex-center-between-mb20 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.myworld-flex-baseline-gap10 { display: flex; align-items: baseline; gap: 10px; }
-.myworld-text-muted-md { font-size: 0.9em; color: var(--text-muted); }
-.myworld-flex-center-gap8 { display: flex; align-items: center; gap: 8px; }
-.myworld-mb-20 { margin-bottom: 20px; }
+.myworld-padding-20-10 {
+    padding: 20px 10px;
+}
+
+.myworld-mt-0-mb-25 {
+    margin-top: 0;
+    margin-bottom: 25px;
+}
+
+.myworld-mb-25 {
+    margin-bottom: 25px;
+}
+
+.myworld-flex-baseline-gap10-mb10 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.myworld-text-muted-sm {
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.myworld-mb-35 {
+    margin-bottom: 35px;
+}
+
+.myworld-flex-end {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.myworld-flex-center-between-mb20 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.myworld-flex-baseline-gap10 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.myworld-text-muted-md {
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.myworld-flex-center-gap8 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.myworld-mb-20 {
+    margin-bottom: 20px;
+}
 
 
-.myworld-margin-0 { margin: 0; }
-.myworld-w-100 { width: 100%; }
-.myworld-h-100px { height: 100px; }
-.myworld-p-12-15 { padding: 12px 15px; }
-.myworld-text-1em { font-size: 1em; }
-.myworld-rounded-6 { border-radius: 6px; }
-.myworld-border-std { border: 1px solid var(--background-modifier-border); }
-.myworld-resize-v { resize: vertical; }
-.myworld-p-10-30 { padding: 10px 30px; }
-.myworld-p-4 { padding: 4px; }
-.myworld-rounded-4 { border-radius: 4px; }
-.myworld-bg-secondary { background-color: var(--background-secondary); }
-.myworld-text-normal { color: var(--text-normal); }
-.myworld-p-4-10 { padding: 4px 10px; }
-.myworld-text-10em { font-size: 1.0em; }
-.myworld-shadow-none { box-shadow: none; }
-.myworld-p-10 { padding: 10px; }
-.myworld-d-none { display: none; }
+.myworld-margin-0 {
+    margin: 0;
+}
+
+.myworld-w-100 {
+    width: 100%;
+}
+
+.myworld-h-100px {
+    height: 100px;
+}
+
+.myworld-p-12-15 {
+    padding: 12px 15px;
+}
+
+.myworld-text-1em {
+    font-size: 1em;
+}
+
+.myworld-rounded-6 {
+    border-radius: 6px;
+}
+
+.myworld-border-std {
+    border: 1px solid var(--background-modifier-border);
+}
+
+.myworld-resize-v {
+    resize: vertical;
+}
+
+.myworld-p-10-30 {
+    padding: 10px 30px;
+}
+
+.myworld-p-4 {
+    padding: 4px;
+}
+
+.myworld-rounded-4 {
+    border-radius: 4px;
+}
+
+.myworld-bg-secondary {
+    background-color: var(--background-secondary);
+}
+
+.myworld-text-normal {
+    color: var(--text-normal);
+}
+
+.myworld-p-4-10 {
+    padding: 4px 10px;
+}
+
+.myworld-text-10em {
+    font-size: 1.0em;
+}
+
+.myworld-shadow-none {
+    box-shadow: none;
+}
+
+.myworld-p-10 {
+    padding: 10px;
+}
+
+.myworld-d-none {
+    display: none;
+}
 
 
 /* ========================================================
    [체크박스 옆 그라데이션 하이라이트 효과]
-   체크박스 우측으로 텍스트를 은은하게 덮는 페이드 아웃 형광펜 효과
+   원래 input[type="checkbox"]::before 방식 유지.
+   li에 isolation: isolate 를 추가하여 z-index: -1 이 페이지 배경 아래로 새지 않게 고정.
    ======================================================== */
+
+/* li에 Stacking Context 격리 → 자식 ::before 의 z-index: -1 이 li 영역 안에서만 작동 */
+.markdown-rendered li[data-task="0"],
+.markdown-rendered li[data-task="1"],
+.markdown-rendered li[data-task="2"],
+.markdown-rendered li[data-task="3"],
+.markdown-rendered li[data-task="7"],
+.markdown-rendered li[data-task="!"] {
+    isolation: isolate;
+}
+
+/* 체크박스에 position: relative 유지 */
 .markdown-rendered li[data-task="0"] > input[type="checkbox"],
 .markdown-rendered li[data-task="1"] > input[type="checkbox"],
 .markdown-rendered li[data-task="2"] > input[type="checkbox"],
@@ -385,53 +587,64 @@ body .workspace-leaf-content .markdown-rendered li[data-task="!"] > input[type="
 .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"],
 .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"],
 .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
-    position: relative; 
+    position: relative;
 }
+
+/* ::before 공통 속성 — z-index: -1 로 글씨 뒤에 깔림 */
+/* ⬇ 테스트: 그라데이션 하이라이트 임시 비활성화 */
+.markdown-rendered li[data-task="0"] > input[type="checkbox"]::before,
+.markdown-rendered li[data-task="1"] > input[type="checkbox"]::before,
+.markdown-rendered li[data-task="2"] > input[type="checkbox"]::before,
+.markdown-rendered li[data-task="3"] > input[type="checkbox"]::before,
+.markdown-rendered li[data-task="7"] > input[type="checkbox"]::before,
+.markdown-rendered li[data-task="!"] > input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"]::before,
+.cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: calc(100% + 6px);
+    width: 140px;
+    height: 1.3em;
+    pointer-events: none;
+    border-radius: 4px;
+    z-index: -1;
+    display: none; /* ← 임시 비활성화 */
+}
+
+/* -------- 색상 -------- */
 
 .markdown-rendered li[data-task="0"] > input[type="checkbox"]::before,
 .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"]::before {
-    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
-    left: calc(100% + 6px); width: 140px; height: 1.3em;
     background: linear-gradient(to right, rgba(233, 49, 71, 0.25), transparent);
-    pointer-events: none; border-radius: 4px;
 }
 
 .markdown-rendered li[data-task="1"] > input[type="checkbox"]::before,
 .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"]::before {
-    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
-    left: calc(100% + 6px); width: 140px; height: 1.3em;
     background: linear-gradient(to right, rgba(255, 210, 0, 0.25), transparent);
-    pointer-events: none; border-radius: 4px;
 }
 
 .markdown-rendered li[data-task="2"] > input[type="checkbox"]::before,
 .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"]::before {
-    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
-    left: calc(100% + 6px); width: 140px; height: 1.3em;
     background: linear-gradient(to right, rgba(68, 207, 110, 0.25), transparent);
-    pointer-events: none; border-radius: 4px;
 }
 
 .markdown-rendered li[data-task="3"] > input[type="checkbox"]::before,
 .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"]::before {
-    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
-    left: calc(100% + 6px); width: 140px; height: 1.3em;
     background: linear-gradient(to right, rgba(8, 109, 221, 0.25), transparent);
-    pointer-events: none; border-radius: 4px;
 }
 
 .markdown-rendered li[data-task="7"] > input[type="checkbox"]::before,
 .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"]::before {
-    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
-    left: calc(100% + 6px); width: 140px; height: 1.3em;
     background: linear-gradient(to right, rgba(150, 150, 150, 0.25), transparent);
-    pointer-events: none; border-radius: 4px;
 }
 
 .markdown-rendered li[data-task="!"] > input[type="checkbox"]::before,
 .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::before {
-    content: ""; position: absolute; top: 50%; transform: translateY(-50%);
-    left: calc(100% + 6px); width: 140px; height: 1.3em;
     background: linear-gradient(to right, rgba(140, 0, 40, 0.3), transparent);
-    pointer-events: none; border-radius: 4px;
 }
