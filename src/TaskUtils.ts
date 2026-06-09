@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { DailyData, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
-import { App, TFile, moment } from "obsidian";
+import { App, TFile, TFolder, moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 
@@ -874,9 +874,27 @@ export class TaskUtils {
         return dashboardHtml ? dashboardHtml + "\n\n" + calloutsHtml : calloutsHtml;
     }
 
-    getProjectFiles(): TFile[] {
+        getProjectFiles(): TFile[] {
         const dir = this.settings.projectDirectory;
-        return this.app.vault.getMarkdownFiles().filter(f => f.path.startsWith(dir + "/"));
+        const folder = this.app.vault.getAbstractFileByPath(dir);
+        const files: TFile[] = [];
+        
+        const traverse = (f: TFolder) => {
+            if (!f.children) return;
+            for (const child of f.children) {
+                if (child instanceof TFile && child.extension === "md") {
+                    files.push(child);
+                } else if (child instanceof TFolder) {
+                    traverse(child);
+                }
+            }
+        };
+
+        if (folder instanceof TFolder) {
+            traverse(folder);
+        }
+        
+        return files;
     }
 
     async saveIfChanged(file: TFile, content: string, originalContent: string): Promise<boolean> {
