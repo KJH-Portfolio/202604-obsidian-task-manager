@@ -1,7 +1,3 @@
----
-작성일: 2026-06-03T01:11
-수정일: 2026-06-05T11:58
----
 # MyWorld Task Manager
 
 > **A Powerful Obsidian Plugin for Centralized Task & Schedule Management**
