@@ -8,21 +8,21 @@
    옵시디언 기본 테마가 커스텀 체크박스(0,1,2,3,7,!)를 
    '완료된 작업'으로 간주하여 취소선을 긋는 현상 방지
    ======================================================== */
-.markdown-rendered li.is-checked[data-task="0"],
-.markdown-rendered li.is-checked[data-task="1"],
-.markdown-rendered li.is-checked[data-task="2"],
-.markdown-rendered li.is-checked[data-task="3"],
-.markdown-rendered li.is-checked[data-task="7"],
-.markdown-rendered li.is-checked[data-task="!"],
-.cm-line.HyperMD-task-line[data-task="0"],
-.cm-line.HyperMD-task-line[data-task="1"],
-.cm-line.HyperMD-task-line[data-task="2"],
-.cm-line.HyperMD-task-line[data-task="3"],
-.cm-line.HyperMD-task-line[data-task="7"],
-.cm-line.HyperMD-task-line[data-task="!"] {
-    text-decoration: none !important;
-    opacity: 1 !important;
-    color: var(--text-normal) !important;
+body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
+body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
+body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
+body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="3"],
+body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="7"],
+body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="!"],
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"],
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"],
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"],
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"],
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"],
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] {
+    text-decoration: none;
+    opacity: 1;
+    color: var(--text-normal);
 }
 
 /* 체크박스 외형을 미완료(진행중) 상태로 렌더링 (체크마크 제거, 테두리 색상 유지) */
@@ -57,12 +57,12 @@
 }
 
 /* 마커별 테두리(체크박스) 색상 입히기 (선택사항이나 가시성을 위해 추가) */
-.markdown-rendered li[data-task="0"] > input[type="checkbox"]:checked, .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] { border-color: rgba(233, 49, 71, 0.8) !important; }
-.markdown-rendered li[data-task="1"] > input[type="checkbox"]:checked, .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] { border-color: rgba(255, 210, 0, 0.8) !important; }
-.markdown-rendered li[data-task="2"] > input[type="checkbox"]:checked, .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] { border-color: rgba(68, 207, 110, 0.8) !important; }
-.markdown-rendered li[data-task="3"] > input[type="checkbox"]:checked, .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] { border-color: rgba(8, 109, 221, 0.8) !important; }
-.markdown-rendered li[data-task="7"] > input[type="checkbox"]:checked, .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] { border-color: rgba(150, 150, 150, 0.8) !important; }
-.markdown-rendered li[data-task="!"] > input[type="checkbox"]:checked, .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] { border-color: rgba(140, 0, 40, 0.9) !important; }
+body .workspace-leaf-content .markdown-rendered li[data-task="0"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] { border-color: rgba(233, 49, 71, 0.8); }
+body .workspace-leaf-content .markdown-rendered li[data-task="1"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] { border-color: rgba(255, 210, 0, 0.8); }
+body .workspace-leaf-content .markdown-rendered li[data-task="2"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] { border-color: rgba(68, 207, 110, 0.8); }
+body .workspace-leaf-content .markdown-rendered li[data-task="3"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] { border-color: rgba(8, 109, 221, 0.8); }
+body .workspace-leaf-content .markdown-rendered li[data-task="7"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] { border-color: rgba(150, 150, 150, 0.8); }
+body .workspace-leaf-content .markdown-rendered li[data-task="!"] > input[type="checkbox"]:checked, body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] { border-color: rgba(140, 0, 40, 0.9); }
 
 /* ========================================================
    1. 스케줄 강조 하이라이트 (fix-task-indent.css)
