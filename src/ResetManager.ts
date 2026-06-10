@@ -402,7 +402,10 @@ export class ResetManager {
                 const newContent = mainContent + statsSection + tailContent;
                 
                 // 취약 항목 볼드 강조 갱신
-                const updatedContent = this.utils.updateRoutineSectionBold(newContent, this.utils.getDeficientItems(tableHeader, dataRows));
+                let updatedContent = this.utils.updateRoutineSectionBold(newContent, this.utils.getDeficientItems(tableHeader, dataRows));
+                
+                // 통계 숫자 파싱 로직 포함 (테이블 내 숫자 1~4를 이모지로 치환)
+                updatedContent = this.utils.sortChecklistTable(updatedContent);
                 
                 await this.utils.saveIfChanged(dailyFile, updatedContent, originalContent);
                 new Notice("✅ 월간 통계 수동 아카이빙 및 대시보드 갱신 완료!");
