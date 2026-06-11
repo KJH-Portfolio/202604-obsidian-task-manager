@@ -936,7 +936,9 @@ export class TaskUtils {
         let hasD0Any = false;
         const pruned: TaskNode[] = [];
         nodes.forEach(node => {
-            const isD0Task = node.line.includes("#D-0") && REGEX.MATCH_TASK_INCOMPLETE.test(node.line);
+            const sMatch = node.line.match(REGEX.STATUS_MATCH);
+            const statusChar = sMatch ? sMatch[1] : '';
+            const isD0Task = (statusChar === '0' || statusChar === '!');
             const childResults = this.pruneTree(node.children);
             
             if (isD0Task || childResults.hasD0) {
