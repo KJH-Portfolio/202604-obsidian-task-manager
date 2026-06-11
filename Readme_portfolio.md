@@ -125,8 +125,6 @@ flowchart TD
 - 데일리 노트 어디서든 상단의 버튼을 눌러 **빠른 할 일 모달창**을 엽니다.
 - 달력(Date Picker)과 입력창을 통해 내일 혹은 특정 날짜로 편하게 할 일을 주입할 수 있습니다.
 <br>
-<img src="./source/4.빠른 할 일 등록 버튼.png" width="100%" alt="빠른 할 일 등록 버튼">
-<br>
 <div align="center">
   <img src="./source/4.빠른 할 일 등록 모달 창.png" width="49%" alt="빠른 할 일 등록 모달 창">
   <img src="./source/4.빠른 할 일 등록 모달 결과.png" width="49%" alt="빠른 할 일 등록 모달 결과">
