@@ -2,7 +2,6 @@ export const REGEX = {
     EXTRACT_ID: /^(.*?)(?:\s*\^([a-zA-Z0-9]+))?$/,
     TASK_LINE: /^(\s*[-*+])\s+\[(.)\]\s+(.*)$/,
     MATCH_TASK: /^\s*[-*+]\s+\[.\]/,
-    MATCH_TASK_INCOMPLETE: /^[\s]*[-*+]\s+\[ \]/,
     MATCH_TASK_COMPLETED: /^[\s]*[-*+]\s+\[[xX-]\]/,
     STATUS_MATCH: /^[\s]*[-*+]\s+\[(.)\]/,
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
@@ -12,9 +11,7 @@ export const REGEX = {
     WORK_SUMMARY_HEADER: /^#\s+계획$/,
     NOTE_LINK: /^##\s+(.+)$/,
     SUMMARY_MATCH: /^[\s]*[-*+]\s+\[([xX ])\]/,
-    CLEAN_PREFIX: /^(?:#D-\d+|#Past)\s*/,
     MARKER_REPLACE_2: /(\[[^\]]\])\s*/,
-    BLOCK_MARKER_REPLACE: /(\[[^\]]\])\s*(?:#D-\d+|#Past)\s*/,
     PROJECT_TODO_SECTION: /(?:^|\n)##\s+프로젝트(?:\n|$)(?:[\s\S]*?)(?=\n#{1,6}\s|$)/g,
     TODO_HEADER: /(?:^|\n)#\s+Todo(?=\n|$)/i,
     INDENT: /^\s*/

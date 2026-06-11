@@ -249,7 +249,7 @@ export class ResetManager {
                             l = l.replace(/^((?:>\s*)*\s*[-*+]\s+)\[[^ ]\]/, "$1[ ]");
                         }
                         if (/^((?:>\s*)+.*?(?:[Ss]tep|도전)\s*:).*$/.test(l)) {
-                            l = l.replace(/^((?:>\s*)+.*?(?:[Ss]tep|도전)\s*:).*$/, (match, p1) => `${p1} ${stepInput || " "}`);
+                            l = l.replace(/^((?:>\s*)+.*?(?:[Ss]tep|도전)\s*:).*$/, (_match, p1) => `${p1} ${stepInput || " "}`);
                         }
                         finalL.push(l);
                     }

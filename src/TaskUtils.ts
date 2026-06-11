@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { DailyData, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
-import { App, TFile, TFolder, moment } from "obsidian";
+import { App, TFile, TFolder } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 
@@ -23,7 +23,6 @@ export const REGEX = {
     EXTRACT_ID: /^(.*?)(?:\s*\^([a-zA-Z0-9]+))?$/,
     TASK_LINE: /^(\s*[-*+])\s+\[(.)\]\s+(.*)$/,
     MATCH_TASK: /^\s*[-*+]\s+\[.\]/,
-    MATCH_TASK_INCOMPLETE: /^[\s]*[-*+]\s+\[ \]/,
     MATCH_TASK_COMPLETED: /^[\s]*[-*+]\s+\[[xX-]\]/,
     STATUS_MATCH: /^[\s]*[-*+]\s+\[(.)\]/,
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
@@ -31,11 +30,8 @@ export const REGEX = {
     TOP_HEADING_START: /^#\s+/,
     EXEC_HEADER: /^#\s+실행$/,
     WORK_SUMMARY_HEADER: /^#\s+계획$/,
-    NOTE_LINK: /^##\s+(.+)$/,
     SUMMARY_MATCH: /^[\s]*[-*+]\s+\[([xX ])\]/,
-    CLEAN_PREFIX: /^(?:#D-\d+|#Past)\s*/,
     MARKER_REPLACE_2: /(\[[^\]]\])\s*/,
-    BLOCK_MARKER_REPLACE: /(\[[^\]]\])\s*(?:#D-\d+|#Past)\s*/,
     PROJECT_TODO_SECTION: /(?:^|\n)##\s+프로젝트(?:\n|$)(?:[\s\S]*?)(?=\n#{1,6}\s|$)/g,
     TODO_HEADER: /(?:^|\n)#\s+Todo(?=\n|$)/i,
     INDENT: /^\s*/
@@ -217,7 +213,7 @@ export class TaskUtils {
         if (!rawText) return { text: "", id: null };
         const m = rawText.match(REGEX.EXTRACT_ID);
         if (!m) return { text: rawText, id: null };
-        const text = m[1].replace(REGEX.CLEAN_PREFIX, '').trim();
+        const text = m[1].trim();
         return { text, id: m[2] || null };
     }
 
@@ -371,7 +367,7 @@ export class TaskUtils {
 
             const metadata = {
                 isBlank,
-                marker: (line.match(/#D-\d+|#Past/) || [""])[0],
+                marker: s,
                 date: dMatch ? dMatch[0].replace('📅', '').trim() : "9999-99-99",
                 statusGroup: (s === ">" || s === "/") ? 0 : (s === " " ? 1 : 2)
             };
@@ -527,9 +523,9 @@ export class TaskUtils {
                     let hw = tableHeaders[c];
 
                     if (hw && hw !== "" && hw !== "날짜") {
-                        if (!cs[hw]) cs[hw] = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 };
+                        if (!cs[hw]) cs[hw] = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 };
                         if (Object.prototype.hasOwnProperty.call(cs[hw], emoji)) cs[hw][emoji]++;
-                    }
+                    }
                     if (Object.prototype.hasOwnProperty.call(sq, emoji)) sq[emoji]++;
                 }
             }
@@ -618,7 +614,7 @@ export class TaskUtils {
                 if (/(횟수|비율|점수|%|Count|Ratio)/i.test(colHeader)) continue;
 
                 let colText = parts[i];
-                parts[i] = colText.replace(/^\s*([1-4])\s*$/, (match, p1) => {
+                parts[i] = colText.replace(/^\s*([1-4])\s*$/, (match, p1) => {
                     return EMOJI_MAP[p1] ? match.replace(p1, EMOJI_MAP[p1]) : match;
                 });
             }
@@ -632,17 +628,17 @@ export class TaskUtils {
             const textQueues: Record<string, TaskData[]> = {};
             for (const key in (data as DailyData).byText) textQueues[key] = [...(data as DailyData).byText[key]];
 
-            const tasks = data.orderedTasks.map((ot) => {
-                if (ot.type === 'id') return data.byId[ot.key];
+            const tasks = data.orderedTasks.map((ot) => {
+                if (ot.type === 'id') return data.byId[ot.key];
                 if (textQueues[ot.key] && textQueues[ot.key].length > 0) return textQueues[ot.key].shift();
                 return null;
             });
-            for (let i = 0; i < tasks.length; i++) {
-                if (tasks[i] && tasks[i].checked) {
+            for (let i = 0; i < tasks.length; i++) {
+                if (tasks[i] && tasks[i].checked) {
                     const pInd = (tasks[i].indent || "").length;
-                    for (let j = i + 1; j < tasks.length; j++) {
-                        if (!tasks[j] || (tasks[j].indent || "").length <= pInd) break;
-                        tasks[j].checked = true;
+                    for (let j = i + 1; j < tasks.length; j++) {
+                        if (!tasks[j] || (tasks[j].indent || "").length <= pInd) break;
+                        tasks[j].checked = true;
                         if (!tasks[j].status || tasks[j].status === ' ') tasks[j].status = tasks[i].status;
                     }
                 }
@@ -664,7 +660,7 @@ export class TaskUtils {
         return this.renderStatsDashboard(sq, cs, title, type);
     }
 
-    renderProjectCallout(noteName: string, rawTasks: string[], done: number, total: number, todayObj: Date, statBar: string, isReset = false): string {
+    renderProjectCallout(noteName: string, rawTasks: string[], done: number, total: number, todayObj: Date, isReset = false): string {
         const filteredTasks = isReset ? this.filterResetTasks(rawTasks, true) : rawTasks;
         const processedTasks = this.applyMarkersToLines(filteredTasks, todayObj);
         let minDiff = Infinity, hasIncomp = false;
@@ -895,44 +891,6 @@ export class TaskUtils {
         }
         
         return files;
-    }
-
-    async saveIfChanged(file: TFile, content: string, originalContent: string): Promise<boolean> {
-        const finalized = content.replace(/\n{3,}/g, '\n\n').trim();
-        const originalFinalized = (originalContent || "").trim();
-
-        if (finalized !== originalFinalized) {
-            await this.app.vault.modify(file, finalized);
-            return true;
-        }
-        return false;
-    }
-
-    getActualDate(nowMoment: moment.Moment, dayNum: number): moment.Moment {
-        return nowMoment.clone().date(dayNum);
-    }
-
-    sortChecklistTable(content: string): string {
-        const chkRange = this.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
-        if (!chkRange) return content;
-        
-        const targetTableText = content.substring(chkRange.start, chkRange.end);
-        if (!targetTableText.includes("|")) return content;
-
-        const convertedTableText = this.convertTableMarkers(targetTableText);
-        return content.substring(0, chkRange.start) + convertedTableText + content.substring(chkRange.end);
-    }
-
-    cleanTaskText(text: string): string {
-        if (!text) return "";
-        return text
-            .replace(REGEX.DATE_LABEL, "")
-            .replace(/#D-\d+|#Past/g, "")
-            .replace(/\^[a-zA-Z0-9]+$/, "")
-            .trim();
-    }
-
-    pruneTree(nodes: TaskNode[]): { nodes: TaskNode[], hasD0: boolean } {
         let hasD0Any = false;
         const pruned: TaskNode[] = [];
         nodes.forEach(node => {
@@ -1044,7 +1002,7 @@ export class TaskUtils {
                 else if (pMinDiff === 3) pSortPri = 4;
                 
                 const statBar = this.renderProgressBar(pPlanTasksDone, pPlanTasksTotal, pNoteName);
-                const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, statBar, isReset);
+                const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, isReset);
                 
                 return { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
             } catch (err) {
