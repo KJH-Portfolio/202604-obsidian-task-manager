@@ -58,14 +58,55 @@ export class Synchronizer {
                 content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
             }
 
+        this.fileManager = fileManager;
+    }
+
+    // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
+    async syncDailyTasks(dailyFile: TFile): Promise<void> {
+        try {
+            new Notice("⏳ 프로젝트 동기화 시작...");
+            const originalContent = await this.app.vault.read(dailyFile);
+            let content = this.utils.preprocessContent(originalContent);
+            const now = this.dateManager.getAdjustedNow();
+            const todayObj = now.clone().startOf('day').toDate();
+
+            // 데일리 노트 내의 프로젝트 맵 파싱
+            const dailyMap = this.utils.parseDailyProjectMap(content);
+            if (dailyMap) {
+                this.utils.syncDailyMap(dailyMap);
+
+                // 프로젝트 파일들로 전파 동기화
+                const projectFiles = this.utils.getProjectFiles();
+                const filesForCollisionCheck = [...projectFiles, dailyFile];
+                
+                const overrideData = await this.utils.syncDailyToProjects(
+                    this.app, 
+                    dailyMap, 
+                    projectFiles, 
+                    filesForCollisionCheck, 
+                    false // isReset: false
+                );
+
+                // 메인 스케줄의 # Project 대시보드 갱신
+                const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
+                const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
+                if (newSectionText) {
+                    content = this.utils.replaceSection(content, "# Project", newSectionText);
+                }
+
+                // #### 프로젝트 (오늘의 마감 작업 리스트) 갱신
+                const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
+                content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
+            }
+
             // # Todo 섹션의 기한 마커 정렬 및 전파
             content = this.utils.processSectionLogic(content, "# Todo", todayObj, false, true);
 
             // 실질적 변경 발생 시 저장
-            await this.utils.saveIfChanged(dailyFile, content, originalContent);
+            await this.fileManager.saveIfChanged(dailyFile, originalContent, content);
             new Notice("✅ 프로젝트 동기화 완료!");
         } catch (e) {
-            console.error("Task Manage Error:", e);
+            console.error("Task Manage Error:", e instanceof Error ? e.message : String(e));
             new Notice("🚨 동기화 실패: 에러가 발생했습니다.");
         }
     }
@@ -77,8 +118,8 @@ export class Synchronizer {
         
         try {
             const noteName = projectFile.basename;
-            new Notice("⏳ 스케줄 반영 및 대시보드 갱신 중...");
-            const now = this.dateManager.getAdjustedNow();
+            new Notice("⏳ 스케줄 반영 및 대시보드 갱신 중...");
+            const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
 
             let content = this.utils.preprocessContent(originalActive);
@@ -138,16 +179,16 @@ export class Synchronizer {
                         let { id } = this.utils.extractIdAndText(pMatch[3]);
                         if (id) {
                             originalIds.add(id);
-                            if (execMap.has(id)) {
-                                const et = execMap.get(id);
+                            if (execMap.has(id)) {
+                                const et = execMap.get(id);
                                 const tM = et.line.match(REGEX.TASK_LINE);
                                 if (tM) {
-                                    const { text: execText } = this.utils.extractIdAndText(tM[3]);
+                                    const { text: execText } = this.utils.extractIdAndText(tM[3]);
                                     newPlanLines.push(`${pMatch[1]} [${et.status}] ${execText} ^${id}`);
                                 } else {
                                     newPlanLines.push(l);
                                 }
-                                planTasksTotal++;
+                                planTasksTotal++;
                                 if (REGEX.MATCH_TASK_COMPLETED.test(et.line)) planTasksDone++;
                             } else {
                                 newPlanLines.push(l);
@@ -264,7 +305,7 @@ export class Synchronizer {
                 
                 if (newSectionText) {
                     let sBody = this.utils.replaceSection(originalSchedule, "# Project", newSectionText);
-                    await this.utils.saveIfChanged(scheduleFile, sBody, originalSchedule);
+                    await this.fileManager.saveIfChanged(scheduleFile, originalSchedule, sBody);
                     new Notice(`✅ [${noteName}] 스케줄 반영 완료!`);
                 } else {
                     new Notice(`⚠️ [${noteName}] 반영할 프로젝트 데이터가 없습니다.`);
@@ -281,7 +322,7 @@ export class Synchronizer {
                     await this.app.vault.modify(scheduleFile, originalSchedule);
                 }
             }
-            console.error("Push Project Schedule Error:", e);
+            console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));
             new Notice("🚨 반영 실패: 원본 데이터를 복구했습니다.");
         }
     }

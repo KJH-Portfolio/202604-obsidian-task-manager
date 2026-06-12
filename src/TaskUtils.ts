@@ -1001,7 +1001,6 @@ export class TaskUtils {
                 else if (pMinDiff === 2) pSortPri = 3; 
                 else if (pMinDiff === 3) pSortPri = 4;
                 
-                const statBar = this.renderProgressBar(pPlanTasksDone, pPlanTasksTotal, pNoteName);
                 const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, isReset);
                 
                 return { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };

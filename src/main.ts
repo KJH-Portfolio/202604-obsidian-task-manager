@@ -308,7 +308,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 const todayObj = this.dateManager.getTodayStart();
                                 text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
                                 
-                                await this.utils.saveIfChanged(scheduleFile, text, original);
+                                await this.fileManager.saveIfChanged(scheduleFile, original, text);
                                 new Notice(`✅ 할 일이 메인 스케줄에 추가되었습니다: "${content}"`);
                             } catch (err) {
             console.error(err instanceof Error ? err.message : String(err));

@@ -323,7 +323,7 @@ export class ResetManager {
 
                     // 최종 파일 저장
                     const newContent = mainContent + statsSection + tailContent;
-                    await this.utils.saveIfChanged(dailyFile, newContent, originalContent);
+                    await this.fileManager.saveIfChanged(dailyFile, originalContent, newContent);
                     new Notice("✅ 새로운 하루 준비 완료!");
                 } catch (innerErr) {
                     console.error("Daily Reset Execution Error:", innerErr);
@@ -407,7 +407,7 @@ export class ResetManager {
                 // 통계 숫자 파싱 로직 포함 (테이블 내 숫자 1~4를 이모지로 치환)
                 updatedContent = this.utils.sortChecklistTable(updatedContent);
                 
-                await this.utils.saveIfChanged(dailyFile, updatedContent, originalContent);
+                await this.fileManager.saveIfChanged(dailyFile, originalContent, updatedContent);
                 new Notice("✅ 월간 통계 수동 아카이빙 및 대시보드 갱신 완료!");
             } else {
                 new Notice("⚠️ 생성된 통계 대시보드가 없습니다.");
