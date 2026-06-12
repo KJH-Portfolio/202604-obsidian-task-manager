@@ -25,47 +25,6 @@ export class Synchronizer {
         try {
             new Notice("⏳ 프로젝트 동기화 시작...");
             const originalContent = await this.app.vault.read(dailyFile);
-            let content = this.utils.preprocessContent(originalContent);
-            const now = this.dateManager.getAdjustedNow();
-            const todayObj = now.clone().startOf('day').toDate();
-
-            // 데일리 노트 내의 프로젝트 맵 파싱
-            const dailyMap = this.utils.parseDailyProjectMap(content);
-            if (dailyMap) {
-                this.utils.syncDailyMap(dailyMap);
-
-                // 프로젝트 파일들로 전파 동기화
-                const projectFiles = this.utils.getProjectFiles();
-                const filesForCollisionCheck = [...projectFiles, dailyFile];
-                
-                const overrideData = await this.utils.syncDailyToProjects(
-                    this.app, 
-                    dailyMap, 
-                    projectFiles, 
-                    filesForCollisionCheck, 
-                    false // isReset: false
-                );
-
-                // 메인 스케줄의 # Project 대시보드 갱신
-                const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
-                const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
-                if (newSectionText) {
-                    content = this.utils.replaceSection(content, "# Project", newSectionText);
-                }
-
-                // #### 프로젝트 (오늘의 마감 작업 리스트) 갱신
-                const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
-                content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
-            }
-
-        this.fileManager = fileManager;
-    }
-
-    // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
-    async syncDailyTasks(dailyFile: TFile): Promise<void> {
-        try {
-            new Notice("⏳ 프로젝트 동기화 시작...");
-            const originalContent = await this.app.vault.read(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
             const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
