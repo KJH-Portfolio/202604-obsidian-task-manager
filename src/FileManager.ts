@@ -27,7 +27,7 @@ export class FileManager {
     async saveIfChanged(file: TFile, originalContent: string, newContent: string): Promise<boolean> {
         if (originalContent !== newContent) {
             const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (activeView && activeView.file && activeView.file.path === file.path) {
+            if (activeView && activeView.file && activeView.file.path === file.path && activeView.getMode() === "source") {
                 activeView.editor.setValue(newContent);
             } else {
                 await this.app.vault.modify(file, newContent);

@@ -30,6 +30,7 @@ export const REGEX = {
     TOP_HEADING_START: /^#\s+/,
     EXEC_HEADER: /^#\s+실행$/,
     WORK_SUMMARY_HEADER: /^#\s+계획$/,
+    NOTE_LINK: /^##\s+(.+)$/,
     SUMMARY_MATCH: /^[\s]*[-*+]\s+\[([xX ])\]/,
     MARKER_REPLACE_2: /(\[[^\]]\])\s*/,
     PROJECT_TODO_SECTION: /(?:^|\n)##\s+프로젝트(?:\n|$)(?:[\s\S]*?)(?=\n#{1,6}\s|$)/g,
@@ -850,6 +851,52 @@ export class TaskUtils {
             else if (tableLines.length > 0 && line.trim() !== "" && !line.includes("# 체크리스트")) break; 
         }
         return tableLines.join('\n');
+    }
+
+    sortChecklistTable(content: string): string {
+        const chkRange = this.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
+        if (!chkRange) return content;
+        
+        const chkSection = content.substring(chkRange.start, chkRange.end);
+        let lines = chkSection.split('\n');
+        let tableStartIndex = -1;
+        let tableEndIndex = -1;
+        
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].trim().startsWith("|")) {
+                if (tableStartIndex === -1) tableStartIndex = i;
+                tableEndIndex = i;
+            } else if (tableStartIndex !== -1 && lines[i].trim() !== "" && !lines[i].includes("# 체크리스트")) {
+                break;
+            }
+        }
+        
+        if (tableStartIndex === -1) return content;
+        
+        let tableLines = lines.slice(tableStartIndex, tableEndIndex + 1);
+        if (tableLines.length < 3) return content; // Header, Separator, and at least 1 data row
+        
+        let header = tableLines[0];
+        let separator = tableLines[1];
+        let dataRows = tableLines.slice(2);
+        
+        dataRows.sort((a, b) => {
+            let aCol = a.split('|')[1];
+            let bCol = b.split('|')[1];
+            if (aCol && bCol) {
+                let aVal = parseInt(aCol.trim());
+                let bVal = parseInt(bCol.trim());
+                if (!isNaN(aVal) && !isNaN(bVal)) return aVal - bVal;
+            }
+            return 0;
+        });
+        
+        let newTableContent = [header, separator, ...dataRows].join('\n');
+        newTableContent = this.convertTableMarkers(newTableContent);
+        
+        lines.splice(tableStartIndex, tableLines.length, newTableContent);
+        
+        return content.substring(0, chkRange.start) + lines.join('\n') + content.substring(chkRange.end);
     }
 
     extractDailyMetadata(content: string): DailyMeta {
