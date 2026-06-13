@@ -853,7 +853,7 @@ export class TaskUtils {
         return tableLines.join('\n');
     }
 
-    sortChecklistTable(content: string): string {
+    formatChecklistTable(content: string): string {
         const chkRange = this.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
         if (!chkRange) return content;
         
@@ -880,16 +880,7 @@ export class TaskUtils {
         let separator = tableLines[1];
         let dataRows = tableLines.slice(2);
         
-        dataRows.sort((a, b) => {
-            let aCol = a.split('|')[1];
-            let bCol = b.split('|')[1];
-            if (aCol && bCol) {
-                let aVal = parseInt(aCol.trim());
-                let bVal = parseInt(bCol.trim());
-                if (!isNaN(aVal) && !isNaN(bVal)) return aVal - bVal;
-            }
-            return 0;
-        });
+
         
         let newTableContent = [header, separator, ...dataRows].join('\n');
         newTableContent = this.convertTableMarkers(newTableContent);

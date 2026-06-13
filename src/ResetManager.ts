@@ -233,7 +233,7 @@ export class ResetManager {
 
                     // --- [Step 3] 할 일 리셋 및 정렬 ---
                     content = this.utils.processSectionLogic(content, "# Todo", todayObj, true, true);
-                    content = this.utils.sortChecklistTable(content);
+                    content = this.utils.formatChecklistTable(content);
 
                     // --- [Step 4] 루틴 체크박스 리셋 및 Step(목표) 업데이트 ---
                     let finalL: string[] = [], allL = content.split('\n'), inRoutine = false, routineType = "";
@@ -405,7 +405,7 @@ export class ResetManager {
                 let updatedContent = this.utils.updateRoutineSectionBold(newContent, this.utils.getDeficientItems(tableHeader, dataRows));
                 
                 // 통계 숫자 파싱 로직 포함 (테이블 내 숫자 1~4를 이모지로 치환)
-                updatedContent = this.utils.sortChecklistTable(updatedContent);
+                updatedContent = this.utils.formatChecklistTable(updatedContent);
                 
                 await this.fileManager.saveIfChanged(dailyFile, originalContent, updatedContent);
                 new Notice("✅ 월간 통계 수동 아카이빙 및 대시보드 갱신 완료!");
