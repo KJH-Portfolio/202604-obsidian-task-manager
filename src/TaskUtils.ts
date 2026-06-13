@@ -929,6 +929,9 @@ export class TaskUtils {
         }
         
         return files;
+    }
+
+    pruneTree(nodes: TaskNode[]): { nodes: TaskNode[], hasD0: boolean } {
         let hasD0Any = false;
         const pruned: TaskNode[] = [];
         nodes.forEach(node => {
@@ -1497,6 +1500,17 @@ export class TaskUtils {
         }));
         return overrideData;
     }
+
+    getActualDate(now: any, day: number): any {
+        const d = now.clone();
+        d.date(day);
+        return d;
+    }
+
+    cleanTaskText(text: string): string {
+        return text.trim();
+    }
+
 }
 
 
