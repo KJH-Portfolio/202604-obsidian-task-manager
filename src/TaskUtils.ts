@@ -1022,6 +1022,8 @@ export class TaskUtils {
                         }
                     }
                 }
+
+                if (!pExecTasks.some(t => REGEX.MATCH_TASK.test(t))) return null;
                 
                 let pMinDiff = Infinity, pSortPri = 99;
                 const pProcessed = this.applyMarkersToLines(pExecTasks.filter(t => t), todayObj);
@@ -1090,12 +1092,16 @@ export class TaskUtils {
                             indent: tM[1], 
                             deleted: isDeleted 
                         };
-                        if (id) {
+                        if (id) {
+
                             dailyMap[currNote].byId[id] = taskData;
-                        } else {
-                            if (!dailyMap[currNote].byText[cleanText]) dailyMap[currNote].byText[cleanText] = [];
+                        } else {
+
+                            if (!dailyMap[currNote].byText[cleanText]) dailyMap[currNote].byText[cleanText] = [];
+
                             dailyMap[currNote].byText[cleanText].push(taskData);
-                        }
+                        }
+
                         dailyMap[currNote].orderedTasks.push(id ? { type: 'id', key: id } : { type: 'text', key: cleanText });
                     }
                 }
@@ -1228,7 +1234,7 @@ export class TaskUtils {
             await app.vault.modify(wFile, wContent.trim() + "\n");
         } else {
             const chkSectionText = `# 체크리스트\n\n${weeklyTableStr}\n\n`;
-            const initialContent = `---\n작성일: "${this.dateManager.formatDateTime(this.dateManager.getAdjustedNow())}"\n---\n# ${weeklyInfo.fileName.replace('.md','')}\n\n# 기록\n\n${dailyRecord ? dailyRecord + '\n\n' : ''}${chkSectionText}# 통계\n${weeklyStatsDashboard}\n`;
+            const initialContent = `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${weeklyInfo.fileName.replace('.md','')}\n\n# 기록\n\n${dailyRecord ? dailyRecord + '\n\n' : ''}${chkSectionText}# 통계\n${weeklyStatsDashboard}\n`;
             await app.vault.create(weeklyInfo.path, initialContent);
         }
     }
@@ -1252,7 +1258,7 @@ export class TaskUtils {
             }
             await app.vault.modify(mFile, mContent.trim() + "\n");
         } else {
-            await app.vault.create(monthlyInfo.path, `---\n작성일: "${this.dateManager.formatDateTime(this.dateManager.getAdjustedNow())}"\n---\n# ${mTitle} 월간 기록\n\n# 기록\n\n# 통계\n${dashboardStr}\n`);
+            await app.vault.create(monthlyInfo.path, `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${mTitle} 월간 기록\n\n# 기록\n\n# 통계\n${dashboardStr}\n`);
         }
         return originalContent;
     }
@@ -1304,13 +1310,17 @@ export class TaskUtils {
                     if (inExSec && REGEX.MATCH_TASK.test(l)) {
                         let tM = l.match(REGEX.TASK_LINE);
                         if (tM) {
-                            let { text, id } = this.extractIdAndText(tM[3]); 
+                            let { text, id } = this.extractIdAndText(tM[3]); 
+
                             let data = (id && dailyData.byId[id]) ? dailyData.byId[id] : (dailyData.byText[text] && dailyData.byText[text].length > 0 ? dailyData.byText[text].shift() : null);
                             if (data) handledInFile.add(id || text);
                             let currentStat = tM[2], newStat = currentStat;
-                            if (data) { 
-                                if (data.deleted) { skipIndent = currentIndent; mod = true; continue; } 
-                                if (data.status && data.status !== ' ') newStat = data.status; 
+                            if (data) { 
+
+                                if (data.deleted) { skipIndent = currentIndent; mod = true; continue; } 
+
+                                if (data.status && data.status !== ' ') newStat = data.status; 
+
                                 else if (data.checked) newStat = 'x'; 
                                 else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat; 
                             } else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat;
@@ -1319,7 +1329,8 @@ export class TaskUtils {
                                 skipCheckIndent = currentIndent; 
                                 skipCheckStatus = newStat; 
                             }
-                            if (data && (currentStat !== newStat || text !== data.text)) { 
+                            if (data && (currentStat !== newStat || text !== data.text)) { 
+
                                 l = `${tM[1]} [${newStat}] ${data.text}${id ? ` ^${id}` : ''}`; 
                                 mod = true; 
                             } else if (currentStat !== newStat) { 
@@ -1384,9 +1395,12 @@ export class TaskUtils {
                     let lastAnchorId: string | null = null; 
                     const tasksToInsert = [];
                     if (dailyData.orderedTasks) { 
-                        for (let ot of dailyData.orderedTasks) { 
-                            if (ot.type === 'id') lastAnchorId = ot.key; 
-                            else if (dailyData.byText[ot.key] && dailyData.byText[ot.key].length > 0) {
+                        for (let ot of dailyData.orderedTasks) { 
+
+                            if (ot.type === 'id') lastAnchorId = ot.key; 
+
+                            else if (dailyData.byText[ot.key] && dailyData.byText[ot.key].length > 0) {
+
                                 tasksToInsert.push({ anchorId: lastAnchorId, task: { ...dailyData.byText[ot.key].shift(), id: this.generateBlockId(collisionFiles) } }); 
                             }
                         } 
@@ -1426,7 +1440,8 @@ export class TaskUtils {
                                         if (id && ins.has(id)) { 
                                             const tl = ins.get(id)!; 
                                             let ia = i + 1; 
-                                            const ntl = tl.map(nt => {
+                                            const ntl = tl.map(nt => {
+
                                                 return `${nt.indent} [${nt.status || (nt.checked ? 'x' : ' ')}] ${nt.text} ^${nt.id}`;
                                             }); 
                                             finalSLines.splice(ia, 0, ...ntl); 

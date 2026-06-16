@@ -304,7 +304,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     }
                                 }
                                 
-                                // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
+                                // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
+
                                 const todayObj = this.dateManager.getTodayStart();
                                 text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
                                 
@@ -418,8 +419,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     templateText = await this.app.vault.read(defaultFile);
                 } else {
                     templateText = `---
-작성일: "{{date}}T{{time}}"
-수정일: "{{date}}T{{time}}"
+작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
 ---
 버튼
@@ -440,11 +441,14 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 # 세부 사항
 `;
                 }
-            }
+            }
+
             const now = this.dateManager.getAdjustedNow();
             const replacements = {
-                projectName: projectName,
-                date: now.format("YYYY-MM-DD"),
+                projectName: projectName,
+
+                date: now.format("YYYY-MM-DD"),
+
                 time: now.format("HH:mm")
             };
 
@@ -489,8 +493,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     }
                     
                     templateText = `---
-작성일: "{{date}}T{{time}}"
-수정일: "{{date}}T{{time}}"
+작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 cssclasses:
   - inline-routine
 ---
@@ -565,11 +569,15 @@ ${checklistTable}
 > 📈 루틴 집계 및 아카이브 통계가 10일 구간별로 렌더링됩니다.
 `;
                 }
-            }
+            }
+
             const now = this.dateManager.getAdjustedNow();
-            const replacements = {
-                date: now.format("YYYY-MM-DD"),
-                time: now.format("HH:mm"),
+            const replacements = {
+
+                date: now.format("YYYY-MM-DD"),
+
+                time: now.format("HH:mm"),
+
                 currentDay: now.date().toString(),
                 defaultStep: "계획 따라 움직이기. 1:30 취침하기.",
                 defaultAffirmation: "시작이 반 이다."
@@ -598,13 +606,12 @@ ${checklistTable}
             await this.utils.ensureFolder(folderPath);
 
             let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
-            if (!memoFile) {
+            if (!memoFile) {
+
                 const now = this.dateManager.getAdjustedNow();
                 const defaultContent = `---
-작성일: "${
-                    now.format("YYYY-MM-DDTHH:mm")}"
-수정일: "${
-                    now.format("YYYY-MM-DDTHH:mm")}"
+작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
 
 `;
@@ -625,7 +632,8 @@ ${checklistTable}
         }
     }
 
-    async loadSettings() {
+    async loadSettings() {
+
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 

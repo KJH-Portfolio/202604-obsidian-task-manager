@@ -35,8 +35,8 @@ export class TemplateHelper {
         const projectPath = `${templatesDir}/프로젝트 계획서 템플릿.md`;
 
         const defaultDailyText = `---
-작성일: "{{date}}T{{time}}"
-수정일: "{{date}}T{{time}}"
+작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 cssclasses:
   - inline-routine
 ---
@@ -143,8 +143,8 @@ cssclasses:
 `;
 
         const defaultProjectText = `---
-작성일: "{{date}}T{{time}}"
-수정일: "{{date}}T{{time}}"
+작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
 ---
 버튼
@@ -198,8 +198,8 @@ cssclasses:
 
 \`\`\`markdown
 ---
-작성일: "2026-06-05T08:00"
-수정일: "2026-06-05T08:00"
+작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 cssclasses:
   - inline-routine
 ---
@@ -274,8 +274,8 @@ cssclasses:
 
 \`\`\`markdown
 ---
-작성일: "2026-06-05T08:00"
-수정일: "2026-06-05T08:00"
+작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
 ---
 버튼
