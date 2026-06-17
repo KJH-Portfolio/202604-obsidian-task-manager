@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { DailyData, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
 import { App, TFile, TFolder } from "obsidian";
+import type { moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 
@@ -1281,7 +1282,7 @@ export class TaskUtils {
                 mContent += `\n\n# 통계\n${dashboardStr}\n`;
             }
             // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
-            await this.fileManager.pluginWrite(mFile as TFile, mContent.trim() + "\n");
+            await this.fileManager.pluginWrite(mFile, mContent.trim() + "\n");
         } else {
             await app.vault.create(monthlyInfo.path, `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${mTitle} 월간 기록\n\n# 기록\n\n# 통계\n${dashboardStr}\n`);
         }
@@ -1543,7 +1544,7 @@ export class TaskUtils {
     }
 
     // BUG-13: moment의 .date(n) setter는 체이닝으로 받아야 안전함
-    getActualDate(now: any, day: number): any {
+    getActualDate(now: moment.Moment, day: number): moment.Moment {
         return now.clone().date(day);
     }
 

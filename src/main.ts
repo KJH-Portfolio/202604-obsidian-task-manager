@@ -167,7 +167,7 @@ class TodayButtonWidget extends WidgetType {
     }
 
     toDOM() {
-        const span = document.createElement("span");
+        const span = activeDocument.createElement("span");
         span.className = "myworld-today-btn";
         span.textContent = "📆 오늘";
         
@@ -385,7 +385,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     }
 
                                     if (shouldShow) {
-                                        const btn = document.createElement("span");
+                                        const btn = activeDocument.createElement("span");
                                         btn.className = "myworld-today-btn";
                                         btn.textContent = "📆 오늘";
                                         btn.onclick = async (e) => {

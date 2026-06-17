@@ -179,8 +179,8 @@ export class Synchronizer {
                         if (id) {
                             originalIds.add(id);
                             if (execMap.has(id)) {
-                                const et = execMap.get(id)!;
-                                if (!et.deleted) {
+                                const et = execMap.get(id);
+                                if (et && !et.deleted) {
                                     const tM = et.line.match(REGEX.TASK_LINE);
                                     if (tM) {
                                         const { text: execText } = this.utils.extractIdAndText(tM[3]);
@@ -311,10 +311,10 @@ export class Synchronizer {
                 
                 let sBody = this.utils.replaceSection(originalSchedule, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
                 if (originalSchedule !== sBody) {
-                    await this.logSyncChange(scheduleFile as TFile, `개별 프로젝트 ➔ 스케줄 반영 (스케줄 대시보드 갱신 - ${noteName})`, originalSchedule, sBody);
+                    await this.logSyncChange(scheduleFile, `개별 프로젝트 ➔ 스케줄 반영 (스케줄 대시보드 갱신 - ${noteName})`, originalSchedule, sBody);
                 }
-                // BUG-06: 타입 캐스팅 명시 (instanceof TFile 검사 이후이므로 안전)
-                await this.fileManager.saveIfChanged(scheduleFile as TFile, originalSchedule, sBody);
+                // BUG-06: 타입 캐스팅 제거 (이미 instanceof TFile)
+                await this.fileManager.saveIfChanged(scheduleFile, originalSchedule, sBody);
                 if (newSectionText) {
                     new Notice(`✅ [${noteName}] 스케줄 반영 완료!`);
                 } else {
