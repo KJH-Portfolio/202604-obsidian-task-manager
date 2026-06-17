@@ -595,6 +595,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             }
         });
 
+
         // 명령어 E: 빠른 할 일 등록 (quick-capture)
         this.addCommand({
             id: "quick-capture",
@@ -607,7 +608,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             try {
                                 const original = await this.app.vault.read(scheduleFile);
                                 let text = this.utils.preprocessContent(original);
-                                
+
                                 // # Todo 섹션 하단의 #### 할 일 아래에 추가 시도
                                 const todoHeader = "#### 할 일";
                                 const todoRange = this.utils.getSectionRange(text, todoHeader, 4);
@@ -657,7 +658,27 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             }
         });
 
-        // 명령어 F: 임시 메모 파일 열기 및 생성 (open-memo)
+        // 명령어 F: 현재 창 새로고침 (비활성화 후 재활성화)
+        this.addCommand({
+            id: "refresh-active-view",
+            name: "현재 창 새로고침 (비활성화 후 재활성화)",
+            callback: async () => {
+                const leaf = this.app.workspace.activeLeaf;
+                if (leaf) {
+                    const state = leaf.getViewState();
+                    const eState = leaf.getEphemeralState();
+                    
+                    await leaf.setViewState(state);
+                    leaf.setEphemeralState(eState);
+                    
+                    new Notice("🔄 현재 창을 새로고침 했습니다.");
+                } else {
+                    new Notice("⚠️ 새로고침할 활성 창이 없습니다.");
+                }
+            }
+        });
+
+        // 명령어 G: 임시 메모 파일 열기 및 생성 (open-memo)
         this.addCommand({
             id: "open-memo",
             name: "임시 메모 파일 열기 및 생성",
