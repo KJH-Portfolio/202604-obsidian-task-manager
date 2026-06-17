@@ -663,7 +663,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             id: "refresh-active-view",
             name: "현재 창 새로고침 (비활성화 후 재활성화)",
             callback: async () => {
-                const leaf = this.app.workspace.activeLeaf;
+                // BUG-27: activeLeaf is deprecated. Use getActiveViewOfType(MarkdownView)?.leaf instead.
+                const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                const leaf = activeView?.leaf;
+                
                 if (leaf) {
                     const state = leaf.getViewState();
                     const eState = leaf.getEphemeralState();
