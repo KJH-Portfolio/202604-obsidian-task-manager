@@ -20,11 +20,47 @@ export class Synchronizer {
         this.fileManager = fileManager;
     }
 
+    async logSyncChange(file: TFile, actionName: string, originalContent: string, newContent: string): Promise<void> {
+        if (originalContent === newContent) return;
+
+        try {
+            const inboxPath = "Inbox/자동동기화_리포트.md";
+            let logContent = "";
+            const nowStr = this.dateManager.getAdjustedNow().format("YYYY-MM-DD HH:mm:ss");
+            
+            const existingFile = this.app.vault.getAbstractFileByPath(inboxPath);
+            if (existingFile && existingFile instanceof TFile) {
+                logContent = await this.app.vault.read(existingFile);
+            } else {
+                const folderPath = "Inbox";
+                const folder = this.app.vault.getAbstractFileByPath(folderPath);
+                if (!folder) await this.app.vault.createFolder(folderPath);
+                logContent = `# 자동동기화 리포트\n\n`;
+            }
+
+            const diffSummary = `\n## [${nowStr}] ${actionName}\n` +
+                                `- 대상 파일: [[${file.basename}]]\n` +
+                                `<details><summary>변경 전 원본 데이터 백업</summary>\n\n\`\`\`markdown\n${originalContent}\n\`\`\`\n\n</details>\n`;
+            
+            logContent += diffSummary;
+            
+            if (existingFile && existingFile instanceof TFile) {
+                // BUG-17: vault.modify 직접 호출 시 modifiedFiles에 로그파일이 추가되는 문제 방지
+                await this.fileManager.pluginWrite(existingFile, logContent);
+            } else {
+                await this.app.vault.create(inboxPath, logContent);
+            }
+        } catch (e) {
+            console.error("Failed to log sync change:", e);
+        }
+    }
+
     // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
     async syncDailyTasks(dailyFile: TFile): Promise<void> {
         try {
             new Notice("⏳ 프로젝트 동기화 시작...");
-            const originalContent = await this.app.vault.read(dailyFile);
+            // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
+            const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
             const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
@@ -49,9 +85,7 @@ export class Synchronizer {
                 // 메인 스케줄의 # Project 대시보드 갱신
                 const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
-                if (newSectionText) {
-                    content = this.utils.replaceSection(content, "# Project", newSectionText);
-                }
+                content = this.utils.replaceSection(content, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
 
                 // #### 프로젝트 (오늘의 마감 작업 리스트) 갱신
                 const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
@@ -62,6 +96,9 @@ export class Synchronizer {
             content = this.utils.processSectionLogic(content, "# Todo", todayObj, false, true);
 
             // 실질적 변경 발생 시 저장
+            if (originalContent !== content) {
+                await this.logSyncChange(dailyFile, "스케줄 노트 전체 동기화", originalContent, content);
+            }
             await this.fileManager.saveIfChanged(dailyFile, originalContent, content);
             new Notice("✅ 프로젝트 동기화 완료!");
         } catch (e) {
@@ -72,7 +109,8 @@ export class Synchronizer {
 
     // 2. 개별 프로젝트 노트 관점 동기화 (기존 102번 스크립트 역할)
     async pushProjectToSchedule(projectFile: TFile): Promise<void> {
-        const originalActive = await this.app.vault.read(projectFile);
+        // BUG-19: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
+        const originalActive = await this.fileManager.getActiveViewOrFileText(projectFile);
         let originalSchedule = "";
         
         try {
@@ -84,7 +122,7 @@ export class Synchronizer {
             let content = this.utils.preprocessContent(originalActive);
             let lines = content.split("\n");
             let inExec = false, inPlan = false;
-            let execTasks: { id: string | null; status?: string; indent?: number; line: string; type?: string }[] = [];
+            let execTasks: { id: string | null; status?: string; indent?: number; line: string; type?: string; deleted?: boolean }[] = [];
             let planTasks: { id: string; line: string }[] = [];
             let planTasksTotal = 0, planTasksDone = 0;
             let originalPlanLines: string[] = [];
@@ -102,12 +140,14 @@ export class Synchronizer {
                     if (REGEX.MATCH_TASK.test(l) || /^##\s/.test(l.trim())) {
                         const tM = l.match(REGEX.TASK_LINE);
                         if (tM) {
-                            let { id } = this.utils.extractIdAndText(tM[3]);
+                            let { text, id } = this.utils.extractIdAndText(tM[3]);
+                            const isDeleted = /\/\/$/.test(text.trim());
                             if (!id) { 
-                                id = this.utils.generateBlockId(); 
+                                // BUG-24: 충돌 체크 대상 파일 전달로 ID 중복 방지
+                                id = this.utils.generateBlockId([projectFile]); 
                                 lines[i] = l + " ^" + id; 
                             }
-                            execTasks.push({ id, status: tM[2], indent: (l.match(REGEX.INDENT)||[''])[0].length, line: lines[i] });
+                            execTasks.push({ id, status: tM[2], indent: (l.match(REGEX.INDENT)||[''])[0].length, line: lines[i], deleted: isDeleted });
                         } else if (/^##\s/.test(l.trim())) {
                             execTasks.push({ id: null, type: 'header', line: l });
                         }
@@ -139,16 +179,18 @@ export class Synchronizer {
                         if (id) {
                             originalIds.add(id);
                             if (execMap.has(id)) {
-                                const et = execMap.get(id);
-                                const tM = et.line.match(REGEX.TASK_LINE);
-                                if (tM) {
-                                    const { text: execText } = this.utils.extractIdAndText(tM[3]);
-                                    newPlanLines.push(`${pMatch[1]} [${et.status}] ${execText} ^${id}`);
-                                } else {
-                                    newPlanLines.push(l);
+                                const et = execMap.get(id)!;
+                                if (!et.deleted) {
+                                    const tM = et.line.match(REGEX.TASK_LINE);
+                                    if (tM) {
+                                        const { text: execText } = this.utils.extractIdAndText(tM[3]);
+                                        newPlanLines.push(`${pMatch[1]} [${et.status}] ${execText} ^${id}`);
+                                    } else {
+                                        newPlanLines.push(l);
+                                    }
+                                    planTasksTotal++;
+                                    if (REGEX.MATCH_TASK_COMPLETED.test(et.line)) planTasksDone++;
                                 }
-                                planTasksTotal++;
-                                if (REGEX.MATCH_TASK_COMPLETED.test(et.line)) planTasksDone++;
                             } else {
                                 newPlanLines.push(l);
                                 planTasksTotal++;
@@ -166,7 +208,7 @@ export class Synchronizer {
                 });
 
                 // 신규 태스크 계획에 추가
-                const newExecTasks = execTasks.filter(et => et.id && !originalIds.has(et.id));
+                const newExecTasks = execTasks.filter(et => et.id && !et.deleted && !originalIds.has(et.id));
                 if (newExecTasks.length > 0) {
                     newExecTasks.forEach(net => {
                         let anchorId: string | null = null;
@@ -234,7 +276,12 @@ export class Synchronizer {
             }
 
             // 프로젝트 노트 최종 저장
-            await this.app.vault.modify(projectFile, cleanedLines.join("\n"));
+            const newActiveContent = cleanedLines.join("\n");
+            if (originalActive !== newActiveContent) {
+                await this.logSyncChange(projectFile, "개별 프로젝트 ➔ 스케줄 반영 (프로젝트 노트 갱신)", originalActive, newActiveContent);
+            }
+            // BUG-01: pluginWrite로 교체하여 vault.on('modify')의 무한 재동기화 방지
+            await this.fileManager.pluginWrite(projectFile, newActiveContent);
 
             // 3. 메인 스케줄 파일 업데이트
             const schedulePath = this.settings.mainSchedulePath;
@@ -262,23 +309,27 @@ export class Synchronizer {
                 const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
                 
+                let sBody = this.utils.replaceSection(originalSchedule, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
+                if (originalSchedule !== sBody) {
+                    await this.logSyncChange(scheduleFile as TFile, `개별 프로젝트 ➔ 스케줄 반영 (스케줄 대시보드 갱신 - ${noteName})`, originalSchedule, sBody);
+                }
+                // BUG-06: 타입 캐스팅 명시 (instanceof TFile 검사 이후이므로 안전)
+                await this.fileManager.saveIfChanged(scheduleFile as TFile, originalSchedule, sBody);
                 if (newSectionText) {
-                    let sBody = this.utils.replaceSection(originalSchedule, "# Project", newSectionText);
-                    await this.fileManager.saveIfChanged(scheduleFile, originalSchedule, sBody);
                     new Notice(`✅ [${noteName}] 스케줄 반영 완료!`);
                 } else {
-                    new Notice(`⚠️ [${noteName}] 반영할 프로젝트 데이터가 없습니다.`);
+                    new Notice(`✅ [${noteName}] 프로젝트가 비워져 스케줄에 반영되었습니다.`);
                 }
             } else {
                 new Notice("🚨 메인 스케줄 파일을 찾을 수 없습니다.");
             }
         } catch (e) {
-            // 실패 시 프로젝트 원본 파일 복구
-            await this.app.vault.modify(projectFile, originalActive);
+            // 실패 시 프로젝트 원본 파일 복구 (롤백은 pluginWrite로 처리)
+            await this.fileManager.pluginWrite(projectFile, originalActive);
             if (originalSchedule) {
                 const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
                 if (scheduleFile && scheduleFile instanceof TFile) {
-                    await this.app.vault.modify(scheduleFile, originalSchedule);
+                    await this.fileManager.pluginWrite(scheduleFile, originalSchedule);
                 }
             }
             console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));

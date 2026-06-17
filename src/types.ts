@@ -27,6 +27,7 @@ export interface SyncTask {
     id: string;
     line: string;
     status?: string;
+    deleted?: boolean;
 }
 
 export interface OrderedTask {

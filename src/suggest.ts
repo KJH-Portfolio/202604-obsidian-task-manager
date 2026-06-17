@@ -3,15 +3,18 @@ import { AbstractInputSuggest, App, TFolder, TFile } from "obsidian";
 // 1. 폴더 경로 자동완성 클래스
 export class FolderSuggest extends AbstractInputSuggest<TFolder> {
     inputEl: HTMLInputElement; // 명시적 속성 선언으로 부모 클래스 속성명 불일치 회피
+    // BUG-21: 리스너를 인스턴스 변수로 저장하여 중복 등록 방지 및 정리 가능하도록 함
+    private keydownHandler: (e: KeyboardEvent) => void;
 
     constructor(app: App, inputEl: HTMLInputElement) {
         super(app, inputEl);
         this.inputEl = inputEl; // 수동으로 인풋 엘리먼트 바인딩
-        
+
         // 엔터 키 입력 시 첫 번째 제안 자동 선택 리스너 추가
-        this.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
+        this.keydownHandler = (e: KeyboardEvent) => {
             if (e.key === "Enter") {
-                const activeItem = activeDocument.querySelector(".suggestion-item.is-active");
+                // BUG-25: activeDocument 대신 inputEl.ownerDocument 사용 (팝아웃 창 대응)
+                const activeItem = this.inputEl.ownerDocument.querySelector(".suggestion-item.is-active");
                 if (activeItem) return; // 이미 사용자가 방향키로 선택 중인 경우 기본 동작 유지
 
                 const suggestions = this.getSuggestions(this.inputEl.value);
@@ -21,7 +24,8 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
                     e.stopPropagation();
                 }
             }
-        });
+        };
+        this.inputEl.addEventListener("keydown", this.keydownHandler);
     }
 
     getSuggestions(inputStr: string): TFolder[] {
@@ -51,20 +55,29 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
         this.inputEl.dispatchEvent(new Event("input"));
         this.close();
     }
+
+    // BUG-21: 팝업 닫힐 때 리스너 정리
+    close(): void {
+        this.inputEl.removeEventListener("keydown", this.keydownHandler);
+        super.close();
+    }
 }
 
 // 2. 파일 경로 자동완성 클래스 (마크다운 확장자 대상)
 export class FileSuggest extends AbstractInputSuggest<TFile> {
     inputEl: HTMLInputElement; // 명시적 속성 선언으로 부모 클래스 속성명 불일치 회피
+    // BUG-21: 리스너를 인스턴스 변수로 저장하여 중복 등록 방지 및 정리 가능하도록 함
+    private keydownHandler: (e: KeyboardEvent) => void;
 
     constructor(app: App, inputEl: HTMLInputElement) {
         super(app, inputEl);
         this.inputEl = inputEl; // 수동으로 인풋 엘리먼트 바인딩
 
         // 엔터 키 입력 시 첫 번째 제안 자동 선택 리스너 추가
-        this.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
+        this.keydownHandler = (e: KeyboardEvent) => {
             if (e.key === "Enter") {
-                const activeItem = activeDocument.querySelector(".suggestion-item.is-active");
+                // BUG-25: activeDocument 대신 inputEl.ownerDocument 사용 (팝아웃 창 대응)
+                const activeItem = this.inputEl.ownerDocument.querySelector(".suggestion-item.is-active");
                 if (activeItem) return; // 이미 사용자가 방향키로 선택 중인 경우 기본 동작 유지
 
                 const suggestions = this.getSuggestions(this.inputEl.value);
@@ -74,7 +87,8 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
                     e.stopPropagation();
                 }
             }
-        });
+        };
+        this.inputEl.addEventListener("keydown", this.keydownHandler);
     }
 
     getSuggestions(inputStr: string): TFile[] {
@@ -101,5 +115,11 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
         this.inputEl.value = file.path;
         this.inputEl.dispatchEvent(new Event("input"));
         this.close();
+    }
+
+    // BUG-21: 팝업 닫힐 때 리스너 정리
+    close(): void {
+        this.inputEl.removeEventListener("keydown", this.keydownHandler);
+        super.close();
     }
 }

@@ -5,6 +5,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { Plugin, TFile, Notice, Modal, Setting, App } from "obsidian";
+import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
+import { RangeSetBuilder } from "@codemirror/state";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { Synchronizer } from "./Synchronizer";
@@ -154,6 +156,120 @@ class CreateProjectModal extends Modal {
     }
 }
 
+class TodayButtonWidget extends WidgetType {
+    // BUG-02: view를 직접 참조하지 않고, 항상 최신 EditorView를 반환하는 getter 함수를 저장
+    constructor(public getView: () => EditorView, public lineStart: number, public plugin: MyWorldTaskManagerPlugin) {
+        super();
+    }
+
+    eq(other: TodayButtonWidget) {
+        return other.lineStart === this.lineStart;
+    }
+
+    toDOM() {
+        const span = document.createElement("span");
+        span.className = "myworld-today-btn";
+        span.textContent = "📆 오늘";
+        
+        span.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // BUG-02: getter를 통해 항상 최신 view를 사용
+            const view = this.getView();
+            const todayStr = window.moment().format("YYYY-MM-DD");
+            const pos = view.posAtDOM(span);
+            if (pos !== null) {
+                const line = view.state.doc.lineAt(pos);
+                view.dispatch({
+                    changes: { from: line.to, insert: ` 📅 ${todayStr}` }
+                });
+            }
+        };
+        return span;
+    }
+}
+
+export function buildTodayButtonExtension(plugin: MyWorldTaskManagerPlugin) {
+    return ViewPlugin.fromClass(class {
+        decorations: DecorationSet;
+        // BUG-02: 항상 최신 EditorView를 트래킹
+        currentView: EditorView;
+        constructor(view: EditorView) {
+            this.currentView = view;
+            this.decorations = this.buildDecorations(view);
+        }
+        update(update: ViewUpdate) {
+            // BUG-02: update 시마다 currentView를 최신으로 갱신
+            this.currentView = update.view;
+            if (update.docChanged || update.viewportChanged || update.focusChanged || update.geometryChanged) {
+                this.decorations = this.buildDecorations(update.view);
+            }
+        }
+        buildDecorations(view: EditorView) {
+            const builder = new RangeSetBuilder<Decoration>();
+            const activeFile = plugin.app.workspace.getActiveFile();
+            if (!activeFile) return builder.finish();
+
+            const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
+            const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
+            if (!isSchedule && !isProject) return builder.finish();
+
+            // BUG-02: 클로저로 currentView getter를 위젯에 전달
+            const getView = () => this.currentView;
+
+            for (let { from, to } of view.visibleRanges) {
+                let pos = from;
+                while (pos <= to) {
+                    const line = view.state.doc.lineAt(pos);
+                    const text = line.text;
+                    const isTask = /^(?:\s*>\s*)*\s*[-*+]\s+\[.\]/.test(text);
+                    const isCompleted = /^(?:\s*>\s*)*\s*[-*+]\s+\[[xX-]\]/.test(text);
+
+                    if (isTask && !isCompleted) {
+                        if (!/\d{4}-\d{2}-\d{2}/.test(text)) {
+                            let shouldShow = false;
+
+                            if (isSchedule) {
+                                let header = "";
+                                for (let i = line.number; i > 0; i--) {
+                                    const l = view.state.doc.line(i).text;
+                                    const m = l.match(/^#\s+(.*)$/);
+                                    if (m) {
+                                        header = m[1].trim().toLowerCase();
+                                        break;
+                                    }
+                                }
+                                if (header === "todo" || header === "project") {
+                                    shouldShow = true;
+                                }
+                            } else if (isProject) {
+                                shouldShow = true;
+                            }
+                            
+                            if (shouldShow) {
+                                builder.add(
+                                    line.to, 
+                                    line.to, 
+                                    Decoration.widget({
+                                        // BUG-02: view 직접 전달 대신 getter 전달
+                                        widget: new TodayButtonWidget(getView, line.from, plugin),
+                                        side: 1
+                                    })
+                                );
+                            }
+                        }
+                    }
+                    pos = line.to + 1;
+                }
+            }
+            return builder.finish();
+        }
+    }, {
+        decorations: v => v.decorations
+    });
+}
+
 export default class MyWorldTaskManagerPlugin extends Plugin {
     settings: PluginSettings;
     dateManager: DateManager;
@@ -162,9 +278,38 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     synchronizer: Synchronizer;
     resetManager: ResetManager;
     templateHelper: TemplateHelper;
+    
+    modifiedFiles: Set<string> = new Set<string>();
+    lastActiveFile: TFile | null = null;
+    // BUG-01/05: 플러그인이 직접 수정한 파일을 추적하여 vault.on('modify') 필터링
+    pluginWritingFiles: Set<string> = new Set<string>();
+    
+    private debounceTimer: number | null = null;
+
+    private triggerDebouncedSync() {
+        if (this.debounceTimer !== null) {
+            window.clearTimeout(this.debounceTimer);
+        }
+        this.debounceTimer = window.setTimeout(() => {
+            this.debounceTimer = null;
+            const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
+            if (scheduleFile && scheduleFile instanceof TFile) {
+                void (async () => {
+                    try {
+                        await this.synchronizer.syncDailyTasks(scheduleFile);
+                    } catch (e) {
+                        console.error("Auto-sync (Debounced) error:", e);
+                    }
+                })();
+            }
+        }, 2000); // 2초 디바운스 대기 후 스케줄 갱신
+    }
 
     async onload() {
         console.log("Loading MyWorld Task Manager...");
+
+        // 1. 설정 불러오기
+        await this.loadSettings();
 
         // --- [Tasks 플러그인 특정 경고창 차단 옵저버] ---
         const noticeObserver = new MutationObserver((mutations) => {
@@ -187,12 +332,119 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.register(() => noticeObserver.disconnect());
         // ------------------------------------------------
 
-        // 1. 설정 불러오기
-        await this.loadSettings();
+        // CM6: 라이브 프리뷰용 오늘 버튼
+        this.registerEditorExtension(buildTodayButtonExtension(this));
+
+        // Reading Mode 용 전역 MutationObserver (오늘 버튼)
+        const readingViewObserver = new MutationObserver((mutations) => {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (!activeFile) return;
+            const isSchedule = activeFile.path === this.settings.mainSchedulePath;
+            const isProject = activeFile.path.startsWith(this.settings.projectDirectory);
+            if (!isSchedule && !isProject) return;
+
+            for (const m of mutations) {
+                if (m.addedNodes.length) {
+                    m.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const el = node as HTMLElement;
+                            const tasks = el.classList?.contains("task-list-item") ? [el] : Array.from(el.querySelectorAll(".task-list-item"));
+                            
+                            tasks.forEach(taskEl => {
+                                if (taskEl.getAttribute("data-task") === "x" || taskEl.classList.contains("is-checked")) return;
+                                
+                                const cloned = taskEl.cloneNode(true) as HTMLElement;
+                                cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                                const rawText = cloned.textContent?.trim() || "";
+                                
+                                const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText);
+                                const hasDateAttr = Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value));
+
+                                const taskTextSpan = taskEl.querySelector(".tasks-list-text");
+                                const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
+
+                                if (!hasDateText && !hasDateAttr && !hasButton) {
+                                    
+                    let shouldShow = false;
+                                    if (isSchedule) {
+                                        const leafContainer = taskEl.closest('.workspace-leaf');
+                                        // BUG-04: 분할 화면 오동작 방지 - leafContainer가 null이면 버튼 부이지 않음
+                                        if (!leafContainer) return;
+                                        const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
+                                        const precedingHeaders = allHeaders.filter(h => {
+                                            return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+                                        });
+                                        if (precedingHeaders.length > 0) {
+                                            const targetH = precedingHeaders[precedingHeaders.length - 1];
+                                            let headerText = targetH.textContent?.trim().toLowerCase() || "";
+                                            headerText = headerText.replace(/^#\s*/, "").trim();
+                                            if (headerText === "todo" || headerText === "project") shouldShow = true;
+                                        }
+                                    } else if (isProject) {
+                                        shouldShow = true;
+                                    }
+
+                                    if (shouldShow) {
+                                        const btn = document.createElement("span");
+                                        btn.className = "myworld-today-btn";
+                                        btn.textContent = "📆 오늘";
+                                        btn.onclick = async (e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            
+                                            // BUG-08: 콜아웃 내 태스크 텍스트에서 '>' 문자 제거 추가
+                                            let cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
+                                            if (!cleanText) return;
+
+                                            const todayStr = window.moment().format("YYYY-MM-DD");
+                                            const fileContent = await this.app.vault.read(activeFile);
+                                            const lines = fileContent.split("\n");
+                                            let modified = false;
+                                            
+                                            for (let i = 0; i < lines.length; i++) {
+                                                if (lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                                    lines[i] = lines[i] + ` 📅 ${todayStr}`;
+                                                    modified = true;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            if (modified) {
+                                                await this.app.vault.modify(activeFile, lines.join("\n"));
+                                                btn.remove();
+                                            }
+                                        };
+                                        
+                                        if (taskTextSpan) {
+                                            taskTextSpan.appendChild(btn);
+                                        } else {
+                                            const checkbox = taskEl.querySelector("input[type='checkbox']");
+                                            if (checkbox && checkbox.nextSibling) {
+                                                taskEl.insertBefore(btn, checkbox.nextSibling.nextSibling);
+                                            } else {
+                                                const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
+                                                if (childList) {
+                                                    taskEl.insertBefore(btn, childList);
+                                                } else {
+                                                    taskEl.appendChild(btn);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+        readingViewObserver.observe(activeDocument.body, { childList: true, subtree: true });
+        this.register(() => readingViewObserver.disconnect());
 
         // 2. 핵심 모듈 인스턴스 생성
         this.dateManager = new DateManager(this.settings);
-        this.fileManager = new FileManager(this.app);
+        // BUG-01/05: pluginWritingFiles Set을 FileManager에 전달
+        this.fileManager = new FileManager(this.app, this.pluginWritingFiles);
         this.utils = new TaskUtils(this.app, this.settings, this.dateManager, this.fileManager);
         this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
         this.resetManager = new ResetManager(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
@@ -201,8 +453,85 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // 3. 설정 탭 등록
         this.addSettingTab(new MyWorldTaskManagerSettingTab(this.app, this));
 
-        // 4. 스타일 강제 재적용 (styles.css는 이미 obsidian이 빌드 후 알아서 읽지만, 필요한 클래스를 지원함)
-        
+        // 4. 자동 동기화(Auto-Sync) 이벤트 등록
+        this.registerEvent(
+            this.app.vault.on('modify', (file) => {
+                if (file instanceof TFile && file.extension === 'md') {
+                    // BUG-01/05: 플러그인이 직접 쓴 파일은 modifiedFiles에 추가하지 않아 무한 재동기화 방지
+                    if (this.pluginWritingFiles.has(file.path)) {
+                        this.pluginWritingFiles.delete(file.path);
+                        return;
+                    }
+                    this.modifiedFiles.add(file.path);
+                }
+            })
+        );
+
+
+        this.registerEvent(
+            this.app.workspace.on('active-leaf-change', () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                
+                // 만약 이전 활성 파일이 있었고, 그것이 현재 활성 파일과 다르고, 수정된 목록에 있다면
+                if (this.lastActiveFile && (!activeFile || this.lastActiveFile.path !== activeFile.path)) {
+                    if (this.modifiedFiles.has(this.lastActiveFile.path)) {
+                        const path = this.lastActiveFile.path;
+                        const fileToSync = this.lastActiveFile;
+                        // 백그라운드 동기화 실행 (await 하지 않음)
+                        void (async () => {
+                            try {
+                                if (path === this.settings.mainSchedulePath) {
+                                    await this.synchronizer.syncDailyTasks(fileToSync);
+                                } else if (path.startsWith(this.settings.projectDirectory)) {
+                                    await this.synchronizer.pushProjectToSchedule(fileToSync);
+                                }
+                            } catch (e) {
+                                console.error("Auto-sync error:", e);
+                            } finally {
+                                this.modifiedFiles.delete(path);
+                            }
+                        })();
+                    }
+                }
+                this.lastActiveFile = activeFile;
+            })
+        );
+
+        // 5. 파일 삭제 및 이동(Rename) 이벤트 감지 (프로젝트 폴더 관련)
+        this.registerEvent(
+            this.app.vault.on('delete', (file) => {
+                if (file.path.startsWith(this.settings.projectDirectory)) {
+                    this.triggerDebouncedSync();
+                }
+            })
+        );
+
+        this.registerEvent(
+            this.app.vault.on('rename', (file, oldPath) => {
+                // 프로젝트 폴더에서 나갔거나, 들어왔거나, 안에서 이름이 바뀐 경우
+                if (file.path.startsWith(this.settings.projectDirectory) || oldPath.startsWith(this.settings.projectDirectory)) {
+                    this.triggerDebouncedSync();
+                }
+            })
+        );
+
+
+        // 플러그인 로드 시(초기 1회) 스케줄 기준 전체 동기화
+        this.app.workspace.onLayoutReady(() => {
+            this.lastActiveFile = this.app.workspace.getActiveFile();
+            const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
+            if (scheduleFile && scheduleFile instanceof TFile) {
+                void (async () => {
+                    try {
+                        console.log("Running initial sync...");
+                        await this.synchronizer.syncDailyTasks(scheduleFile);
+                    } catch (e) {
+                        console.error("Initial sync error:", e);
+                    }
+                })();
+            }
+        });
+
         // 5. 명령어(Command) 등록
 
         // 명령어 A: 양방향 프로젝트 및 스케줄 동기화 (task-manage)
@@ -394,6 +723,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     }
 
     onunload() {
+        // BUG-03: 플러그인 종료 시 debounce 타이머 정리하여 시스템 종료 후 콜백 실행 방지
+        if (this.debounceTimer !== null) {
+            window.clearTimeout(this.debounceTimer);
+            this.debounceTimer = null;
+        }
         console.log("Unloading MyWorld Task Manager...");
     }
 
@@ -422,14 +756,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
----
-버튼
-<div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px;">
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:push-project-to-schedule" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #00cec9;">📤</div>
-  </a>
-</div>
-
 # 실행
 - 
 # 개요
@@ -500,17 +826,14 @@ cssclasses:
 ---
 - 
 <div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; justify-content: center;">
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:task-manage" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #00cec9;">⚡️</div>
+  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:quick-capture" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #a29bfe;">✏️</div>
   </a>
   <a href="obsidian://advanced-uri?commandid=myworld-task-manager:daily-task-reset" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
     <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #ff7675;">🌤️</div>
   </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:monthly-stats-archive" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0 20px;">
+  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:monthly-stats-archive" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
     <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #fdcb6e;">🗂️</div>
-  </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:quick-capture" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #a29bfe;">✏️</div>
   </a>
   <a href="obsidian://advanced-uri?commandid=myworld-task-manager:open-memo" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
     <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #74b9ff;">📋</div>
@@ -607,8 +930,7 @@ ${checklistTable}
 
             let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
             if (!memoFile) {
-
-                const now = this.dateManager.getAdjustedNow();
+                // BUG-07: 미사용 now 변수 제거
                 const defaultContent = `---
 작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
@@ -645,6 +967,8 @@ ${checklistTable}
         if (this.synchronizer) this.synchronizer.settings = this.settings;
         if (this.resetManager) this.resetManager.settings = this.settings;
         if (this.templateHelper) this.templateHelper.settings = this.settings;
+        // BUG-20: dateManager.settings도 갱신 (midnightOffsetHour 변경이 재시작 없이 즉시 반영)
+        if (this.dateManager) this.dateManager.settings = this.settings;
     }
 }
 

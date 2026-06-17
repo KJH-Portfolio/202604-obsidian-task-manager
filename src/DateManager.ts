@@ -9,7 +9,8 @@ import { PluginSettings } from "./settings";
 import { DATE_FORMATS } from "./Constants";
 
 export class DateManager {
-    private settings: PluginSettings;
+    // BUG-20: public으로 변경하여 saveSettings 시 main.ts에서 즉시 갱신 가능하도록 함
+    public settings: PluginSettings;
 
     constructor(settings: PluginSettings) {
         this.settings = settings;

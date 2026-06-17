@@ -2,9 +2,12 @@ import { App, TFile, Notice, MarkdownView } from "obsidian";
 
 export class FileManager {
     private app: App;
+    // BUG-01/05: 플러그인이 직접 수정한 파일 경로를 추적하여 vault.on('modify')에서 필터링
+    private pluginWritingFiles: Set<string>;
 
-    constructor(app: App) {
+    constructor(app: App, pluginWritingFiles: Set<string>) {
         this.app = app;
+        this.pluginWritingFiles = pluginWritingFiles;
     }
 
     getFile(path: string): TFile | null {
@@ -24,8 +27,19 @@ export class FileManager {
         return await this.app.vault.read(file);
     }
 
+    /**
+     * BUG-01: 플러그인이 직접 vault.modify를 호출해야 할 때 사용.
+     * pluginWritingFiles에 경로를 등록하여 vault.on('modify')가 이를 무시하도록 한다.
+     */
+    async pluginWrite(file: TFile, content: string): Promise<void> {
+        this.pluginWritingFiles.add(file.path);
+        await this.app.vault.modify(file, content);
+    }
+
     async saveIfChanged(file: TFile, originalContent: string, newContent: string): Promise<boolean> {
         if (originalContent !== newContent) {
+            // BUG-01/05: 저장 전 경로를 등록하여 vault.on('modify') 이벤트가 modifiedFiles에 추가되지 않도록 방지
+            this.pluginWritingFiles.add(file.path);
             const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
             if (activeView && activeView.file && activeView.file.path === file.path && activeView.getMode() === "source") {
                 activeView.editor.setValue(newContent);

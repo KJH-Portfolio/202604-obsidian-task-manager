@@ -648,3 +648,5 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::before {
     background: linear-gradient(to right, rgba(140, 0, 40, 0.3), transparent);
 }
+.myworld-today-btn { cursor: pointer; font-size: 0.8em; padding: 2px 6px; margin-left: 6px; background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 4px; opacity: 0.7; transition: opacity 0.2s, transform 0.1s; vertical-align: middle; }
+.myworld-today-btn:hover { opacity: 1; transform: scale(1.05); }

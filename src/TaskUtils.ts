@@ -154,7 +154,8 @@ export class TaskUtils {
             }
         }
 
-        if (fallbackLines || useFallback) {
+        // BUG-11: fallbackLines가 null인데 useFallback이 true인 경우 TypeError 방지
+        if ((fallbackLines || useFallback) && fallbackLines !== null) {
             const prefix = "#".repeat(level) + " " + sectionName;
             let startLine = fallbackLines.findIndex(l => l.startsWith(prefix));
             if (startLine === -1) return null;
@@ -196,6 +197,8 @@ export class TaskUtils {
     generateBlockId(filesToCheck: TFile[] = []): string {
         let id: string;
         let isDuplicate: boolean;
+        // BUG-16: 무한 루프 방지를 위한 최대 시도 횟수 제한
+        let maxAttempts = 100;
         do {
             id = Math.random().toString(36).substring(2, 8).padEnd(6, '0');
             isDuplicate = false;
@@ -206,7 +209,8 @@ export class TaskUtils {
                     break;
                 }
             }
-        } while (isDuplicate);
+            maxAttempts--;
+        } while (isDuplicate && maxAttempts > 0);
         return id;
     }
 
@@ -323,13 +327,20 @@ export class TaskUtils {
             let currentIndent = isBlank ? 999 : actualIndent;
 
             if (skipIndent !== -1) {
+                // BUG-15: 완료된 태스크 블록 내부의 빈 줄은 소실됨 (의도적 동작 - 완료 항목 제거 시 시각적 공백 방지)
                 if (isBlank) continue;
                 if (currentIndent > skipIndent) continue;
                 else skipIndent = -1;
             }
 
             if (REGEX.MATCH_TASK.test(l)) {
-                if (REGEX.MATCH_TASK_COMPLETED.test(l)) {
+                let isDeleted = false;
+                const match = l.match(REGEX.TASK_LINE);
+                if (match) {
+                    const textWithId = match[3];
+                    isDeleted = /\/\/(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim());
+                }
+                if (REGEX.MATCH_TASK_COMPLETED.test(l) || isDeleted) {
                     skipIndent = currentIndent; continue;
                 }
                 filtered.push(l);
@@ -1023,6 +1034,17 @@ export class TaskUtils {
                     }
                 }
 
+                pExecTasks = pExecTasks.filter(t => {
+                    if (REGEX.MATCH_TASK.test(t)) {
+                        const match = t.match(REGEX.TASK_LINE);
+                        if (match) {
+                            const textWithId = match[3];
+                            if (/\/\/(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim())) return false;
+                        }
+                    }
+                    return true;
+                });
+
                 if (!pExecTasks.some(t => REGEX.MATCH_TASK.test(t))) return null;
                 
                 let pMinDiff = Infinity, pSortPri = 99;
@@ -1107,7 +1129,8 @@ export class TaskUtils {
                 }
             }
         }
-        this.syncDailyMap(dailyMap);
+        // BUG-14: syncDailyMap은 외부 호출부(Synchronizer, ResetManager)에서 이미 한 번 더 호출하므로
+        // 여기서 이중으로 실행하면 불필요한 재처리가 발생함 → 제거하여 외부에서만 호출
         return dailyMap;
     }
 
@@ -1231,7 +1254,8 @@ export class TaskUtils {
                 }
             }
 
-            await app.vault.modify(wFile, wContent.trim() + "\n");
+            // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
+            await this.fileManager.pluginWrite(wFile, wContent.trim() + "\n");
         } else {
             const chkSectionText = `# 체크리스트\n\n${weeklyTableStr}\n\n`;
             const initialContent = `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${weeklyInfo.fileName.replace('.md','')}\n\n# 기록\n\n${dailyRecord ? dailyRecord + '\n\n' : ''}${chkSectionText}# 통계\n${weeklyStatsDashboard}\n`;
@@ -1256,7 +1280,8 @@ export class TaskUtils {
             } else {
                 mContent += `\n\n# 통계\n${dashboardStr}\n`;
             }
-            await app.vault.modify(mFile, mContent.trim() + "\n");
+            // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
+            await this.fileManager.pluginWrite(mFile as TFile, mContent.trim() + "\n");
         } else {
             await app.vault.create(monthlyInfo.path, `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${mTitle} 월간 기록\n\n# 기록\n\n# 통계\n${dashboardStr}\n`);
         }
@@ -1491,7 +1516,8 @@ export class TaskUtils {
                     }
                 }
                 
-                if (mod) await app.vault.modify(file, finalSLines.join("\n"));
+                // BUG-10: pluginWrite로 교체하여 프로젝트 파일 저장이 modifiedFiles에 쌓이는 것을 방지
+                if (mod) await this.fileManager.pluginWrite(file, finalSLines.join("\n"));
 
                 let execTasks: string[] = [], planTasksTotal = 0, planTasksDone = 0;
                 let pInEx = false, pInPl = false;
@@ -1516,10 +1542,9 @@ export class TaskUtils {
         return overrideData;
     }
 
+    // BUG-13: moment의 .date(n) setter는 체이닝으로 받아야 안전함
     getActualDate(now: any, day: number): any {
-        const d = now.clone();
-        d.date(day);
-        return d;
+        return now.clone().date(day);
     }
 
     cleanTaskText(text: string): string {
