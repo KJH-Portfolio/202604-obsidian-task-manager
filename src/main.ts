@@ -353,85 +353,90 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             tasks.forEach(taskEl => {
                                 if (taskEl.getAttribute("data-task") === "x" || taskEl.classList.contains("is-checked")) return;
                                 
-                                const cloned = taskEl.cloneNode(true) as HTMLElement;
-                                cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
-                                const rawText = cloned.textContent?.trim() || "";
-                                
-                                const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText);
-                                const hasDateAttr = Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value));
+                                // BUG-26: 비동기 렌더링을 수행하는 Tasks나 Dataview 플러그인과의 Race Condition 방지
+                                window.setTimeout(() => {
+                                    if (!taskEl.isConnected) return;
 
-                                const taskTextSpan = taskEl.querySelector(".tasks-list-text");
-                                const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
-
-                                if (!hasDateText && !hasDateAttr && !hasButton) {
+                                    const cloned = taskEl.cloneNode(true) as HTMLElement;
+                                    cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                                    const rawText = cloned.textContent?.trim() || "";
+                                    const rawHtml = cloned.innerHTML;
                                     
-                    let shouldShow = false;
-                                    if (isSchedule) {
-                                        const leafContainer = taskEl.closest('.workspace-leaf');
-                                        // BUG-04: 분할 화면 오동작 방지 - leafContainer가 null이면 버튼 부이지 않음
-                                        if (!leafContainer) return;
-                                        const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
-                                        const precedingHeaders = allHeaders.filter(h => {
-                                            return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-                                        });
-                                        if (precedingHeaders.length > 0) {
-                                            const targetH = precedingHeaders[precedingHeaders.length - 1];
-                                            let headerText = targetH.textContent?.trim().toLowerCase() || "";
-                                            headerText = headerText.replace(/^#\s*/, "").trim();
-                                            if (headerText === "todo" || headerText === "project") shouldShow = true;
-                                        }
-                                    } else if (isProject) {
-                                        shouldShow = true;
-                                    }
+                                    // 텍스트뿐만 아니라 HTML 내부(속성 등)에 날짜가 있는지 강력하게 검사
+                                    const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText) || /\d{4}-\d{2}-\d{2}/.test(rawHtml);
+                                    const hasDateAttr = Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value));
 
-                                    if (shouldShow) {
-                                        const btn = activeDocument.createElement("span");
-                                        btn.className = "myworld-today-btn";
-                                        btn.textContent = "📆 오늘";
-                                        btn.onclick = async (e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            
-                                            // BUG-08: 콜아웃 내 태스크 텍스트에서 '>' 문자 제거 추가
-                                            let cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
-                                            if (!cleanText) return;
+                                    const taskTextSpan = taskEl.querySelector(".tasks-list-text");
+                                    const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
 
-                                            const todayStr = window.moment().format("YYYY-MM-DD");
-                                            const fileContent = await this.app.vault.read(activeFile);
-                                            const lines = fileContent.split("\n");
-                                            let modified = false;
-                                            
-                                            for (let i = 0; i < lines.length; i++) {
-                                                if (lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                                    lines[i] = lines[i] + ` 📅 ${todayStr}`;
-                                                    modified = true;
-                                                    break;
-                                                }
-                                            }
-                                            
-                                            if (modified) {
-                                                await this.app.vault.modify(activeFile, lines.join("\n"));
-                                                btn.remove();
-                                            }
-                                        };
+                                    if (!hasDateText && !hasDateAttr && !hasButton) {
                                         
-                                        if (taskTextSpan) {
-                                            taskTextSpan.appendChild(btn);
-                                        } else {
-                                            const checkbox = taskEl.querySelector("input[type='checkbox']");
-                                            if (checkbox && checkbox.nextSibling) {
-                                                taskEl.insertBefore(btn, checkbox.nextSibling.nextSibling);
+                                        let shouldShow = false;
+                                        if (isSchedule) {
+                                            const leafContainer = taskEl.closest('.workspace-leaf');
+                                            if (!leafContainer) return;
+                                            const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
+                                            const precedingHeaders = allHeaders.filter(h => {
+                                                return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+                                            });
+                                            if (precedingHeaders.length > 0) {
+                                                const targetH = precedingHeaders[precedingHeaders.length - 1];
+                                                let headerText = targetH.textContent?.trim().toLowerCase() || "";
+                                                headerText = headerText.replace(/^#\s*/, "").trim();
+                                                if (headerText === "todo" || headerText === "project") shouldShow = true;
+                                            }
+                                        } else if (isProject) {
+                                            shouldShow = true;
+                                        }
+
+                                        if (shouldShow) {
+                                            const btn = activeDocument.createElement("span");
+                                            btn.className = "myworld-today-btn";
+                                            btn.textContent = "📆 오늘";
+                                            btn.onclick = async (e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                
+                                                let cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
+                                                if (!cleanText) return;
+
+                                                const todayStr = window.moment().format("YYYY-MM-DD");
+                                                const fileContent = await this.app.vault.read(activeFile);
+                                                const lines = fileContent.split("\n");
+                                                let modified = false;
+                                                
+                                                for (let i = 0; i < lines.length; i++) {
+                                                    if (lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                                        lines[i] = lines[i] + ` 📅 ${todayStr}`;
+                                                        modified = true;
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                if (modified) {
+                                                    await this.app.vault.modify(activeFile, lines.join("\n"));
+                                                    btn.remove();
+                                                }
+                                            };
+                                            
+                                            if (taskTextSpan) {
+                                                taskTextSpan.appendChild(btn);
                                             } else {
-                                                const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
-                                                if (childList) {
-                                                    taskEl.insertBefore(btn, childList);
+                                                const checkbox = taskEl.querySelector("input[type='checkbox']");
+                                                if (checkbox && checkbox.nextSibling) {
+                                                    taskEl.insertBefore(btn, checkbox.nextSibling.nextSibling);
                                                 } else {
-                                                    taskEl.appendChild(btn);
+                                                    const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
+                                                    if (childList) {
+                                                        taskEl.insertBefore(btn, childList);
+                                                    } else {
+                                                        taskEl.appendChild(btn);
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }
+                                }, 150);
                             });
                         }
                     });
