@@ -48,6 +48,17 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
     private renderSettings(): void {
         const { containerEl } = this;
         containerEl.empty();
+
+        // --- 📢 공지 및 업데이트 정보 시작 ---
+        const noticeEl = containerEl.createDiv({ attr: { style: "padding: 15px; background-color: var(--background-secondary); border-left: 4px solid var(--color-accent); border-radius: 6px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" }});
+        
+        noticeEl.createEl("h3", { text: "✨ 최근 업데이트 (v1.0.38)", attr: { style: "margin-top: 0; margin-bottom: 10px; color: var(--text-accent);" }});
+        noticeEl.createEl("p", { text: "- [수정] 날짜가 없는 항목의 이전 날짜 마커가 자동으로 초기화되도록 수정했습니다.\n- [추가] 설정 화면 맨 하단에 '버그 제보 및 기능 제안' 링크를 추가했습니다.", attr: { style: "white-space: pre-wrap; margin-bottom: 15px; font-size: 0.95em; line-height: 1.5;" }});
+        
+        noticeEl.createEl("h4", { text: "💬 개발자 코멘트", attr: { style: "margin-bottom: 8px; margin-top: 0;" }});
+        noticeEl.createEl("p", { text: "항상 MyWorld Task Manager를 사용해 주셔서 감사합니다! 불편한 점이나 새로운 기능 제안은 언제든지 맨 아래 깃허브 이슈를 통해 남겨주세요. 🚀", attr: { style: "font-style: italic; color: var(--text-muted); margin: 0; font-size: 0.9em;" }});
+        // --- 📢 공지 및 업데이트 정보 끝 ---
+
         new Setting(containerEl).setName("일반 설정").setHeading();
 
         // 1. 경로 설정 섹션
