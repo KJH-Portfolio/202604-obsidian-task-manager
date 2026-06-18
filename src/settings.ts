@@ -299,23 +299,24 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             .setDesc("플러그인의 최신 변경 사항 및 개발자의 메시지를 확인합니다.");
 
         // --- 📢 공지 및 업데이트 정보 (토글 컨텐츠) ---
-        const noticeEl = containerEl.createDiv({ attr: { style: "display: none; padding: 15px; background-color: var(--background-secondary); border-left: 4px solid var(--color-accent); border-radius: 6px; margin-top: 10px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" }});
+        const noticeEl = containerEl.createDiv();
+        noticeEl.hide(); // 초기 상태는 숨김
         
-        noticeEl.createEl("h3", { text: "✨ 최근 업데이트", attr: { style: "margin-top: 0; margin-bottom: 10px; color: var(--text-accent);" }});
-        noticeEl.createEl("p", { text: "- 현재 지속적으로 기능 개선 및 개발이 진행 중인 단계입니다.", attr: { style: "white-space: pre-wrap; margin-bottom: 15px; font-size: 0.95em; line-height: 1.5;" }});
+        new Setting(noticeEl).setName("✨ 최근 업데이트").setHeading();
+        new Setting(noticeEl).setDesc("- 현재 지속적으로 기능 개선 및 개발이 진행 중인 단계입니다.");
         
-        noticeEl.createEl("h4", { text: "💬 개발자 코멘트", attr: { style: "margin-bottom: 8px; margin-top: 0;" }});
-        noticeEl.createEl("p", { text: "이 플러그인은 현재 개발 중인 단계입니다. 추후 필요 시 영어 버전(English Version)을 추가할 계획을 가지고 있습니다.", attr: { style: "font-style: italic; color: var(--text-muted); margin: 0; font-size: 0.9em;" }});
+        new Setting(noticeEl).setName("💬 개발자 코멘트").setHeading();
+        new Setting(noticeEl).setDesc("이 플러그인은 현재 개발 중인 단계입니다. 추후 필요 시 영어 버전(English Version)을 추가할 계획을 가지고 있습니다.");
 
         toggleBtnSetting.addButton(btn => {
             btn.setButtonText("내용 보기");
             btn.onClick(() => {
                 isNoticeVisible = !isNoticeVisible;
                 if (isNoticeVisible) {
-                    noticeEl.style.display = "block";
+                    noticeEl.show();
                     btn.setButtonText("내용 숨기기");
                 } else {
-                    noticeEl.style.display = "none";
+                    noticeEl.hide();
                     btn.setButtonText("내용 보기");
                 }
             });
