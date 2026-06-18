@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { Plugin, TFile, Notice, Modal, Setting, App } from "obsidian";
+import { Plugin, TFile, Notice, Modal, Setting, App, MarkdownView } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab } from "./settings";

@@ -310,8 +310,13 @@ export class TaskUtils {
             
             let status = (d as { propStatus?: string }).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", " "])[1];
             
-            if (!d.isCompleted && d.m) {
-                status = d.m.trim();
+            if (!d.isCompleted) {
+                if (d.m) {
+                    status = d.m.trim();
+                } else if (["!", "0", "1", "2", "3", "7"].includes(status)) {
+                    // 날짜가 없는데 기존 마커가 날짜 전용 마커라면 초기화 (빈 칸)
+                    status = " ";
+                }
             }
             
             l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${status}]`);
