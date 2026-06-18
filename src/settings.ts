@@ -279,6 +279,18 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                         }).open();
                 });
             });
+
+        // 6. 지원 및 피드백 섹션
+        new Setting(containerEl).setName("6. 지원 및 피드백").setHeading();
+        new Setting(containerEl)
+            .setName("버그 제보 및 기능 제안")
+            .setDesc("플러그인 사용 중 문제가 발생했거나 새로운 기능이 필요하다면 GitHub 이슈를 통해 알려주세요.")
+            .addButton(btn => {
+                btn.setButtonText("GitHub 이슈로 이동");
+                btn.onClick(() => {
+                    window.open("https://github.com/KJH-Portfolio/202604-obsidian-task-manager/issues");
+                });
+            });
     }
 }
 
