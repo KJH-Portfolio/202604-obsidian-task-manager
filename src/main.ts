@@ -286,6 +286,26 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     
     private debounceTimer: number | null = null;
 
+    private triggerAutoSyncForFile(fileToSync: TFile) {
+        if (!this.modifiedFiles.has(fileToSync.path)) return;
+        
+        const path = fileToSync.path;
+        // 백그라운드 동기화 실행 (await 하지 않음)
+        void (async () => {
+            try {
+                if (path === this.settings.mainSchedulePath) {
+                    await this.synchronizer.syncDailyTasks(fileToSync);
+                } else if (path.startsWith(this.settings.projectDirectory)) {
+                    await this.synchronizer.pushProjectToSchedule(fileToSync);
+                }
+            } catch (e) {
+                console.error("Auto-sync error:", e);
+            } finally {
+                this.modifiedFiles.delete(path);
+            }
+        })();
+    }
+
     private triggerDebouncedSync() {
         if (this.debounceTimer !== null) {
             window.clearTimeout(this.debounceTimer);
@@ -480,22 +500,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 // 만약 이전 활성 파일이 있었고, 그것이 현재 활성 파일과 다르고, 수정된 목록에 있다면
                 if (this.lastActiveFile && (!activeFile || this.lastActiveFile.path !== activeFile.path)) {
                     if (this.modifiedFiles.has(this.lastActiveFile.path)) {
-                        const path = this.lastActiveFile.path;
-                        const fileToSync = this.lastActiveFile;
-                        // 백그라운드 동기화 실행 (await 하지 않음)
-                        void (async () => {
-                            try {
-                                if (path === this.settings.mainSchedulePath) {
-                                    await this.synchronizer.syncDailyTasks(fileToSync);
-                                } else if (path.startsWith(this.settings.projectDirectory)) {
-                                    await this.synchronizer.pushProjectToSchedule(fileToSync);
-                                }
-                            } catch (e) {
-                                console.error("Auto-sync error:", e);
-                            } finally {
-                                this.modifiedFiles.delete(path);
-                            }
-                        })();
+                        this.triggerAutoSyncForFile(this.lastActiveFile);
                     }
                 }
                 this.lastActiveFile = activeFile;
@@ -667,6 +672,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 const leaf = activeView?.leaf;
                 
+                // 현재 문서가 수정되었다면 (다른 노트로 이동하는 효과) 동기화 수행
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile && this.modifiedFiles.has(activeFile.path)) {
+                    this.triggerAutoSyncForFile(activeFile);
+                }
+
                 if (leaf) {
                     const state = leaf.getViewState();
                     const eState = leaf.getEphemeralState();
