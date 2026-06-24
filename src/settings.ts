@@ -9,6 +9,7 @@ export interface PluginSettings {
     fleetingMemoPath: string;
     templatesDirectory: string;
     midnightOffsetHour: number;
+    syncOnStartup: boolean;
     customTemplates: {
         dailySchedule: string;
         projectNote: string;
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     fleetingMemoPath: "5. Zettelkasten/01.Fleeting/임시 메모.md",
     templatesDirectory: "3. Resource/01.Templates",
     midnightOffsetHour: 4,
+    syncOnStartup: false,
     customTemplates: {
         dailySchedule: "",
         projectNote: ""
@@ -50,6 +52,16 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         containerEl.empty();
 
         new Setting(containerEl).setName("일반 설정").setHeading();
+
+        new Setting(containerEl)
+            .setName("부팅 시 자동 전체 동기화")
+            .setDesc("옵시디언을 켤 때 스케줄과 프로젝트 전체를 강제로 동기화합니다. (초기 구동 시 프리징이나 렉이 발생한다면 이 옵션을 끄는 것을 권장합니다.)")
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.syncOnStartup)
+                .onChange(async (value) => {
+                    this.plugin.settings.syncOnStartup = value;
+                    await this.plugin.saveSettings();
+                }));
 
         // 1. 경로 설정 섹션
         new Setting(containerEl).setName("1. 경로 설정").setHeading();

@@ -650,3 +650,107 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 }
 .myworld-today-btn { cursor: pointer; font-size: 0.8em; padding: 2px 6px; margin-left: 6px; background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 4px; opacity: 0.7; transition: opacity 0.2s, transform 0.1s; vertical-align: middle; }
 .myworld-today-btn:hover { opacity: 1; transform: scale(1.05); }
+
+/* 날짜 텍스트: 흐리고 작게, 커서 변경 */
+.myworld-date-clickable-text {
+    opacity: 0.5;
+    font-size: 0.82em;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0 2px;
+}
+.myworld-date-clickable-text:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
+.myworld-date-clickable-text.myworld-overdue { color: var(--text-error); opacity: 0.75; }
+
+/* 읽기 모드 날짜 span */
+.myworld-date-clickable {
+    opacity: 0.5;
+    font-size: 0.82em;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0 2px;
+}
+.myworld-date-clickable:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
+.myworld-date-clickable.myworld-overdue { color: var(--text-error); opacity: 0.75; }
+
+/* ── 달력 팝업 ── */
+.myworld-cal-popup {
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    padding: 10px;
+    width: 250px;
+    font-family: var(--font-interface);
+    color: var(--text-normal);
+    z-index: 1000;
+}
+.myworld-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.myworld-cal-month { font-weight: 600; font-size: 0.95em; }
+.myworld-cal-nav {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+    box-shadow: none;
+}
+.myworld-cal-nav:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+
+.myworld-cal-dow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 0.72em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.myworld-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.myworld-cal-day {
+    text-align: center;
+    padding: 4px 2px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.82em;
+    transition: background 0.1s, color 0.1s;
+}
+.myworld-cal-day:hover { background: var(--interactive-accent); color: var(--text-on-accent); }
+.myworld-cal-today { font-weight: 700; color: var(--interactive-accent); }
+.myworld-cal-selected { background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 5px; }
+.myworld-cal-sat { color: var(--color-blue, #4b8ef0); }
+.myworld-cal-sun { color: var(--color-red, #e93147); }
+
+.myworld-cal-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    gap: 6px;
+}
+.myworld-cal-foot-btn {
+    flex: 1;
+    padding: 4px 0;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 5px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: background 0.15s;
+    box-shadow: none;
+}
+.myworld-cal-foot-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.myworld-cal-today-btn { background: var(--interactive-accent); color: var(--text-on-accent); border-color: transparent; }
+.myworld-cal-today-btn:hover { background: var(--interactive-accent-hover, var(--interactive-accent)); opacity: 0.85; }
