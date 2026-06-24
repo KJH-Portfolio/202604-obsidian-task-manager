@@ -306,8 +306,11 @@ class TodayEmojiWidget extends WidgetType {
                 if (!newDate) return;
                 const view = this.getView();
                 const line = view.state.doc.line(this.lineNo);
+                const idMatch = line.text.match(/\s+\^[a-zA-Z0-9]+$/);
+                const insertPos = idMatch ? line.to - idMatch[0].length : line.to;
+                
                 view.dispatch({
-                    changes: { from: line.to, insert: ` 📅 ${newDate}` }
+                    changes: { from: insertPos, insert: ` 📅 ${newDate}` }
                 });
             });
         });

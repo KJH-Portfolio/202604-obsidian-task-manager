@@ -754,3 +754,109 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-cal-foot-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 .myworld-cal-today-btn { background: var(--interactive-accent); color: var(--text-on-accent); border-color: transparent; }
 .myworld-cal-today-btn:hover { background: var(--interactive-accent-hover, var(--interactive-accent)); opacity: 0.85; }
+
+/* ============================
+   StartupSyncModal (부팅 확인 팝업)
+   ============================ */
+.myworld-startup-modal {
+    width: 380px;
+    border-radius: 14px;
+}
+.myworld-startup-modal .modal-content {
+    padding: 28px 28px 22px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.myworld-startup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 2px;
+}
+.myworld-startup-icon {
+    font-size: 2em;
+    line-height: 1;
+    animation: myworld-spin 1.5s linear infinite;
+    display: inline-block;
+}
+@keyframes myworld-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+.myworld-startup-title {
+    margin: 0;
+    font-size: 1.25em;
+    font-weight: 700;
+    color: var(--text-normal);
+    line-height: 1.2;
+}
+.myworld-startup-desc p {
+    margin: 0;
+    font-size: 0.92em;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+.myworld-startup-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-accent);
+}
+.myworld-startup-notice {
+    background: var(--background-modifier-message, rgba(255,200,80,0.08));
+    border-left: 3px solid var(--color-yellow, #f5c842);
+    border-radius: 0 6px 6px 0;
+    padding: 8px 12px;
+    font-size: 0.82em;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+.myworld-startup-btn-area {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 6px;
+}
+.myworld-startup-btn-skip {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    box-shadow: none;
+}
+.myworld-startup-btn-skip:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+.myworld-startup-btn-sync {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.myworld-startup-btn-sync:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
+.myworld-startup-btn-sync:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}

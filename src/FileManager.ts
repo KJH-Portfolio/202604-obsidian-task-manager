@@ -60,42 +60,17 @@ export class FileManager {
         });
 
         if (activeLeaf) {
-            // 에디터 트랜잭션을 사용하여 외부 수정 경고(Merge Conflict) 방지 및 스크롤 보존
             const view = activeLeaf.view as MarkdownView;
             const editor = view.editor;
-            
             const origLines = originalContent.split("\n");
             const newLines = newContent.split("\n");
-            
-            if (origLines.length === newLines.length) {
-                // 줄 수가 같을 경우 (대부분의 스케줄/날짜 동기화) -> 변경된 줄만 핀셋 교체 (스크롤 흔들림 0%)
-                const changes = [];
-                for (let i = 0; i < origLines.length; i++) {
-                    if (origLines[i] !== newLines[i]) {
-                        changes.push({
-                            from: { line: i, ch: 0 },
-                            to: { line: i, ch: origLines[i].length },
-                            text: newLines[i]
-                        });
-                    }
-                }
-                if (changes.length > 0) {
-                    editor.transaction({ changes });
-                }
-            } else {
-                // 줄 수가 다를 경우 전체 교체하되 커서 위치는 보존 시도
-                const cursor = editor.getCursor();
-                const lastLine = editor.lineCount() > 0 ? editor.lineCount() - 1 : 0;
-                const lastCh = editor.lineCount() > 0 ? editor.getLine(lastLine).length : 0;
-                
-                editor.transaction({
-                    changes: [{
-                        from: { line: 0, ch: 0 },
-                        to: { line: lastLine, ch: lastCh },
-                        text: newContent
-                    }],
-                    selections: [{ anchor: cursor, head: cursor }]
-                });
+
+            // 줄 수가 같든 다르든 항상 diff 기반 핀셋 교체를 사용하여 스크롤 튐 완전 방지.
+            // 전체 교체(from:0 ~ to:끝)를 하면 CM6가 뷰포트를 커서 위치로 강제 스크롤하므로
+            // 변경이 발생한 구간만 정밀하게 교체하는 방식으로 통일한다.
+            const changes = this.diffLines(origLines, newLines);
+            if (changes.length > 0) {
+                editor.transaction({ changes });
             }
         } else {
             // 에디터에 열려있지 않거나 읽기 모드라면 조용히 백그라운드 실제 파일 수정
@@ -103,6 +78,66 @@ export class FileManager {
         }
 
         return true;
+    }
+
+    /**
+     * 두 줄 배열을 비교해 실제로 달라진 구간만 EditorChange 배열로 반환한다.
+     * 줄 수가 같으면 변경된 줄만, 줄 수가 다르면 달라지기 시작한 지점부터
+     * 달라지는 마지막 지점까지를 하나의 change로 묶어서 반환한다.
+     * 이 방식은 CM6에게 "문서 전체"가 아닌 "좁은 구간"만 바뀌었음을 알려주므로
+     * 뷰포트 스크롤 리셋이 발생하지 않는다.
+     */
+    private diffLines(
+        origLines: string[],
+        newLines: string[]
+    ): { from: { line: number; ch: number }; to: { line: number; ch: number }; text: string }[] {
+        // 앞쪽에서 공통 줄을 건너뜀
+        let startIdx = 0;
+        const minLen = Math.min(origLines.length, newLines.length);
+        while (startIdx < minLen && origLines[startIdx] === newLines[startIdx]) {
+            startIdx++;
+        }
+
+        // 변경이 없으면 빈 배열 반환
+        if (startIdx === origLines.length && startIdx === newLines.length) {
+            return [];
+        }
+
+        // 뒤쪽에서 공통 줄을 건너뜀
+        let origEnd = origLines.length - 1;
+        let newEnd = newLines.length - 1;
+        while (
+            origEnd >= startIdx &&
+            newEnd >= startIdx &&
+            origLines[origEnd] === newLines[newEnd]
+        ) {
+            origEnd--;
+            newEnd--;
+        }
+
+        // 줄 수가 같을 경우: 변경된 각 줄을 독립적으로 교체 (스크롤 영향 최소화)
+        if (origLines.length === newLines.length) {
+            const changes: { from: { line: number; ch: number }; to: { line: number; ch: number }; text: string }[] = [];
+            for (let i = startIdx; i <= origEnd; i++) {
+                if (origLines[i] !== newLines[i]) {
+                    changes.push({
+                        from: { line: i, ch: 0 },
+                        to: { line: i, ch: origLines[i].length },
+                        text: newLines[i]
+                    });
+                }
+            }
+            return changes;
+        }
+
+        // 줄 수가 다를 경우: startIdx~origEnd 구간을 newLines의 startIdx~newEnd로 교체.
+        // 전체 문서가 아닌 "실제로 달라진 구간"만 교체하므로 스크롤 튐이 발생하지 않는다.
+        const replacementText = newLines.slice(startIdx, newEnd + 1).join("\n");
+        return [{
+            from: { line: startIdx, ch: 0 },
+            to:   { line: origEnd,  ch: origLines[origEnd].length },
+            text: replacementText
+        }];
     }
 
     async modifyWithRollback(files: TFile[], modificationCallback: () => Promise<void>): Promise<boolean> {

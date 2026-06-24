@@ -8,7 +8,7 @@ import { Plugin, TFile, Notice, Modal, Setting, App, MarkdownView } from "obsidi
 import { Prec, RangeSetBuilder } from "@codemirror/state";
 import { EditorView, ViewPlugin, Decoration, DecorationSet, WidgetType, ViewUpdate } from "@codemirror/view";
 import { buildCalendarPopup, buildTodayButtonExtension, buildDateClickablePlugin } from "./ui/CalendarWidget";
-import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab } from "./settings";
+import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab, StartupSyncModal } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { Synchronizer } from "./Synchronizer";
 import { ResetManager } from "./ResetManager";
@@ -87,7 +87,13 @@ class QuickCaptureModal extends Modal {
                 return;
             }
             this.close();
-            const finalContent = `${this.content.trim()} 📅 ${this.selectedDate}`;
+            let finalContent = this.content.trim();
+            const idMatch = finalContent.match(/\s+\^[a-zA-Z0-9]+$/);
+            if (idMatch) {
+                finalContent = finalContent.substring(0, finalContent.length - idMatch[0].length) + ` 📅 ${this.selectedDate}` + idMatch[0];
+            } else {
+                finalContent = `${finalContent} 📅 ${this.selectedDate}`;
+            }
             void this.onSubmit(finalContent);
         };
 
@@ -512,7 +518,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                     for (let i = 0; i < lines.length; i++) {
                                                         if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
                                                             if (matchCount === occurrenceIndex) {
-                                                                lines[i] = lines[i] + ` 📅 ${newDate}`;
+                                                                const text = lines[i];
+                                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                                                if (idMatch) {
+                                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
+                                                                } else {
+                                                                    lines[i] = text + ` 📅 ${newDate}`;
+                                                                }
                                                                 modified = true;
                                                                 break;
                                                             }
@@ -594,24 +606,25 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             })
         );
 
-        // 플러그인 로드 시(초기 1회) 스케줄 기준 전체 동기화 (설정에서 켜진 경우에만)
+        // 플러그인 로드 시(초기 1회) 스케줄 기준 전체 동기화 확인 팝업 (설정에서 켜진 경우에만)
         this.app.workspace.onLayoutReady(() => {
             this.lastActiveFile = this.app.workspace.getActiveFile();
             if (!this.settings.syncOnStartup) {
-                console.log("Startup sync disabled in settings. Skipping initial sync.");
+                console.log("Startup sync popup disabled in settings. Skipping.");
                 return;
             }
 
             const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
             if (scheduleFile && scheduleFile instanceof TFile) {
-                void (async () => {
+                // 자동 실행 대신 사용자 확인 팝업을 띄움
+                new StartupSyncModal(this.app, async () => {
                     try {
-                        console.log("Running initial sync...");
+                        console.log("Running initial sync (user confirmed)...");
                         await this.synchronizer.syncDailyTasks(scheduleFile);
                     } catch (e) {
                         console.error("Initial sync error:", e);
                     }
-                })();
+                }).open();
             }
         });
 

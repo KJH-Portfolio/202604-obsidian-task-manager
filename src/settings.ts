@@ -54,8 +54,8 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         new Setting(containerEl).setName("일반 설정").setHeading();
 
         new Setting(containerEl)
-            .setName("부팅 시 자동 전체 동기화")
-            .setDesc("옵시디언을 켤 때 스케줄과 프로젝트 전체를 강제로 동기화합니다. (초기 구동 시 프리징이나 렉이 발생한다면 이 옵션을 끄는 것을 권장합니다.)")
+            .setName("부팅 시 동기화 확인 팝업")
+            .setDesc("옵시디언을 켤 때 '스케줄을 동기화하시겠습니까?' 확인 팝업을 표시합니다. 팝업에서 동의하면 동기화를 실행하고, 취소하면 건너뜁니다. (git pull 등 다른 플러그인과의 충돌을 방지하는 안전한 방식입니다.)")
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.syncOnStartup)
                 .onChange(async (value) => {
@@ -422,6 +422,61 @@ export class ConfirmModal extends Modal {
                     this.close();
                 })
             );
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
+// 부팅 시 동기화 확인 팝업
+export class StartupSyncModal extends Modal {
+    onSync: () => Promise<void>;
+
+    constructor(app: App, onSync: () => Promise<void>) {
+        super(app);
+        this.onSync = onSync;
+    }
+
+    onOpen() {
+        const { contentEl, modalEl } = this;
+        contentEl.empty();
+        modalEl.addClass("myworld-startup-modal");
+
+        // 아이콘 + 타이틀
+        const header = contentEl.createDiv({ cls: "myworld-startup-header" });
+        header.createEl("div", { text: "🔄", cls: "myworld-startup-icon" });
+        header.createEl("h2", { text: "스케줄 동기화", cls: "myworld-startup-title" });
+
+        // 안내 메시지
+        const desc = contentEl.createDiv({ cls: "myworld-startup-desc" });
+        desc.createEl("p", { text: "프로젝트 노트와 메인 스케줄 간의 할 일을 동기화합니다." });
+
+        // 오늘 날짜 표시
+        const today = window.moment().format("YYYY년 MM월 DD일 (ddd)");
+        const dateEl = contentEl.createDiv({ cls: "myworld-startup-date" });
+        dateEl.createEl("span", { text: "📅 " + today });
+
+        // 안내 문구
+        const notice = contentEl.createDiv({ cls: "myworld-startup-notice" });
+        notice.createEl("span", { text: "💡 Git Pull 등이 완료된 후 동기화를 실행하면 충돌을 방지할 수 있습니다." });
+
+        // 버튼 영역
+        const btnArea = contentEl.createDiv({ cls: "myworld-startup-btn-area" });
+
+        const skipBtn = btnArea.createEl("button", { text: "건너뛰기", cls: "myworld-startup-btn-skip" });
+        skipBtn.addEventListener("click", () => {
+            this.close();
+        });
+
+        const syncBtn = btnArea.createEl("button", { text: "🔄 지금 동기화", cls: "myworld-startup-btn-sync" });
+        syncBtn.addEventListener("click", async () => {
+            syncBtn.disabled = true;
+            syncBtn.textContent = "동기화 중...";
+            this.close();
+            await this.onSync();
+        });
     }
 
     onClose() {
