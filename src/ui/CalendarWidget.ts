@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { App, MarkdownView } from "obsidian";
+import { App } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 
@@ -246,28 +246,32 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                 if (isMatch) {
                     e.preventDefault();
                     const rect = target.getBoundingClientRect();
-                    buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, async (newDate) => {
-                        const activeView = app.workspace.getActiveViewOfType(MarkdownView);
-                        if (activeView && activeView.file) {
-                            const targetFile = activeView.file;
-                            const content = await app.vault.read(targetFile);
-                            const lines = content.split("\n");
-                            const i = lineNo - 1;
-                            if (i >= 0 && i < lines.length) {
-                                if (newDate === null) {
-                                    lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
-                                } else {
-                                    lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
-                                }
-                                await app.vault.modify(targetFile, lines.join("\n"));
+                    // Bug M: 클릭 시점 view를 캡처하여 콜백에서 사용 (getActiveViewOfType 클로저 버그 해결)
+                    const clickedView = view;
+                    buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
+                        try {
+                            const line = clickedView.state.doc.line(lineNo);
+                            const text = line.text;
+                            const match = text.match(/📅\s*\d{4}-\d{2}-\d{2}/);
+                            if (!match || match.index === undefined) return;
+
+                            const from = line.from + match.index;
+                            const to = from + match[0].length;
+
+                            if (newDate === null) {
+                                // 날짜 앞 공백이 있으면 함께 제거
+                                const removeFrom = (match.index > 0 && text[match.index - 1] === ' ') ? from - 1 : from;
+                                clickedView.dispatch({ changes: { from: removeFrom, to, insert: '' } });
+                            } else {
+                                clickedView.dispatch({ changes: { from, to, insert: `📅 ${newDate}` } });
                             }
+                        } catch (err) {
+                            console.error("[Bug M] view dispatch 실패:", err);
                         }
                     });
                     return true;
                 }
             }
-
-
         }
     }
 });

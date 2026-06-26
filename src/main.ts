@@ -176,8 +176,23 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     
     modifiedFiles: Set<string> = new Set<string>();
     lastActiveFile: TFile | null = null;
-    // BUG-01/05/04: 플러그인이 직접 수정한 파일과 시간을 추적하여 vault.on('modify') 필터링 (Debounce)
-    pluginWritingFiles: Map<string, number> = new Map<string, number>();
+    // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
+    // 타임스탬프 방식(1초 임계값)은 클라우드 동기화 환경에서 이벤트 지연으로 무력화될 수 있어 콘텐츠 해시 비교로 전환
+    pluginWritingFiles: Map<string, string> = new Map<string, string>();
+    // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
+    private fileWriteQueue: Map<string, Promise<void>> = new Map();
+
+    /**
+     * BUG-02: 동일 파일에 대한 read→modify 작업을 직렬화하여 Race Condition 방지.
+     * 연속 클릭 시 이전 작업이 완료된 후 다음 작업이 실행됨을 보장한다.
+     */
+    private enqueueFileWrite(filePath: string, task: () => Promise<void>): void {
+        const current = this.fileWriteQueue.get(filePath) ?? Promise.resolve();
+        const next = current.then(task).catch((e: unknown) => {
+            console.error('enqueueFileWrite error:', e);
+        });
+        this.fileWriteQueue.set(filePath, next);
+    }
 
     private async triggerAutoSyncForFile(fileToSync: TFile, force: boolean = false) {
         if (!force && !this.modifiedFiles.has(fileToSync.path)) return;
@@ -290,7 +305,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             checkboxes.forEach((cb) => {
                 // 옵시디언의 읽기 모드 체크박스 핸들러는 주로 click 이벤트를 위임(delegation)하여 처리하므로,
                 // 체크박스 자체에 click 이벤트를 달고 stopPropagation()을 호출하면 완벽히 차단됨
-                cb.addEventListener("click", async (e) => {
+                cb.addEventListener("click", (e) => {
                     e.preventDefault();
                     e.stopPropagation();
 
@@ -311,23 +326,27 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     const targetFile = this.app.vault.getAbstractFileByPath(context.sourcePath);
                     if (!targetFile || !(targetFile instanceof TFile)) return;
 
-                    const fileContent = await this.app.vault.read(targetFile);
-                    const lines = fileContent.split("\n");
-                    let modified = false;
-                    for (let i = 0; i < lines.length; i++) {
-                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) &&
-                            lines[i].includes(cleanText.slice(0, Math.min(30, cleanText.length)))) {
-                            lines[i] = lines[i].replace(
-                                /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/,
-                                `$1${nextMarker}$3`
-                            );
-                            modified = true;
-                            break;
+                    // BUG-02: Race Condition 방지 - read→modify 전 과정을 직렬화 큐로 순서 보장
+                    // pluginWrite 사용으로 vault.on('modify') 해시 필터도 함께 적용
+                    this.enqueueFileWrite(targetFile.path, async () => {
+                        const fileContent = await this.app.vault.read(targetFile);
+                        const lines = fileContent.split("\n");
+                        let modified = false;
+                        for (let i = 0; i < lines.length; i++) {
+                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) &&
+                                lines[i].includes(cleanText.slice(0, Math.min(30, cleanText.length)))) {
+                                lines[i] = lines[i].replace(
+                                    /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/,
+                                    `$1${nextMarker}$3`
+                                );
+                                modified = true;
+                                break;
+                            }
                         }
-                    }
-                    if (modified) {
-                        await this.app.vault.modify(targetFile, lines.join("\n"));
-                    }
+                        if (modified) {
+                            await this.fileManager.pluginWrite(targetFile, lines.join("\n"));
+                        }
+                    });
                 });
             });
         });
@@ -418,6 +437,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                 ev.stopPropagation();
                                                 const rect = dateSpan.getBoundingClientRect();
 
+                                                // Bug D: Observer 시점 activeFile 클로저 문제 해결 — 클릭 시점에 taskEl 소속 파일 재탐색
+                                                const clickLeaf = this.app.workspace.getLeavesOfType("markdown")
+                                                    .find(l => l.view.containerEl.contains(taskEl));
+                                                const clickFile = clickLeaf ? (clickLeaf.view as MarkdownView).file : activeFile;
+                                                if (!clickFile) return;
+
                                                 const cleanTextForMatch = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
                                                 const container = taskEl.closest(".markdown-reading-view") || activeDocument.body;
                                                 const allTasks = Array.from(container.querySelectorAll(".task-list-item"));
@@ -432,24 +457,27 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                     }
                                                 }
 
-                                                buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, async (newDate) => {
-                                                    const fileContent = await this.app.vault.read(activeFile);
-                                                    const lines = fileContent.split("\n");
-                                                    let matchCount = 0;
-                                                    for (let i = 0; i < lines.length; i++) {
-                                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanTextForMatch) && lines[i].includes(dateStr)) {
-                                                            if (matchCount === occurrenceIndex) {
-                                                                if (newDate === null) {
-                                                                    lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
-                                                                } else {
-                                                                    lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
+                                                buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
+                                                    // BUG-02: Race Condition 방지 - 직렬화 큐로 순서 보장 + pluginWrite로 해시 필터 적용
+                                                    this.enqueueFileWrite(clickFile.path, async () => {
+                                                        const fileContent = await this.app.vault.read(clickFile);
+                                                        const lines = fileContent.split("\n");
+                                                        let matchCount = 0;
+                                                        for (let i = 0; i < lines.length; i++) {
+                                                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanTextForMatch) && lines[i].includes(dateStr)) {
+                                                                if (matchCount === occurrenceIndex) {
+                                                                    if (newDate === null) {
+                                                                        lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
+                                                                    } else {
+                                                                        lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
+                                                                    }
+                                                                    await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                                                    break;
                                                                 }
-                                                                await this.app.vault.modify(activeFile, lines.join("\n"));
-                                                                break;
+                                                                matchCount++;
                                                             }
-                                                            matchCount++;
                                                         }
-                                                    }
+                                                    });
                                                 });
                                             });
 
@@ -488,6 +516,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                 e.preventDefault();
                                                 e.stopPropagation();
 
+                                                // Bug D: Observer 시점 activeFile 클로저 문제 해결 — 클릭 시점에 taskEl 소속 파일 재탐색
+                                                const clickLeaf = this.app.workspace.getLeavesOfType("markdown")
+                                                    .find(l => l.view.containerEl.contains(taskEl));
+                                                const clickFile = clickLeaf ? (clickLeaf.view as MarkdownView).file : activeFile;
+                                                if (!clickFile) return;
+
                                                 let cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
                                                 if (!cleanText) return;
 
@@ -507,35 +541,37 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                 const todayStr = window.moment().format("YYYY-MM-DD");
                                                 const rect = btn.getBoundingClientRect();
 
-                                                buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, async (newDate) => {
+                                                buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
                                                     if (!newDate) return;
+                                                    // BUG-02: Race Condition 방지 - 직렬화 큐로 순서 보장 + pluginWrite로 해시 필터 적용
+                                                    this.enqueueFileWrite(clickFile.path, async () => {
+                                                        const fileContent = await this.app.vault.read(clickFile);
+                                                        const lines = fileContent.split("\n");
+                                                        let modified = false;
+                                                        let matchCount = 0;
 
-                                                    const fileContent = await this.app.vault.read(activeFile);
-                                                    const lines = fileContent.split("\n");
-                                                    let modified = false;
-                                                    let matchCount = 0;
-
-                                                    for (let i = 0; i < lines.length; i++) {
-                                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                                            if (matchCount === occurrenceIndex) {
-                                                                const text = lines[i];
-                                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                                                if (idMatch) {
-                                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
-                                                                } else {
-                                                                    lines[i] = text + ` 📅 ${newDate}`;
+                                                        for (let i = 0; i < lines.length; i++) {
+                                                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                                                if (matchCount === occurrenceIndex) {
+                                                                    const text = lines[i];
+                                                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                                                    if (idMatch) {
+                                                                        lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
+                                                                    } else {
+                                                                        lines[i] = text + ` 📅 ${newDate}`;
+                                                                    }
+                                                                    modified = true;
+                                                                    break;
                                                                 }
-                                                                modified = true;
-                                                                break;
+                                                                matchCount++;
                                                             }
-                                                            matchCount++;
                                                         }
-                                                    }
 
-                                                    if (modified) {
-                                                        await this.app.vault.modify(activeFile, lines.join("\n"));
-                                                        btn.remove();
-                                                    }
+                                                        if (modified) {
+                                                            await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                                            btn.remove();
+                                                        }
+                                                    });
                                                 });
                                             });
                                             
@@ -580,14 +616,30 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // 4. 자동 동기화(Auto-Sync) 이벤트 등록
         this.registerEvent(
             this.app.vault.on('modify', (file) => {
-                if (file instanceof TFile && file.extension === 'md') {
-                    // BUG-01/05/04: 플러그인이 저장 직후 1초(1000ms) 동안 발생하는 모든 이벤트 무시 (Debounce)
-                    const lastWriteTime = this.pluginWritingFiles.get(file.path);
-                    if (lastWriteTime && Date.now() - lastWriteTime < 1000) {
-                        return;
-                    }
-                    this.modifiedFiles.add(file.path);
+                if (!(file instanceof TFile) || file.extension !== 'md') return;
+
+                // BUG-01/05/04: 플러그인이 쓴 파일인지 콘텐츠 해시로 판단 (타임스탬프 저기의 1초 방식 개선)
+                // cachedHash가 있는 경우에만 vault.read()를 호출하므로 플러그인이 안 쓴 파일은 I/O 추가 없음
+                const cachedHash = this.pluginWritingFiles.get(file.path);
+                if (cachedHash !== undefined) {
+                    void (async () => {
+                        try {
+                            const currentContent = await this.app.vault.read(file);
+                            const currentHash = this.fileManager.simpleHash(currentContent);
+                            if (currentHash === cachedHash) {
+                                // 콘텐츠가 플러그인이 마지막으로 저장한 것과 동일 → 자신의 저장임, 무시
+                                return;
+                            }
+                            // 콘텐츠가 다르다 → 외부(사용자 또는 클라우드)에서 변경된 것 → 캐시 제거 후 동기화 허용
+                            this.pluginWritingFiles.delete(file.path);
+                            this.modifiedFiles.add(file.path);
+                        } catch (e) {
+                            console.error('pluginWritingFiles hash check error:', e);
+                        }
+                    })();
+                    return;
                 }
+                this.modifiedFiles.add(file.path);
             })
         );
 
@@ -835,11 +887,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     }
 
     onunload() {
-        // BUG-03: 플러그인 종료 시 debounce 타이머 정리하여 시스템 종료 후 콜백 실행 방지
-        if (this.debounceTimer !== null) {
-            window.clearTimeout(this.debounceTimer);
-            this.debounceTimer = null;
-        }
         console.log("Unloading MyWorld Task Manager...");
     }
 

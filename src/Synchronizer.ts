@@ -141,7 +141,7 @@ export class Synchronizer {
                         const tM = l.match(REGEX.TASK_LINE);
                         if (tM) {
                             let { text, id } = this.utils.extractIdAndText(tM[3]);
-                            const isDeleted = /\/\/$/.test(text.trim());
+                            const isDeleted = /;;$/.test(text.trim());
                             if (!id) { 
                                 // BUG-24: 충돌 체크 대상 파일 전달로 ID 중복 방지
                                 id = this.utils.generateBlockId([projectFile]); 
@@ -197,7 +197,7 @@ export class Synchronizer {
                                 if (REGEX.MATCH_TASK_COMPLETED.test(l)) planTasksDone++;
                             }
                         } else {
-                            const newId = this.utils.generateBlockId();
+                            const newId = this.utils.generateBlockId([projectFile]);
                             newPlanLines.push(`${l} ^${newId}`);
                             planTasksTotal++;
                             if (REGEX.MATCH_TASK_COMPLETED.test(l)) planTasksDone++;
@@ -324,12 +324,22 @@ export class Synchronizer {
                 new Notice("🚨 메인 스케줄 파일을 찾을 수 없습니다.");
             }
         } catch (e) {
-            // 실패 시 프로젝트 원본 파일 복구 (롤백은 pluginWrite로 처리)
-            await this.fileManager.pluginWrite(projectFile, originalActive);
+            // 실패 시 프로젝트 원본 파일 복구 (에디터가 열려있을 때 Merge Conflict 방지를 위해 saveIfChanged 사용)
+            try {
+                const currentActiveText = await this.fileManager.getActiveViewOrFileText(projectFile);
+                await this.fileManager.saveIfChanged(projectFile, currentActiveText, originalActive);
+            } catch (rollbackErr) {
+                console.error("Rollback failed for project file:", projectFile.path, rollbackErr);
+            }
             if (originalSchedule) {
                 const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
                 if (scheduleFile && scheduleFile instanceof TFile) {
-                    await this.fileManager.pluginWrite(scheduleFile, originalSchedule);
+                    try {
+                        const currentScheduleText = await this.fileManager.getActiveViewOrFileText(scheduleFile);
+                        await this.fileManager.saveIfChanged(scheduleFile, currentScheduleText, originalSchedule);
+                    } catch (rollbackErr) {
+                        console.error("Rollback failed for schedule file:", rollbackErr);
+                    }
                 }
             }
             console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));

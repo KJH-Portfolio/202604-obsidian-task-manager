@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { App, Modal, TFile, Notice, MarkdownView } from "obsidian";
+import { App, Modal, TFile, Notice } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
@@ -117,14 +117,8 @@ export class ResetManager {
         try {
             new Notice("⏳ 일간 마감 준비 중...");
             
-            // 에디터의 실시간 내용을 우선 읽어옴 (저장 지연 방지)
-            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-            let originalContent = "";
-            if (activeView && activeView.file && activeView.file.path === dailyFile.path) {
-                originalContent = activeView.editor.getValue();
-            } else {
-                originalContent = await this.app.vault.read(dailyFile);
-            }
+            // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
+            const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             
             let content = this.utils.preprocessContent(originalContent);
             const now = this.utils.getAdjustedNow(); // 설정된 자정 보정 적용
@@ -211,9 +205,9 @@ export class ResetManager {
                     const allFiles = this.utils.getProjectFiles();
                     const filesForCollisionCheck = [...allFiles, dailyFile];
 
-                    // [트랜잭션 백업] 프로젝트 파일 원본 캐싱
+                    // [트랜잭션 백업] 프로젝트 파일 원본 캐싱 (미저장 에디터 내용 포함)
                     for (const f of allFiles) {
-                        const fileContent = await this.app.vault.read(f);
+                        const fileContent = await this.fileManager.getActiveViewOrFileText(f);
                         originalProjectsCache.set(f, fileContent);
                     }
 
@@ -328,13 +322,19 @@ export class ResetManager {
                 } catch (innerErr) {
                     console.error("Daily Reset Execution Error:", innerErr);
                     
-                    // [트랜잭션 롤백] 데일리 파일 복구
-                    await this.app.vault.modify(dailyFile, originalContent);
-                    
-                    // [트랜잭션 롤백] 프로젝트 파일들 일괄 복구
+                    // [트랜잭션 롤백] 데일리 파일 복구 (해시 필터 등록 후 안전하게 저장)
+                    try {
+                        const currentDailyText = await this.fileManager.getActiveViewOrFileText(dailyFile);
+                        await this.fileManager.saveIfChanged(dailyFile, currentDailyText, originalContent);
+                    } catch (e) {
+                        console.error("Rollback failed for daily file", dailyFile.path, e);
+                    }
+
+                    // [트랜잭션 롤백] 프로젝트 파일들 일괄 복구 (해시 필터 우회 방지)
                     for (const [f, c] of originalProjectsCache.entries()) {
                         try {
-                            await this.app.vault.modify(f, c);
+                            const currentText = await this.fileManager.getActiveViewOrFileText(f);
+                            await this.fileManager.saveIfChanged(f, currentText, c);
                         } catch (e) {
                             console.error("Rollback failed for", f.path, e);
                         }
@@ -353,14 +353,8 @@ export class ResetManager {
         try {
             new Notice("⏳ 월간 통계 수동 아카이빙 시작...");
             
-            // 에디터의 실시간 내용을 우선 읽어옴 (저장 지연 방지)
-            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-            let originalContent = "";
-            if (activeView && activeView.file && activeView.file.path === dailyFile.path) {
-                originalContent = activeView.editor.getValue();
-            } else {
-                originalContent = await this.app.vault.read(dailyFile);
-            }
+            // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
+            const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             
             const content = this.utils.preprocessContent(originalContent);
             const now = this.utils.getAdjustedNow(); // 설정된 자정 보정 적용

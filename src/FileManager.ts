@@ -2,12 +2,27 @@ import { App, TFile, Notice, MarkdownView } from "obsidian";
 
 export class FileManager {
     private app: App;
-    // BUG-01/05/04: 플러그인이 직접 수정한 파일 경로와 시간을 추적하여 vault.on('modify')에서 필터링 (Debounce)
-    private pluginWritingFiles: Map<string, number>;
+    // BUG-01/05/04: 플러그인이 직접 수정한 파일 경로와 콘텐츠 해시를 추적하여 vault.on('modify')에서 이중 동기화 필터링
+    // 타임스탬프(1초 임계값) 방식은 클라우드 동기화 환경에서 이벤트 지연으로 무력화될 수 있어 해시 비교로 전환
+    private pluginWritingFiles: Map<string, string>;
 
-    constructor(app: App, pluginWritingFiles: Map<string, number>) {
+    constructor(app: App, pluginWritingFiles: Map<string, string>) {
         this.app = app;
         this.pluginWritingFiles = pluginWritingFiles;
+    }
+
+    /**
+     * 문자열을 빠른 32bit 정수 해시로 변환.
+     * vault.on('modify') 이벤트 필터링 시 콘텐츠 동일 여부를 확인하는 데 사용.
+     */
+    public simpleHash(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0; // 32bit integer로 강제
+        }
+        return hash.toString(36);
     }
 
     getFile(path: string): TFile | null {
@@ -38,23 +53,29 @@ export class FileManager {
     }
 
     /**
-     * BUG-01: 플러그인이 직접 vault.modify를 호출해야 할 때 사용.
-     * pluginWritingFiles에 경로와 현재 시간을 등록하여 vault.on('modify')가 이를 1초간 무시하도록 한다.
+     * 플러그인이 직접 vault.modify를 호출해야 할 때 사용.
+     * 저장하는 콘텐츠의 해시를 pluginWritingFiles에 기록하여,
+     * vault.on('modify') 이벤트 발생 시 이중 동기화를 유발하지 않도록 필터링한다.
      */
     async pluginWrite(file: TFile, content: string): Promise<void> {
-        this.pluginWritingFiles.set(file.path, Date.now());
+        this.pluginWritingFiles.set(file.path, this.simpleHash(content));
         await this.app.vault.modify(file, content);
     }
 
     async saveIfChanged(file: TFile, originalContent: string, newContent: string): Promise<boolean> {
         if (originalContent === newContent) return false;
 
-        // 저장 전 타임스탬프를 등록하여 vault.on('modify') 이벤트가 무한 루프를 돌지 않도록 방지
-        this.pluginWritingFiles.set(file.path, Date.now());
+        // 저장할 콘텐츠의 해시를 등록하여 vault.on('modify') 이벤트 발생 시 이중 동기화를 방지
+        this.pluginWritingFiles.set(file.path, this.simpleHash(newContent));
 
         // 열려있는 에디터(Live View) 중 이 파일을 편집 중인 탭을 찾음
+        // 1. 현재 활성 뷰를 최우선으로 확인
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const priorityLeaf = (activeView && activeView.file && activeView.file.path === file.path && activeView.getState().mode === 'source') ? activeView.leaf : null;
+
         const leaves = this.app.workspace.getLeavesOfType("markdown");
-        const activeLeaf = leaves.find(l => {
+        // 2. 활성 뷰가 아니면 전체 창에서 순회 탐색
+        const activeLeaf = priorityLeaf ?? leaves.find(l => {
             const view = l.view as MarkdownView;
             return view && view.file && view.file.path === file.path && l.getViewState().state?.mode === "source";
         });
@@ -62,6 +83,13 @@ export class FileManager {
         if (activeLeaf) {
             const view = activeLeaf.view as MarkdownView;
             const editor = view.editor;
+
+            // 3. 에디터 렌더링 미완료 예외 처리 (뷰는 열렸으나 DOM 로드 전)
+            if (editor.lineCount() === 0) {
+                await this.pluginWrite(file, newContent);
+                return true;
+            }
+
             const origLines = originalContent.split("\n");
             const newLines = newContent.split("\n");
 

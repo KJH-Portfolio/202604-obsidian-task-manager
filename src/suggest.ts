@@ -56,9 +56,10 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
         this.close();
     }
 
-    // BUG-21: 팝업 닫힐 때 리스너 정리
+    // Bug N: close() 시 removeEventListener를 하지 않음
+    // 설정 탭이 닫힐 면 DOM 자체가 파괴되므로 메모리 누수 없음
+    // close() 때 제거하면 두 번째 사용부터 Enter 키가 먹통이 되는 버그 발생
     close(): void {
-        this.inputEl.removeEventListener("keydown", this.keydownHandler);
         super.close();
     }
 }
@@ -117,9 +118,10 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
         this.close();
     }
 
-    // BUG-21: 팝업 닫힐 때 리스너 정리
+    // Bug N: close() 시 removeEventListener를 하지 않음
+    // 설정 탭이 닫힐 면 DOM 자체가 파괴되므로 메모리 누수 없음
+    // close() 때 제거하면 두 번째 사용부터 Enter 키가 먹통이 되는 버그 발생
     close(): void {
-        this.inputEl.removeEventListener("keydown", this.keydownHandler);
         super.close();
     }
 }

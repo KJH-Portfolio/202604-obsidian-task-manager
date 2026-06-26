@@ -9,16 +9,7 @@ import { App, TFile, TFolder } from "obsidian";
 import type { moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
-
-export interface PluginSettings {
-    projectDirectory: string;
-    mainSchedulePath: string;
-    archiveDirectory: string;
-    customTemplates: {
-        dailySchedule: string;
-        projectNote: string;
-    };
-}
+import { PluginSettings } from "./settings";
 
 export const REGEX = {
     EXTRACT_ID: /^(.*?)(?:\s*\^([a-zA-Z0-9]+))?$/,
@@ -95,8 +86,7 @@ export class TaskUtils {
     preprocessContent(content: string): string {
         if (!content) return "";
         return content.replace(/\r\n/g, '\n')
-            .replace(/\t/g, '    ')
-            .replace(/\n{3,}/g, '\n\n');
+            .replace(/\n{3,}/g, '\n\n'); // 3줄 이상 빈 줄은 2줄로(즉 한 줄의 빈 줄) 치환
     }
 
     getCache(file: TFile): import("obsidian").CachedMetadata | null {
@@ -195,6 +185,8 @@ export class TaskUtils {
         };
     }
 
+    private issuedIds: Set<string> = new Set();
+
     generateBlockId(filesToCheck: TFile[] = []): string {
         let id: string;
         let isDuplicate: boolean;
@@ -210,8 +202,13 @@ export class TaskUtils {
                     break;
                 }
             }
+            if (!isDuplicate && this.issuedIds.has(id)) {
+                isDuplicate = true;
+            }
             maxAttempts--;
         } while (isDuplicate && maxAttempts > 0);
+        
+        this.issuedIds.add(id);
         return id;
     }
 
@@ -344,7 +341,7 @@ export class TaskUtils {
                 const match = l.match(REGEX.TASK_LINE);
                 if (match) {
                     const textWithId = match[3];
-                    isDeleted = /\/\/(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim());
+                    isDeleted = /;;(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim());
                 }
                 if (REGEX.MATCH_TASK_COMPLETED.test(l) || isDeleted) {
                     skipIndent = currentIndent; continue;
@@ -453,7 +450,7 @@ export class TaskUtils {
         if (!sMatch) return cContent;
         const sIdx = sMatch.index + (sMatch[1] === '\n' ? 1 : 0);
         const hLevel = (hName.match(/^#+/) || ["#"])[0].length;
-        const nextHRegex = new RegExp(`\\n#{1,${hLevel}}\\s`, 'g');
+        const nextHRegex = new RegExp(`\\n(?!>)#{1,${hLevel}}\\s`, 'g');
         nextHRegex.lastIndex = sIdx + hName.length;
         const m = nextHRegex.exec(cContent);
         const nIdx = m ? m.index : cContent.length;
@@ -894,7 +891,7 @@ export class TaskUtils {
         if (tableLines.length < 3) return content; // Header, Separator, and at least 1 data row
         
         let header = tableLines[0];
-        let separator = tableLines[1];
+        const separator = tableLines[1];
         let dataRows = tableLines.slice(2);
         
 
@@ -1023,7 +1020,8 @@ export class TaskUtils {
                     pPlanTasksDone = overrideData[pNoteName].planTasksDone || 0;
                     pPlanTasksTotal = overrideData[pNoteName].planTasksTotal || 0;
                 } else {
-                    let pContent = await this.app.vault.read(file);
+                    // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
+                    let pContent = await this.fileManager.getActiveViewOrFileText(file);
                     let pLines = pContent.split("\n");
                     let pInEx = false, pInPl = false;
                     
@@ -1045,7 +1043,7 @@ export class TaskUtils {
                         const match = t.match(REGEX.TASK_LINE);
                         if (match) {
                             const textWithId = match[3];
-                            if (/\/\/(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim())) return false;
+                            if (/;;(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim())) return false;
                         }
                     }
                     return true;
@@ -1111,8 +1109,8 @@ export class TaskUtils {
                     const tM = cleanLine.match(REGEX.TASK_LINE);
                     if (tM) {
                         let { text, id } = this.extractIdAndText(tM[3]);
-                        const isDeleted = /\/\/$/.test(text.trim());
-                        const cleanText = isDeleted ? text.replace(/\/\/$/, '').trim() : text;
+                        const isDeleted = /;;$/.test(text.trim());
+                        const cleanText = isDeleted ? text.replace(/;;$/, '').trim() : text;
                         const taskData = { 
                             status: tM[2], 
                             checked: (tM[2].toLowerCase() === 'x' || tM[2] === '-'), 
@@ -1278,7 +1276,8 @@ export class TaskUtils {
         let originalContent: string | null = null;
 
         if (mFile && mFile instanceof TFile) {
-            let mContent = await app.vault.read(mFile);
+            // Bug G: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
+            let mContent = await this.fileManager.getActiveViewOrFileText(mFile);
             originalContent = mContent;
             const statsRange = this.getSectionRange(mContent, "# 통계") as { start: number, end: number };
             if (statsRange) {
@@ -1298,6 +1297,15 @@ export class TaskUtils {
     async syncDailyToProjects(app: App, dailyMap: Record<string, DailyData>, allFiles: TFile[], collisionFiles: TFile[], isReset = false): Promise<Record<string, ProjectOverrideData>> {
         const overrideData: Record<string, ProjectOverrideData> = {};
 
+        // Bug C: 에러 발생 시 전체 롤백을 위해 대상 파일 사전 백업
+        const backups = new Map<string, string>();
+        for (const file of allFiles) {
+            if (this.hasSection(file, "실행", 1) || this.hasSection(file, "계획", 1)) {
+                backups.set(file.path, await this.fileManager.getActiveViewOrFileText(file));
+            }
+        }
+        const syncErrors: Array<{ file: TFile; error: unknown }> = [];
+
         await Promise.all(allFiles.map(async (file) => {
             try {
                 if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return;
@@ -1305,7 +1313,8 @@ export class TaskUtils {
                 const noteName = file.basename;
                 const dailyData = dailyMap[noteName] || { byId: {}, byText: {}, orderedTasks: [] };
                 
-                let sContent = await app.vault.read(file);
+                // Bug F: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
+                let sContent = await this.fileManager.getActiveViewOrFileText(file);
                 let sLines = sContent.split("\n"), mod = false, inExSec = false; 
                 let finalSLines: string[] = [], skipIndent = -1, skipCheckIndent = -1, skipCheckStatus = " ";
                 let handledInFile = new Set<string>();
@@ -1542,9 +1551,24 @@ export class TaskUtils {
                 overrideData[noteName] = { execTasks, planTasksDone, planTasksTotal };
 
             } catch (e) { 
-                console.error(`Sync error on [${file.path}]:`, e); 
+                console.error(`Sync error on [${file.path}]:`, e);
+                syncErrors.push({ file, error: e });
             }
         }));
+
+        // Bug C: 하나라도 실패하면 백업에서 전체 롤백
+        if (syncErrors.length > 0) {
+            console.warn(`[syncDailyToProjects] ${syncErrors.length}개 파일 동기화 실패, 전체 롤백 시작`);
+            for (const [path, backup] of backups.entries()) {
+                const f = app.vault.getAbstractFileByPath(path);
+                if (f instanceof TFile) {
+                    try { await this.fileManager.pluginWrite(f, backup); }
+                    catch (re) { console.error(`롤백 실패: ${path}`, re); }
+                }
+            }
+            throw new Error(`${syncErrors.length}개 파일 동기화 실패, 전체 롤백 완료`);
+        }
+
         return overrideData;
     }
 
