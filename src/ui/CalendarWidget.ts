@@ -291,7 +291,7 @@ class TodayEmojiWidget extends WidgetType {
         super();
     }
 
-    eq(other: TodayEmojiWidget) {
+    eq() {
         return true;
     }
 

@@ -6,7 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { DailyData, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
 import { App, TFile, TFolder } from "obsidian";
-import type { moment } from "obsidian";
+import { moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 import { PluginSettings } from "./settings";
