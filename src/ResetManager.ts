@@ -134,7 +134,9 @@ export class ResetManager {
             new DailyResetModal(this.app, defaultReview, async (reviewInput, stepInput) => {
                 const originalProjectsCache: Map<TFile, string> = new Map();
                 try {
+                    this.utils.showLoadingOverlay("⏳ 일간 마감 처리 중...");
                     new Notice("⏳ 일간 마감 및 리셋 시작...");
+                    let content = this.utils.preprocessContent(originalContent);
 
                     // --- [Step 1] 미니 테이블 데이터 추출 및 체크리스트 본 표 이관 ---
                     const miniTableRegex = /(\|.*\|\n\|(?:\s*[:-]+[ -]*\|)+\n)([^\n]+)/;
@@ -324,8 +326,7 @@ export class ResetManager {
                     
                     // [트랜잭션 롤백] 데일리 파일 복구 (해시 필터 등록 후 안전하게 저장)
                     try {
-                        const currentDailyText = await this.fileManager.getActiveViewOrFileText(dailyFile);
-                        await this.fileManager.saveIfChanged(dailyFile, currentDailyText, originalContent);
+                        await this.fileManager.pluginWrite(dailyFile, originalContent);
                     } catch (e) {
                         console.error("Rollback failed for daily file", dailyFile.path, e);
                     }
@@ -333,14 +334,15 @@ export class ResetManager {
                     // [트랜잭션 롤백] 프로젝트 파일들 일괄 복구 (해시 필터 우회 방지)
                     for (const [f, c] of originalProjectsCache.entries()) {
                         try {
-                            const currentText = await this.fileManager.getActiveViewOrFileText(f);
-                            await this.fileManager.saveIfChanged(f, currentText, c);
+                            await this.fileManager.pluginWrite(f, c);
                         } catch (e) {
                             console.error("Rollback failed for", f.path, e);
                         }
                     }
                     
                     new Notice("🚨 리셋 실패: 모든 연관 파일을 복구했습니다.");
+                } finally {
+                    this.utils.hideLoadingOverlay();
                 }
             }).open();
         } catch (e) {
@@ -351,6 +353,7 @@ export class ResetManager {
 
     async runManualArchive(dailyFile: TFile): Promise<void> {
         try {
+            this.utils.showLoadingOverlay("⏳ 월간 통계 아카이빙 중...");
             new Notice("⏳ 월간 통계 수동 아카이빙 시작...");
             
             // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
@@ -409,6 +412,8 @@ export class ResetManager {
         } catch (e) {
             console.error("Manual Archive Error:", e);
             new Notice("🚨 아카이빙 중 에러가 발생했습니다.");
+        } finally {
+            this.utils.hideLoadingOverlay();
         }
     }
 }

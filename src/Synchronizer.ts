@@ -58,6 +58,7 @@ export class Synchronizer {
     // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
     async syncDailyTasks(dailyFile: TFile): Promise<void> {
         try {
+            this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
             new Notice("⏳ 프로젝트 동기화 시작...");
             // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
             const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
@@ -104,6 +105,8 @@ export class Synchronizer {
         } catch (e) {
             console.error("Task Manage Error:", e instanceof Error ? e.message : String(e));
             new Notice("🚨 동기화 실패: 에러가 발생했습니다.");
+        } finally {
+            this.utils.hideLoadingOverlay();
         }
     }
 
@@ -114,6 +117,7 @@ export class Synchronizer {
         let originalSchedule = "";
         
         try {
+            this.utils.showLoadingOverlay("⏳ 스케줄 반영 중...");
             const noteName = projectFile.basename;
             new Notice("⏳ 스케줄 반영 및 대시보드 갱신 중...");
             const now = this.dateManager.getAdjustedNow();
@@ -287,7 +291,7 @@ export class Synchronizer {
             const schedulePath = this.settings.mainSchedulePath;
             const scheduleFile = this.app.vault.getAbstractFileByPath(schedulePath);
             if (scheduleFile && scheduleFile instanceof TFile) {
-                originalSchedule = await this.app.vault.read(scheduleFile);
+                originalSchedule = await this.fileManager.getActiveViewOrFileText(scheduleFile);
                 
                 const overrideData: Record<string, { execTasks: string[]; planTasksDone: number; planTasksTotal: number }> = {};
                 overrideData[noteName] = { 
@@ -326,8 +330,7 @@ export class Synchronizer {
         } catch (e) {
             // 실패 시 프로젝트 원본 파일 복구 (에디터가 열려있을 때 Merge Conflict 방지를 위해 saveIfChanged 사용)
             try {
-                const currentActiveText = await this.fileManager.getActiveViewOrFileText(projectFile);
-                await this.fileManager.saveIfChanged(projectFile, currentActiveText, originalActive);
+                await this.fileManager.pluginWrite(projectFile, originalActive);
             } catch (rollbackErr) {
                 console.error("Rollback failed for project file:", projectFile.path, rollbackErr);
             }
@@ -335,8 +338,7 @@ export class Synchronizer {
                 const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
                 if (scheduleFile && scheduleFile instanceof TFile) {
                     try {
-                        const currentScheduleText = await this.fileManager.getActiveViewOrFileText(scheduleFile);
-                        await this.fileManager.saveIfChanged(scheduleFile, currentScheduleText, originalSchedule);
+                        await this.fileManager.pluginWrite(scheduleFile, originalSchedule);
                     } catch (rollbackErr) {
                         console.error("Rollback failed for schedule file:", rollbackErr);
                     }
@@ -344,6 +346,8 @@ export class Synchronizer {
             }
             console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));
             new Notice("🚨 반영 실패: 원본 데이터를 복구했습니다.");
+        } finally {
+            this.utils.hideLoadingOverlay();
         }
     }
 }

@@ -75,6 +75,81 @@ export class TaskUtils {
         this.fileManager = fileManager;
     }
 
+    private overlayEl: HTMLElement | null = null;
+    private keydownHandler = (e: KeyboardEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+    };
+
+    showLoadingOverlay(message: string) {
+        if (this.overlayEl) return;
+        this.overlayEl = document.createElement("div");
+        Object.assign(this.overlayEl.style, {
+            position: "fixed",
+            top: "0",
+            left: "0",
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0, 0, 0, 0.4)",
+            zIndex: "999999",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            fontSize: "20px",
+            fontWeight: "bold",
+            pointerEvents: "all",
+            cursor: "wait",
+            backdropFilter: "blur(2px)"
+        });
+        
+        const spinner = document.createElement("div");
+        Object.assign(spinner.style, {
+            border: "6px solid rgba(255, 255, 255, 0.3)",
+            borderTop: "6px solid #ffffff",
+            borderRadius: "50%",
+            width: "50px",
+            height: "50px",
+            animation: "my-plugin-spin 1s linear infinite",
+            marginBottom: "20px"
+        });
+        
+        if (!document.getElementById("my-plugin-spinner-style")) {
+            const style = document.createElement("style");
+            style.id = "my-plugin-spinner-style";
+            style.innerHTML = `
+                @keyframes my-plugin-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const msgEl = document.createElement("div");
+        msgEl.innerText = message;
+        
+        this.overlayEl.appendChild(spinner);
+        this.overlayEl.appendChild(msgEl);
+        document.body.appendChild(this.overlayEl);
+
+        window.addEventListener("keydown", this.keydownHandler, { capture: true });
+        window.addEventListener("keypress", this.keydownHandler, { capture: true });
+        window.addEventListener("keyup", this.keydownHandler, { capture: true });
+    }
+
+    hideLoadingOverlay() {
+        if (this.overlayEl) {
+            this.overlayEl.remove();
+            this.overlayEl = null;
+        }
+        window.removeEventListener("keydown", this.keydownHandler, { capture: true });
+        window.removeEventListener("keypress", this.keydownHandler, { capture: true });
+        window.removeEventListener("keyup", this.keydownHandler, { capture: true });
+    }
+
+
     getRegex() { return REGEX; }
     getMarkerPri() { return MARKER_PRI; }
     getEmojiMap() { return EMOJI_MAP; }
@@ -1157,7 +1232,7 @@ export class TaskUtils {
         let wContent = "";
 
         if (wFile && wFile instanceof TFile) {
-            wContent = await app.vault.read(wFile);
+            wContent = await this.fileManager.getActiveViewOrFileText(wFile);
             const chkRange = this.getSectionRange(wContent, "# 체크리스트") as { start: number, end: number };
             if (chkRange) {
                 const chkSection = wContent.substring(chkRange.start, chkRange.end);

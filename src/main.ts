@@ -329,7 +329,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     // BUG-02: Race Condition 방지 - read→modify 전 과정을 직렬화 큐로 순서 보장
                     // pluginWrite 사용으로 vault.on('modify') 해시 필터도 함께 적용
                     this.enqueueFileWrite(targetFile.path, async () => {
-                        const fileContent = await this.app.vault.read(targetFile);
+                        const fileContent = await this.fileManager.getActiveViewOrFileText(targetFile);
                         const lines = fileContent.split("\n");
                         let modified = false;
                         for (let i = 0; i < lines.length; i++) {
@@ -460,7 +460,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                 buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
                                                     // BUG-02: Race Condition 방지 - 직렬화 큐로 순서 보장 + pluginWrite로 해시 필터 적용
                                                     this.enqueueFileWrite(clickFile.path, async () => {
-                                                        const fileContent = await this.app.vault.read(clickFile);
+                                                        const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
                                                         const lines = fileContent.split("\n");
                                                         let matchCount = 0;
                                                         for (let i = 0; i < lines.length; i++) {
@@ -545,7 +545,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                     if (!newDate) return;
                                                     // BUG-02: Race Condition 방지 - 직렬화 큐로 순서 보장 + pluginWrite로 해시 필터 적용
                                                     this.enqueueFileWrite(clickFile.path, async () => {
-                                                        const fileContent = await this.app.vault.read(clickFile);
+                                                        const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
                                                         const lines = fileContent.split("\n");
                                                         let modified = false;
                                                         let matchCount = 0;
@@ -749,7 +749,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
                         if (scheduleFile && scheduleFile instanceof TFile) {
                             try {
-                                const original = await this.app.vault.read(scheduleFile);
+                                const original = await this.fileManager.getActiveViewOrFileText(scheduleFile);
                                 let text = this.utils.preprocessContent(original);
 
                                 // # Todo 섹션 하단의 #### 할 일 아래에 추가 시도
