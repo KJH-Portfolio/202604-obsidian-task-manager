@@ -398,7 +398,6 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
         decorations: v => v.decorations
     });
 }
-
-/* eslint-enable @typescript-eslint/no-unsafe-member-access */
-/* eslint-enable @typescript-eslint/no-unsafe-call */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment */
+/* eslint-enable @typescript-eslint/no-unsafe-member-access -- window.moment 및 DOM 조작을 위해 허용 */
+/* eslint-enable @typescript-eslint/no-unsafe-call -- window.moment 연산을 위해 허용 */
+/* eslint-enable @typescript-eslint/no-unsafe-assignment -- DOM 요소 동적 할당을 위해 허용 */
