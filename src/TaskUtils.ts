@@ -76,7 +76,7 @@ export class TaskUtils {
     }
 
     private overlayEl: HTMLElement | null = null;
-    private attachedWindow: Window | null = null;
+    private boundWindow: Window | null = null;
     private keydownHandler = (e: KeyboardEvent) => {
         e.stopPropagation();
         e.preventDefault();
@@ -97,12 +97,10 @@ export class TaskUtils {
         this.overlayEl.appendChild(msgEl);
         activeDocument.body.appendChild(this.overlayEl);
 
-        const win = this.overlayEl.ownerDocument.defaultView || window;
-        this.attachedWindow = win;
-
-        win.addEventListener("keydown", this.keydownHandler, { capture: true });
-        win.addEventListener("keypress", this.keydownHandler, { capture: true });
-        win.addEventListener("keyup", this.keydownHandler, { capture: true });
+        this.boundWindow = activeDocument.defaultView || window;
+        this.boundWindow.addEventListener("keydown", this.keydownHandler, { capture: true });
+        this.boundWindow.addEventListener("keypress", this.keydownHandler, { capture: true });
+        this.boundWindow.addEventListener("keyup", this.keydownHandler, { capture: true });
     }
 
     hideLoadingOverlay() {
@@ -110,11 +108,11 @@ export class TaskUtils {
             this.overlayEl.remove();
             this.overlayEl = null;
         }
-        if (this.attachedWindow) {
-            this.attachedWindow.removeEventListener("keydown", this.keydownHandler, { capture: true });
-            this.attachedWindow.removeEventListener("keypress", this.keydownHandler, { capture: true });
-            this.attachedWindow.removeEventListener("keyup", this.keydownHandler, { capture: true });
-            this.attachedWindow = null;
+        if (this.boundWindow) {
+            this.boundWindow.removeEventListener("keydown", this.keydownHandler, { capture: true });
+            this.boundWindow.removeEventListener("keypress", this.keydownHandler, { capture: true });
+            this.boundWindow.removeEventListener("keyup", this.keydownHandler, { capture: true });
+            this.boundWindow = null;
         }
     }
 

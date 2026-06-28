@@ -251,6 +251,7 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                     const rect = target.getBoundingClientRect();
                     // Bug M: 클릭 시점 view를 캡처하여 콜백에서 사용 (getActiveViewOfType 클로저 버그 해결)
                     const clickedView = view;
+                    const doc = view.dom.ownerDocument;
                     buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
                         try {
                             const line = clickedView.state.doc.line(lineNo);
@@ -271,7 +272,7 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                         } catch (err) {
                             console.error("[Bug M] view dispatch 실패:", err);
                         }
-                    }, view.dom.ownerDocument);
+                    });
                     return true;
                 }
             }
