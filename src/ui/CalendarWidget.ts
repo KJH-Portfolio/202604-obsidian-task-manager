@@ -23,10 +23,12 @@ export function buildCalendarPopup(
         curMonth = today.month();
     }
 
-    // 기존 팝업 제거
-    activeDocument.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
+    const doc = activeDocument;
 
-    const popup = activeDocument.createElement("div");
+    // 기존 팝업 제거
+    doc.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
+
+    const popup = doc.createElement("div");
     popup.className = "myworld-cal-popup";
     popup.setCssStyles({
         position: "fixed",
@@ -38,13 +40,13 @@ export function buildCalendarPopup(
     const outsideClickHandler = (e: MouseEvent) => {
         if (!popup.contains(e.target as Node)) {
             popup.remove();
-            activeDocument.removeEventListener("mousedown", outsideClickHandler);
+            doc.removeEventListener("mousedown", outsideClickHandler);
         }
     };
 
     const cleanupAndClose = () => {
         popup.remove();
-        activeDocument.removeEventListener("mousedown", outsideClickHandler);
+        doc.removeEventListener("mousedown", outsideClickHandler);
     };
 
     const render = () => {
@@ -60,10 +62,10 @@ export function buildCalendarPopup(
         const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
         // Header
-        const header = activeDocument.createElement("div");
+        const header = doc.createElement("div");
         header.className = "myworld-cal-header";
 
-        const btnPrev = activeDocument.createElement("button");
+        const btnPrev = doc.createElement("button");
         btnPrev.className = "myworld-cal-nav";
         btnPrev.textContent = "‹";
         btnPrev.addEventListener("mousedown", (e) => {
@@ -73,11 +75,11 @@ export function buildCalendarPopup(
             render();
         });
 
-        const spanMonth = activeDocument.createElement("span");
+        const spanMonth = doc.createElement("span");
         spanMonth.className = "myworld-cal-month";
         spanMonth.textContent = monthLabel;
 
-        const btnNext = activeDocument.createElement("button");
+        const btnNext = doc.createElement("button");
         btnNext.className = "myworld-cal-nav";
         btnNext.textContent = "›";
         btnNext.addEventListener("mousedown", (e) => {
@@ -93,26 +95,26 @@ export function buildCalendarPopup(
         popup.appendChild(header);
 
         // Day of week row
-        const dowRow = activeDocument.createElement("div");
+        const dowRow = doc.createElement("div");
         dowRow.className = "myworld-cal-dow";
         DAYS.forEach(d => {
-            const cell = activeDocument.createElement("div");
+            const cell = doc.createElement("div");
             cell.textContent = d;
             dowRow.appendChild(cell);
         });
         popup.appendChild(dowRow);
 
         // Grid
-        const grid = activeDocument.createElement("div");
+        const grid = doc.createElement("div");
         grid.className = "myworld-cal-grid";
 
         for (let i = 0; i < startDow; i++) {
-            grid.appendChild(activeDocument.createElement("div"));
+            grid.appendChild(doc.createElement("div"));
         }
 
         for (let d = 1; d <= daysInMonth; d++) {
             const ds = `${curYear}-${String(curMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-            const cell = activeDocument.createElement("div");
+            const cell = doc.createElement("div");
             cell.className = "myworld-cal-day";
             if (ds === todayStr) cell.classList.add("myworld-cal-today");
             if (ds === initialDate) cell.classList.add("myworld-cal-selected");
@@ -131,10 +133,10 @@ export function buildCalendarPopup(
         popup.appendChild(grid);
 
         // Footer
-        const footer = activeDocument.createElement("div");
+        const footer = doc.createElement("div");
         footer.className = "myworld-cal-footer";
 
-        const btnDelete = activeDocument.createElement("button");
+        const btnDelete = doc.createElement("button");
         btnDelete.className = "myworld-cal-foot-btn";
         btnDelete.textContent = "삭제";
         btnDelete.addEventListener("mousedown", (e) => {
@@ -143,7 +145,7 @@ export function buildCalendarPopup(
             cleanupAndClose();
         });
 
-        const btnToday = activeDocument.createElement("button");
+        const btnToday = doc.createElement("button");
         btnToday.className = "myworld-cal-foot-btn myworld-cal-today-btn";
         btnToday.textContent = "오늘";
         btnToday.addEventListener("mousedown", (e) => {
@@ -158,9 +160,9 @@ export function buildCalendarPopup(
     };
 
     render();
-    activeDocument.body.appendChild(popup);
+    doc.body.appendChild(popup);
     window.setTimeout(() => {
-        activeDocument.addEventListener("mousedown", outsideClickHandler);
+        doc.addEventListener("mousedown", outsideClickHandler);
     }, 0);
 }
 
@@ -283,20 +285,19 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
 // ─────────────────────────────────────────────────────────────
 class TodayEmojiWidget extends WidgetType {
     constructor(
-        public getView: () => EditorView,
-        public lineFrom: number,
-        public lineNo: number,
-        public app: App
+        public getView: () => EditorView
     ) {
         super();
     }
 
     eq(other: TodayEmojiWidget) {
-        return other.lineFrom === this.lineFrom;
+        return true;
     }
 
     toDOM() {
-        const span = activeDocument.createElement("span");
+        const view = this.getView();
+        const doc = view?.dom.ownerDocument || activeDocument;
+        const span = doc.createElement("span");
         span.className = "myworld-today-btn";
         span.textContent = "📅";
         span.title = "날짜 지정";
@@ -311,12 +312,13 @@ class TodayEmojiWidget extends WidgetType {
             buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
                 void (async () => {
                     if (!newDate) return;
-                    const view = this.getView();
-                    const line = view.state.doc.line(this.lineNo);
+                    const clickedView = this.getView();
+                    const pos = clickedView.posAtDOM(span);
+                    const line = clickedView.state.doc.lineAt(pos);
                     const idMatch = line.text.match(/\s+\^[a-zA-Z0-9]+$/);
                     const insertPos = idMatch ? line.to - idMatch[0].length : line.to;
                     
-                    view.dispatch({
+                    clickedView.dispatch({
                         changes: { from: insertPos, insert: ` 📅 ${newDate}` }
                     });
                 })();
@@ -383,7 +385,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                             builder.add(
                                 line.to, line.to,
                                 Decoration.widget({
-                                    widget: new TodayEmojiWidget(getView, line.from, line.number, app),
+                                    widget: new TodayEmojiWidget(getView),
                                     side: 1
                                 })
                             );

@@ -217,24 +217,33 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         await this.loadSettings();
 
         // --- [Tasks 플러그인 특정 경고창 차단 옵저버] ---
-        const noticeObserver = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        const el = node as HTMLElement;
-                        if (el.classList.contains("notice")) {
-                            const text = el.innerText || "";
-                            if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
-                                el.addClass("myworld-d-none");
+        const attachNoticeObserver = (doc: Document) => {
+            const noticeObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const el = node as HTMLElement;
+                            if (el.classList.contains("notice")) {
+                                const text = el.innerText || "";
+                                if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
+                                    el.addClass("myworld-d-none");
+                                }
                             }
                         }
-                    }
+                    });
                 });
             });
-        });
+            noticeObserver.observe(doc.body, { childList: true, subtree: true });
+            this.register(() => noticeObserver.disconnect());
+        };
 
-        noticeObserver.observe(activeDocument.body, { childList: true, subtree: true });
-        this.register(() => noticeObserver.disconnect());
+        // 메인 창에 부착
+        attachNoticeObserver(window.document);
+
+        // 팝아웃(새 창) 열릴 때마다 부착
+        this.registerEvent(this.app.workspace.on("window-open", (win) => {
+            attachNoticeObserver(win.doc);
+        }));
         // ------------------------------------------------
 
         const checkboxCaptureHandler = (e: MouseEvent) => {
@@ -356,249 +365,219 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // CM6: 라이브 프리뷰용 날짜 텍스트 → 클릭 가능한 달력 팝업
         this.registerEditorExtension(buildDateClickablePlugin(this.app));
 
-        // Reading Mode 용 전역 MutationObserver (오늘 버튼)
-        const readingViewObserver = new MutationObserver((mutations) => {
-            const activeFile = this.app.workspace.getActiveFile();
-            if (!activeFile) return;
-            const isSchedule = activeFile.path === this.settings.mainSchedulePath;
-            const isProject = activeFile.path.startsWith(this.settings.projectDirectory);
+        // Reading Mode 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
+        this.registerMarkdownPostProcessor((element, context) => {
+            const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
+            const isProject = context.sourcePath.startsWith(this.settings.projectDirectory);
             if (!isSchedule && !isProject) return;
 
-            for (const m of mutations) {
-                if (m.addedNodes.length) {
-                    m.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            const el = node as HTMLElement;
-                            const tasks = el.classList?.contains("task-list-item") ? [el] : Array.from(el.querySelectorAll(".task-list-item"));
-                            
-                            tasks.forEach(taskEl => {
-                                // [x] / [X] 만 스킵 — [1],[0],[!] 등 커스텀 마커는 처리 대상
-                                if (/^[xX]$/.test(taskEl.getAttribute("data-task") ?? "")) return;
-                                
-                                // BUG-26: 비동기 렌더링을 수행하는 Tasks나 Dataview 플러그인과의 Race Condition 방지 제거 (동기화 처리로 깜빡임 방지)
-                                if (!taskEl.isConnected) return;
+            const tasks = Array.from(element.querySelectorAll(".task-list-item")) as HTMLElement[];
+            if (!tasks.length) return;
 
-                                // 체크박스 토글은 전역 capture 핸들러(checkboxCaptureHandler)가 처리
+            const clickFile = this.app.vault.getAbstractFileByPath(context.sourcePath);
+            if (!clickFile || !(clickFile instanceof TFile)) return;
 
-                                    const cloned = taskEl.cloneNode(true) as HTMLElement;
-                                    cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
-                                    const rawText = cloned.textContent?.trim() || "";
-                                    const rawHtml = cloned.innerHTML;
-                                    
-                                    // 텍스트뿐만 아니라 HTML 내부(속성 등)에 날짜가 있는지 강력하게 검사
-                                    const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText) || /\d{4}-\d{2}-\d{2}/.test(rawHtml);
-                                    const hasDateAttr = Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value));
+            tasks.forEach(taskEl => {
+                // [x] / [X] 만 스킵 — [1],[0],[!] 등 커스텀 마커는 처리 대상
+                if (/^[xX]$/.test(taskEl.getAttribute("data-task") ?? "")) return;
 
-                                    const taskTextSpan = taskEl.querySelector(".tasks-list-text");
-                                    const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
+                const cloned = taskEl.cloneNode(true) as HTMLElement;
+                cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                const rawText = cloned.textContent?.trim() || "";
+                const rawHtml = cloned.innerHTML;
+                
+                const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText) || /\d{4}-\d{2}-\d{2}/.test(rawHtml);
+                const hasDateAttr = Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value));
 
-                                    // 날짜가 있으면 → 날짜 span을 클릭 가능하게 처리
-                                    if (hasDateText && !taskEl.querySelector(".myworld-date-clickable")) {
-                                        // 텍스트 노드 중 날짜가 있는 것 찾아서 span으로 감싸기 (자식 할일 텍스트 제외)
-                                        const walker = activeDocument.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
-                                            acceptNode: (node) => {
-                                                let p = node.parentElement;
-                                                while (p && p !== taskEl) {
-                                                    if (p.classList.contains("task-list-item")) return NodeFilter.FILTER_REJECT;
-                                                    p = p.parentElement;
-                                                }
-                                                return NodeFilter.FILTER_ACCEPT;
-                                            }
-                                        });
-                                        const nodesToProcess: Text[] = [];
-                                        let n: Text | null;
-                                        while ((n = walker.nextNode() as Text | null)) {
-                                            if (/📅\s*\d{4}-\d{2}-\d{2}/.test(n.textContent || "")) {
-                                                nodesToProcess.push(n);
-                                            }
-                                        }
-                                        nodesToProcess.forEach(textNode => {
-                                            const text = textNode.textContent || "";
-                                            const match = text.match(/(📅\s*)(\d{4}-\d{2}-\d{2})/);
-                                            if (!match || match.index === undefined) return;
+                const taskTextSpan = taskEl.querySelector(".tasks-list-text");
+                const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
 
-                                            const dateStr = match[2];
-                                            const before = text.slice(0, match.index);
-                                            const after = text.slice(match.index + match[0].length);
+                const doc = element.ownerDocument;
 
-                                            const frag = activeDocument.createDocumentFragment();
-                                            if (before) frag.appendChild(activeDocument.createTextNode(before));
-
-                                            const dateSpan = activeDocument.createElement("span");
-                                            dateSpan.className = "myworld-date-clickable";
-                                            dateSpan.textContent = match[0];
-
-                                            const todayStr = this.dateManager?.getAdjustedNow().format("YYYY-MM-DD") || window.moment().format("YYYY-MM-DD");
-                                            if (dateStr < todayStr) dateSpan.classList.add("myworld-overdue");
-
-                                            dateSpan.addEventListener("mousedown", (ev) => {
-                                                ev.preventDefault();
-                                                ev.stopPropagation();
-                                                const rect = dateSpan.getBoundingClientRect();
-
-                                                // Bug D: Observer 시점 activeFile 클로저 문제 해결 — 클릭 시점에 taskEl 소속 파일 재탐색
-                                                const clickLeaf = this.app.workspace.getLeavesOfType("markdown")
-                                                    .find(l => l.view.containerEl.contains(taskEl));
-                                                const clickFile = clickLeaf ? (clickLeaf.view as MarkdownView).file : activeFile;
-                                                if (!clickFile) return;
-
-                                                const cleanTextForMatch = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
-                                                const container = taskEl.closest(".markdown-reading-view") || activeDocument.body;
-                                                const allTasks = Array.from(container.querySelectorAll(".task-list-item"));
-                                                let occurrenceIndex = 0;
-                                                for (const t of allTasks) {
-                                                    const tCloned = t.cloneNode(true) as HTMLElement;
-                                                    tCloned.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(e => e.remove());
-                                                    const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
-                                                    if (tClean === cleanTextForMatch) {
-                                                        if (t === taskEl) break;
-                                                        occurrenceIndex++;
-                                                    }
-                                                }
-
-                                                buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
-                                                    // BUG-02: Race Condition 방지 - 직렬화 큐로 순서 보장 + pluginWrite로 해시 필터 적용
-                                                    this.enqueueFileWrite(clickFile.path, async () => {
-                                                        const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                                        const lines = fileContent.split("\n");
-                                                        let matchCount = 0;
-                                                        for (let i = 0; i < lines.length; i++) {
-                                                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanTextForMatch) && lines[i].includes(dateStr)) {
-                                                                if (matchCount === occurrenceIndex) {
-                                                                    if (newDate === null) {
-                                                                        lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
-                                                                    } else {
-                                                                        lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
-                                                                    }
-                                                                    await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
-                                                                    break;
-                                                                }
-                                                                matchCount++;
-                                                            }
-                                                        }
-                                                    });
-                                                });
-                                            });
-
-                                            frag.appendChild(dateSpan);
-                                            if (after) frag.appendChild(activeDocument.createTextNode(after));
-                                            textNode.parentNode?.replaceChild(frag, textNode);
-                                        });
-                                    }
-
-                                    if (!hasDateText && !hasDateAttr && !hasButton) {
-                                        
-                                        let shouldShow = false;
-                                        if (isSchedule) {
-                                            const leafContainer = taskEl.closest('.workspace-leaf');
-                                            if (!leafContainer) return;
-                                            const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
-                                            const precedingHeaders = allHeaders.filter(h => {
-                                                return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-                                            });
-                                            if (precedingHeaders.length > 0) {
-                                                const targetH = precedingHeaders[precedingHeaders.length - 1];
-                                                let headerText = targetH.textContent?.trim().toLowerCase() || "";
-                                                headerText = headerText.replace(/^#\s*/, "").trim();
-                                                if (headerText === "todo" || headerText === "project") shouldShow = true;
-                                            }
-                                        } else if (isProject) {
-                                            shouldShow = true;
-                                        }
-
-                                        if (shouldShow) {
-                                            const btn = activeDocument.createElement("span");
-                                            btn.className = "myworld-today-btn";
-                                            btn.textContent = "📅";
-                                            btn.title = "날짜 지정";
-                                            btn.addEventListener("mousedown", (e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-
-                                                // Bug D: Observer 시점 activeFile 클로저 문제 해결 — 클릭 시점에 taskEl 소속 파일 재탐색
-                                                const clickLeaf = this.app.workspace.getLeavesOfType("markdown")
-                                                    .find(l => l.view.containerEl.contains(taskEl));
-                                                const clickFile = clickLeaf ? (clickLeaf.view as MarkdownView).file : activeFile;
-                                                if (!clickFile) return;
-
-                                                let cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
-                                                if (!cleanText) return;
-
-                                                const container = taskEl.closest(".markdown-reading-view") || activeDocument.body;
-                                                const allTasks = Array.from(container.querySelectorAll(".task-list-item"));
-                                                let occurrenceIndex = 0;
-                                                for (const t of allTasks) {
-                                                    const tCloned = t.cloneNode(true) as HTMLElement;
-                                                    tCloned.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
-                                                    const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
-                                                    if (tClean === cleanText) {
-                                                        if (t === taskEl) break;
-                                                        occurrenceIndex++;
-                                                    }
-                                                }
-
-                                                const todayStr = window.moment().format("YYYY-MM-DD");
-                                                const rect = btn.getBoundingClientRect();
-
-                                                buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
-                                                    if (!newDate) return;
-                                                    // BUG-02: Race Condition 방지 - 직렬화 큐로 순서 보장 + pluginWrite로 해시 필터 적용
-                                                    this.enqueueFileWrite(clickFile.path, async () => {
-                                                        const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                                        const lines = fileContent.split("\n");
-                                                        let modified = false;
-                                                        let matchCount = 0;
-
-                                                        for (let i = 0; i < lines.length; i++) {
-                                                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                                                if (matchCount === occurrenceIndex) {
-                                                                    const text = lines[i];
-                                                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                                                    if (idMatch) {
-                                                                        lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
-                                                                    } else {
-                                                                        lines[i] = text + ` 📅 ${newDate}`;
-                                                                    }
-                                                                    modified = true;
-                                                                    break;
-                                                                }
-                                                                matchCount++;
-                                                            }
-                                                        }
-
-                                                        if (modified) {
-                                                            await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
-                                                            btn.remove();
-                                                        }
-                                                    });
-                                                });
-                                            });
-                                            
-                                            if (taskTextSpan) {
-                                                taskTextSpan.appendChild(btn);
-                                            } else {
-                                                const checkbox = taskEl.querySelector("input[type='checkbox']");
-                                                if (checkbox && checkbox.nextSibling) {
-                                                    taskEl.insertBefore(btn, checkbox.nextSibling.nextSibling);
-                                                } else {
-                                                    const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
-                                                    if (childList) {
-                                                        taskEl.insertBefore(btn, childList);
-                                                    } else {
-                                                        taskEl.appendChild(btn);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                            });
+                if (hasDateText && !taskEl.querySelector(".myworld-date-clickable")) {
+                    const walker = doc.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
+                        acceptNode: (node) => {
+                            let p = node.parentElement;
+                            while (p && p !== taskEl) {
+                                if (p.classList.contains("task-list-item")) return NodeFilter.FILTER_REJECT;
+                                p = p.parentElement;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
                         }
                     });
+                    const nodesToProcess: Text[] = [];
+                    let n: Text | null;
+                    while ((n = walker.nextNode() as Text | null)) {
+                        if (/📅\s*\d{4}-\d{2}-\d{2}/.test(n.textContent || "")) {
+                            nodesToProcess.push(n);
+                        }
+                    }
+                    nodesToProcess.forEach(textNode => {
+                        const text = textNode.textContent || "";
+                        const match = text.match(/(📅\s*)(\d{4}-\d{2}-\d{2})/);
+                        if (!match || match.index === undefined) return;
+
+                        const dateStr = match[2];
+                        const before = text.slice(0, match.index);
+                        const after = text.slice(match.index + match[0].length);
+
+                        const frag = doc.createDocumentFragment();
+                        if (before) frag.appendChild(doc.createTextNode(before));
+
+                        const dateSpan = doc.createElement("span");
+                        dateSpan.className = "myworld-date-clickable";
+                        dateSpan.textContent = match[0];
+
+                        const todayStr = this.dateManager?.getAdjustedNow().format("YYYY-MM-DD") || window.moment().format("YYYY-MM-DD");
+                        if (dateStr < todayStr) dateSpan.classList.add("myworld-overdue");
+
+                        dateSpan.addEventListener("mousedown", (ev) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            const rect = dateSpan.getBoundingClientRect();
+
+                            const cleanTextForMatch = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
+                            const container = taskEl.closest(".markdown-reading-view") || doc.body;
+                            const allTasks = Array.from(container.querySelectorAll(".task-list-item"));
+                            let occurrenceIndex = 0;
+                            for (const t of allTasks) {
+                                const tCloned = t.cloneNode(true) as HTMLElement;
+                                tCloned.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(e => e.remove());
+                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
+                                if (tClean === cleanTextForMatch) {
+                                    if (t === taskEl) break;
+                                    occurrenceIndex++;
+                                }
+                            }
+
+                            buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
+                                this.enqueueFileWrite(clickFile.path, async () => {
+                                    const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                    const lines = fileContent.split("\n");
+                                    let matchCount = 0;
+                                    for (let i = 0; i < lines.length; i++) {
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanTextForMatch) && lines[i].includes(dateStr)) {
+                                            if (matchCount === occurrenceIndex) {
+                                                if (newDate === null) {
+                                                    lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
+                                                } else {
+                                                    lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
+                                                }
+                                                await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                                break;
+                                            }
+                                            matchCount++;
+                                        }
+                                    }
+                                });
+                            });
+                        });
+
+                        frag.appendChild(dateSpan);
+                        if (after) frag.appendChild(doc.createTextNode(after));
+                        textNode.parentNode?.replaceChild(frag, textNode);
+                    });
                 }
-            }
+
+                if (!hasDateText && !hasDateAttr && !hasButton) {
+                    let shouldShow = false;
+                    if (isSchedule) {
+                        const leafContainer = taskEl.closest('.workspace-leaf');
+                        if (!leafContainer) return;
+                        const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
+                        const precedingHeaders = allHeaders.filter(h => {
+                            return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+                        });
+                        if (precedingHeaders.length > 0) {
+                            const targetH = precedingHeaders[precedingHeaders.length - 1];
+                            let headerText = targetH.textContent?.trim().toLowerCase() || "";
+                            headerText = headerText.replace(/^#\s*/, "").trim();
+                            if (headerText === "todo" || headerText === "project") shouldShow = true;
+                        }
+                    } else if (isProject) {
+                        shouldShow = true;
+                    }
+
+                    if (shouldShow) {
+                        const btn = doc.createElement("span");
+                        btn.className = "myworld-today-btn";
+                        btn.textContent = "📅";
+                        btn.title = "날짜 지정";
+                        btn.addEventListener("mousedown", (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            let cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
+                            if (!cleanText) return;
+
+                            const container = taskEl.closest(".markdown-reading-view") || doc.body;
+                            const allTasks = Array.from(container.querySelectorAll(".task-list-item"));
+                            let occurrenceIndex = 0;
+                            for (const t of allTasks) {
+                                const tCloned = t.cloneNode(true) as HTMLElement;
+                                tCloned.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
+                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
+                                if (tClean === cleanText) {
+                                    if (t === taskEl) break;
+                                    occurrenceIndex++;
+                                }
+                            }
+
+                            const todayStr = window.moment().format("YYYY-MM-DD");
+                            const rect = btn.getBoundingClientRect();
+
+                            buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
+                                if (!newDate) return;
+                                this.enqueueFileWrite(clickFile.path, async () => {
+                                    const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                    const lines = fileContent.split("\n");
+                                    let modified = false;
+                                    let matchCount = 0;
+
+                                    for (let i = 0; i < lines.length; i++) {
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                            if (matchCount === occurrenceIndex) {
+                                                const text = lines[i];
+                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                                if (idMatch) {
+                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
+                                                } else {
+                                                    lines[i] = text + ` 📅 ${newDate}`;
+                                                }
+                                                modified = true;
+                                                break;
+                                            }
+                                            matchCount++;
+                                        }
+                                    }
+
+                                    if (modified) {
+                                        await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                        btn.remove();
+                                    }
+                                });
+                            });
+                        });
+                        
+                        if (taskTextSpan) {
+                            taskTextSpan.appendChild(btn);
+                        } else {
+                            const checkbox = taskEl.querySelector("input[type='checkbox']");
+                            if (checkbox && checkbox.nextSibling) {
+                                taskEl.insertBefore(btn, checkbox.nextSibling.nextSibling);
+                            } else {
+                                const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
+                                if (childList) {
+                                    taskEl.insertBefore(btn, childList);
+                                } else {
+                                    taskEl.appendChild(btn);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         });
-        readingViewObserver.observe(activeDocument.body, { childList: true, subtree: true });
-        this.register(() => readingViewObserver.disconnect());
 
         // 2. 핵심 모듈 인스턴스 생성
         this.dateManager = new DateManager(this.settings);
