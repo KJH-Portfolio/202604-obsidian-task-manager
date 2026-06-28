@@ -202,7 +202,8 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
 
     buildDeco(view: EditorView) {
         const builder = new RangeSetBuilder<Decoration>();
-        const activeFile = app.workspace.getActiveFile();
+        const leaf = app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(view.dom));
+        const activeFile = leaf ? (leaf.view as any).file : null;
         if (!activeFile) return builder.finish();
 
         const processedLines = new Set<number>();
@@ -272,7 +273,7 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                         } catch (err) {
                             console.error("[Bug M] view dispatch 실패:", err);
                         }
-                    });
+                    }, doc);
                     return true;
                 }
             }
@@ -348,7 +349,8 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
 
         buildDecorations(view: EditorView) {
             const builder = new RangeSetBuilder<Decoration>();
-            const activeFile = app.workspace.getActiveFile();
+            const leaf = app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(view.dom));
+            const activeFile = leaf ? (leaf.view as any).file : null;
             if (!activeFile) return builder.finish();
 
             const plugin = getPlugin();
