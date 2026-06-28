@@ -398,3 +398,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
         decorations: v => v.decorations
     });
 }
+
+/* eslint-enable @typescript-eslint/no-unsafe-member-access */
+/* eslint-enable @typescript-eslint/no-unsafe-call */
+/* eslint-enable @typescript-eslint/no-unsafe-assignment */
