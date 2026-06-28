@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access -- window.moment 및 DOM 조작을 위해 허용 */
 /* eslint-disable @typescript-eslint/no-unsafe-call -- window.moment 연산을 위해 허용 */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- DOM 요소 동적 할당을 위해 허용 */
-import { App } from "obsidian";
+import { App, MarkdownView } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 
@@ -203,7 +203,7 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
     buildDeco(view: EditorView) {
         const builder = new RangeSetBuilder<Decoration>();
         const leaf = app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(view.dom));
-        const activeFile = leaf ? (leaf.view as any).file : null;
+        const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
         if (!activeFile) return builder.finish();
 
         const processedLines = new Set<number>();
@@ -350,7 +350,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
         buildDecorations(view: EditorView) {
             const builder = new RangeSetBuilder<Decoration>();
             const leaf = app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(view.dom));
-            const activeFile = leaf ? (leaf.view as any).file : null;
+            const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
             if (!activeFile) return builder.finish();
 
             const plugin = getPlugin();
