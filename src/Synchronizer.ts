@@ -172,7 +172,7 @@ export class Synchronizer {
                 let newPlanLines: string[] = [];
                 const execMap = new Map<string, SyncTask>();
                 execTasks.forEach(et => {
-                    if (et.id) execMap.set(et.id, et);
+                    if (et.id) execMap.set(et.id, et as SyncTask);
                 });
                 const originalIds = new Set<string>();
                 

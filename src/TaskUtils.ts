@@ -509,7 +509,7 @@ export class TaskUtils {
         subSections.push(currentSub);
 
         const processed = subSections.map(sub => {
-            if (options.excludeSubSections && sub.header && (options.excludeSubSections as string[]).some((ex: string) => sub.header.includes(ex))) {
+            if (options.excludeSubSections && sub.header && (options.excludeSubSections as string[]).some((ex: string) => sub.header!.includes(ex))) {
                 return (sub.header ? [sub.header, ...sub.content] : sub.content).join('\n');
             }
 
@@ -691,12 +691,12 @@ export class TaskUtils {
                 return null;
             });
             for (let i = 0; i < tasks.length; i++) {
-                if (tasks[i] && tasks[i].checked) {
-                    const pInd = (tasks[i].indent || "").length;
+                if (tasks[i] && tasks[i]!.checked) {
+                    const pInd = (tasks[i]!.indent || "").length;
                     for (let j = i + 1; j < tasks.length; j++) {
-                        if (!tasks[j] || (tasks[j].indent || "").length <= pInd) break;
-                        tasks[j].checked = true;
-                        if (!tasks[j].status || tasks[j].status === ' ') tasks[j].status = tasks[i].status;
+                        if (!tasks[j] || (tasks[j]!.indent || "").length <= pInd) break;
+                        tasks[j]!.checked = true;
+                        if (!tasks[j]!.status || tasks[j]!.status === ' ') tasks[j]!.status = tasks[i]!.status;
                     }
                 }
             }
@@ -1507,8 +1507,8 @@ export class TaskUtils {
                             for (let item of tasksToInsert) { 
                                 if (item.anchorId) { 
                                     if (!ins.has(item.anchorId)) ins.set(item.anchorId, []); 
-                                    ins.get(item.anchorId)!.push(item.task); 
-                                } else fbt.push(item.task); 
+                                    ins.get(item.anchorId)!.push(item.task as TaskData); 
+                                } else fbt.push(item.task as TaskData); 
                             }
                             let lastTIdx = exStart;
                             for (let i = exEnd - 1; i > exStart; i--) { 

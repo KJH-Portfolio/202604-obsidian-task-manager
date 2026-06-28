@@ -165,13 +165,13 @@ class CreateProjectModal extends Modal {
 
 
 export default class MyWorldTaskManagerPlugin extends Plugin {
-    settings: PluginSettings;
-    dateManager: DateManager;
-    fileManager: FileManager;
-    utils: TaskUtils;
-    synchronizer: Synchronizer;
-    resetManager: ResetManager;
-    templateHelper: TemplateHelper;
+    settings!: PluginSettings;
+    dateManager!: DateManager;
+    fileManager!: FileManager;
+    utils!: TaskUtils;
+    synchronizer!: Synchronizer;
+    resetManager!: ResetManager;
+    templateHelper!: TemplateHelper;
     
     modifiedFiles: Set<string> = new Set<string>();
     lastActiveFile: TFile | null = null;
