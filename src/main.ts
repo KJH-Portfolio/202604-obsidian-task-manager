@@ -341,6 +341,19 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
                     if (!cleanText) return;
 
+                    const container = taskEl.closest(".markdown-reading-view") || doc.body;
+                    const allTasks = Array.from(container.querySelectorAll(".task-list-item"));
+                    let occurrenceIndex = 0;
+                    for (const t of allTasks) {
+                        const tCloned = t.cloneNode(true) as HTMLElement;
+                        tCloned.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
+                        const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
+                        if (tClean === cleanText) {
+                            if (t === taskEl) break;
+                            occurrenceIndex++;
+                        }
+                    }
+
                     const targetFile = this.app.vault.getAbstractFileByPath(context.sourcePath);
                     if (!targetFile || !(targetFile instanceof TFile)) return;
 
@@ -350,15 +363,21 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const fileContent = await this.fileManager.getActiveViewOrFileText(targetFile);
                         const lines = fileContent.split("\n");
                         let modified = false;
+                        let matchCount = 0;
                         for (let i = 0; i < lines.length; i++) {
-                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) &&
-                                lines[i].includes(cleanText.slice(0, Math.min(30, cleanText.length)))) {
-                                lines[i] = lines[i].replace(
-                                    /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/,
-                                    `$1${nextMarker}$3`
-                                );
-                                modified = true;
-                                break;
+                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                                let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                if (lineClean === cleanText) {
+                                    if (matchCount === occurrenceIndex) {
+                                        lines[i] = lines[i].replace(
+                                            /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/,
+                                            `$1${nextMarker}$3`
+                                        );
+                                        modified = true;
+                                        break;
+                                    }
+                                    matchCount++;
+                                }
                             }
                         }
                         if (modified) {
@@ -466,17 +485,20 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     const lines = fileContent.split("\n");
                                     let matchCount = 0;
                                     for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanTextForMatch) && lines[i].includes(dateStr)) {
-                                            if (matchCount === occurrenceIndex) {
-                                                if (newDate === null) {
-                                                    lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
-                                                } else {
-                                                    lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(dateStr)) {
+                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                            if (lineClean === cleanTextForMatch) {
+                                                if (matchCount === occurrenceIndex) {
+                                                    if (newDate === null) {
+                                                        lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
+                                                    } else {
+                                                        lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
+                                                    }
+                                                    await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                                    break;
                                                 }
-                                                await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
-                                                break;
+                                                matchCount++;
                                             }
-                                            matchCount++;
                                         }
                                     }
                                 });
@@ -545,19 +567,22 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     let matchCount = 0;
 
                                     for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                            if (matchCount === occurrenceIndex) {
-                                                const text = lines[i];
-                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                                if (idMatch) {
-                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
-                                                } else {
-                                                    lines[i] = text + ` 📅 ${newDate}`;
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                            if (lineClean === cleanText) {
+                                                if (matchCount === occurrenceIndex) {
+                                                    const text = lines[i];
+                                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                                    if (idMatch) {
+                                                        lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
+                                                    } else {
+                                                        lines[i] = text + ` 📅 ${newDate}`;
+                                                    }
+                                                    modified = true;
+                                                    break;
                                                 }
-                                                modified = true;
-                                                break;
+                                                matchCount++;
                                             }
-                                            matchCount++;
                                         }
                                     }
 
