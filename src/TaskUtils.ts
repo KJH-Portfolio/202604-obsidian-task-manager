@@ -76,6 +76,7 @@ export class TaskUtils {
     }
 
     private overlayEl: HTMLElement | null = null;
+    private attachedWindow: Window | null = null;
     private keydownHandler = (e: KeyboardEvent) => {
         e.stopPropagation();
         e.preventDefault();
@@ -96,9 +97,12 @@ export class TaskUtils {
         this.overlayEl.appendChild(msgEl);
         activeDocument.body.appendChild(this.overlayEl);
 
-        window.addEventListener("keydown", this.keydownHandler, { capture: true });
-        window.addEventListener("keypress", this.keydownHandler, { capture: true });
-        window.addEventListener("keyup", this.keydownHandler, { capture: true });
+        const win = this.overlayEl.ownerDocument.defaultView || window;
+        this.attachedWindow = win;
+
+        win.addEventListener("keydown", this.keydownHandler, { capture: true });
+        win.addEventListener("keypress", this.keydownHandler, { capture: true });
+        win.addEventListener("keyup", this.keydownHandler, { capture: true });
     }
 
     hideLoadingOverlay() {
@@ -106,9 +110,12 @@ export class TaskUtils {
             this.overlayEl.remove();
             this.overlayEl = null;
         }
-        window.removeEventListener("keydown", this.keydownHandler, { capture: true });
-        window.removeEventListener("keypress", this.keydownHandler, { capture: true });
-        window.removeEventListener("keyup", this.keydownHandler, { capture: true });
+        if (this.attachedWindow) {
+            this.attachedWindow.removeEventListener("keydown", this.keydownHandler, { capture: true });
+            this.attachedWindow.removeEventListener("keypress", this.keydownHandler, { capture: true });
+            this.attachedWindow.removeEventListener("keyup", this.keydownHandler, { capture: true });
+            this.attachedWindow = null;
+        }
     }
 
 

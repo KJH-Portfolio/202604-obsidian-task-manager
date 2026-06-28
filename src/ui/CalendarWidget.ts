@@ -12,7 +12,8 @@ export function buildCalendarPopup(
     initialDate: string,
     posLeft: number,
     posTop: number,
-    onSelect: (date: string | null) => void
+    onSelect: (date: string | null) => void,
+    doc: Document = activeDocument
 ) {
     // @ts-ignore
     const today = window.moment();
@@ -22,8 +23,6 @@ export function buildCalendarPopup(
         curYear = today.year();
         curMonth = today.month();
     }
-
-    const doc = activeDocument;
 
     // 기존 팝업 제거
     doc.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
@@ -272,7 +271,7 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                         } catch (err) {
                             console.error("[Bug M] view dispatch 실패:", err);
                         }
-                    });
+                    }, view.dom.ownerDocument);
                     return true;
                 }
             }
@@ -322,7 +321,7 @@ class TodayEmojiWidget extends WidgetType {
                         changes: { from: insertPos, insert: ` 📅 ${newDate}` }
                     });
                 })();
-            });
+            }, doc);
         });
 
         return span;

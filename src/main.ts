@@ -239,11 +239,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         // 메인 창에 부착
         attachNoticeObserver(window.document);
-
-        // 팝아웃(새 창) 열릴 때마다 부착
-        this.registerEvent(this.app.workspace.on("window-open", (win) => {
-            attachNoticeObserver(win.doc);
-        }));
         // ------------------------------------------------
 
         const checkboxCaptureHandler = (e: MouseEvent) => {
@@ -300,6 +295,21 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         // mousedown 등은 텍스트 포커싱을 위해 살려두고, 오직 click 이벤트만 최우선(capture)으로 차단합니다.
         this.registerDomEvent(window, "click", checkboxCaptureHandler, { capture: true });
+
+        // 팝아웃(새 창) 열릴 때마다 부착
+        this.registerEvent(this.app.workspace.on("window-open", (win) => {
+            attachNoticeObserver(win.doc);
+            
+            // 새 창의 window 객체에도 click 이벤트 캡처 핸들러 부착
+            win.addEventListener("click", checkboxCaptureHandler, { capture: true });
+            
+            // 창 닫힐 때 이벤트 리스너 해제 (메모리 누수 방지)
+            this.registerEvent(this.app.workspace.on("window-close", (closedWin) => {
+                if (closedWin === win) {
+                    win.removeEventListener("click", checkboxCaptureHandler, { capture: true });
+                }
+            }));
+        }));
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 2. 읽기 모드(Reading Mode): 마크다운 렌더링 파이프라인 개입
@@ -470,7 +480,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                         }
                                     }
                                 });
-                            });
+                            }, doc);
                         });
 
                         frag.appendChild(dateSpan);
@@ -556,7 +566,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                         btn.remove();
                                     }
                                 });
-                            });
+                            }, doc);
                         });
                         
                         if (taskTextSpan) {
