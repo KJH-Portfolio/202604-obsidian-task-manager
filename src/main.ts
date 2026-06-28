@@ -5,8 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { Plugin, TFile, Notice, Modal, Setting, App, MarkdownView } from "obsidian";
-import { Prec, RangeSetBuilder } from "@codemirror/state";
-import { EditorView, ViewPlugin, Decoration, DecorationSet, WidgetType, ViewUpdate } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { buildCalendarPopup, buildTodayButtonExtension, buildDateClickablePlugin } from "./ui/CalendarWidget";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab, StartupSyncModal } from "./settings";
 import { TaskUtils } from "./TaskUtils";
@@ -285,7 +284,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             // Tasks 플러그인의 Dirty Workaround 방식: 
             // 옵시디언이 강제로 상태를 되돌리는 것을 막기 위해 명시적으로 상태 재지정
             const desiredChecked = nextMarker !== " ";
-            setTimeout(() => {
+            window.setTimeout(() => {
                 (target as HTMLInputElement).checked = desiredChecked;
             }, 1);
         };
@@ -396,7 +395,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     // 날짜가 있으면 → 날짜 span을 클릭 가능하게 처리
                                     if (hasDateText && !taskEl.querySelector(".myworld-date-clickable")) {
                                         // 텍스트 노드 중 날짜가 있는 것 찾아서 span으로 감싸기 (자식 할일 텍스트 제외)
-                                        const walker = document.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
+                                        const walker = activeDocument.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
                                             acceptNode: (node) => {
                                                 let p = node.parentElement;
                                                 while (p && p !== taskEl) {
@@ -422,10 +421,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                             const before = text.slice(0, match.index);
                                             const after = text.slice(match.index + match[0].length);
 
-                                            const frag = document.createDocumentFragment();
-                                            if (before) frag.appendChild(document.createTextNode(before));
+                                            const frag = activeDocument.createDocumentFragment();
+                                            if (before) frag.appendChild(activeDocument.createTextNode(before));
 
-                                            const dateSpan = document.createElement("span");
+                                            const dateSpan = activeDocument.createElement("span");
                                             dateSpan.className = "myworld-date-clickable";
                                             dateSpan.textContent = match[0];
 
@@ -482,7 +481,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                             });
 
                                             frag.appendChild(dateSpan);
-                                            if (after) frag.appendChild(document.createTextNode(after));
+                                            if (after) frag.appendChild(activeDocument.createTextNode(after));
                                             textNode.parentNode?.replaceChild(frag, textNode);
                                         });
                                     }

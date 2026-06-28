@@ -471,11 +471,13 @@ export class StartupSyncModal extends Modal {
         });
 
         const syncBtn = btnArea.createEl("button", { text: "🔄 지금 동기화", cls: "myworld-startup-btn-sync" });
-        syncBtn.addEventListener("click", async () => {
-            syncBtn.disabled = true;
-            syncBtn.textContent = "동기화 중...";
-            this.close();
-            await this.onSync();
+        syncBtn.addEventListener("click", () => {
+            void (async () => {
+                syncBtn.disabled = true;
+                syncBtn.textContent = "동기화 중...";
+                this.close();
+                await this.onSync();
+            })();
         });
     }
 

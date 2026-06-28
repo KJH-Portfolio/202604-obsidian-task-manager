@@ -860,3 +860,41 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     cursor: not-allowed;
     transform: none;
 }
+
+/* ============================
+   Loading Overlay (Global)
+   ============================ */
+.myworld-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    pointer-events: all;
+    cursor: wait;
+    backdrop-filter: blur(2px);
+}
+
+.myworld-spinner {
+    border: 6px solid rgba(255, 255, 255, 0.3);
+    border-top: 6px solid #ffffff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: myworld-plugin-spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes myworld-plugin-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

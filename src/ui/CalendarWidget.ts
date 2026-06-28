@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access -- window.moment 및 DOM 조작을 위해 허용 */
+/* eslint-disable @typescript-eslint/no-unsafe-call -- window.moment 연산을 위해 허용 */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment -- DOM 요소 동적 할당을 위해 허용 */
 import { App } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
@@ -24,25 +24,27 @@ export function buildCalendarPopup(
     }
 
     // 기존 팝업 제거
-    document.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
+    activeDocument.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
 
-    const popup = document.createElement("div");
+    const popup = activeDocument.createElement("div");
     popup.className = "myworld-cal-popup";
-    popup.style.position = "fixed";
-    popup.style.left = `${posLeft}px`;
-    popup.style.top = `${posTop}px`;
-    popup.style.zIndex = "9999";
+    popup.setCssStyles({
+        position: "fixed",
+        left: `${posLeft}px`,
+        top: `${posTop}px`,
+        zIndex: "9999"
+    });
 
     const outsideClickHandler = (e: MouseEvent) => {
         if (!popup.contains(e.target as Node)) {
             popup.remove();
-            document.removeEventListener("mousedown", outsideClickHandler);
+            activeDocument.removeEventListener("mousedown", outsideClickHandler);
         }
     };
 
     const cleanupAndClose = () => {
         popup.remove();
-        document.removeEventListener("mousedown", outsideClickHandler);
+        activeDocument.removeEventListener("mousedown", outsideClickHandler);
     };
 
     const render = () => {
@@ -58,10 +60,10 @@ export function buildCalendarPopup(
         const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
         // Header
-        const header = document.createElement("div");
+        const header = activeDocument.createElement("div");
         header.className = "myworld-cal-header";
 
-        const btnPrev = document.createElement("button");
+        const btnPrev = activeDocument.createElement("button");
         btnPrev.className = "myworld-cal-nav";
         btnPrev.textContent = "‹";
         btnPrev.addEventListener("mousedown", (e) => {
@@ -71,11 +73,11 @@ export function buildCalendarPopup(
             render();
         });
 
-        const spanMonth = document.createElement("span");
+        const spanMonth = activeDocument.createElement("span");
         spanMonth.className = "myworld-cal-month";
         spanMonth.textContent = monthLabel;
 
-        const btnNext = document.createElement("button");
+        const btnNext = activeDocument.createElement("button");
         btnNext.className = "myworld-cal-nav";
         btnNext.textContent = "›";
         btnNext.addEventListener("mousedown", (e) => {
@@ -91,26 +93,26 @@ export function buildCalendarPopup(
         popup.appendChild(header);
 
         // Day of week row
-        const dowRow = document.createElement("div");
+        const dowRow = activeDocument.createElement("div");
         dowRow.className = "myworld-cal-dow";
         DAYS.forEach(d => {
-            const cell = document.createElement("div");
+            const cell = activeDocument.createElement("div");
             cell.textContent = d;
             dowRow.appendChild(cell);
         });
         popup.appendChild(dowRow);
 
         // Grid
-        const grid = document.createElement("div");
+        const grid = activeDocument.createElement("div");
         grid.className = "myworld-cal-grid";
 
         for (let i = 0; i < startDow; i++) {
-            grid.appendChild(document.createElement("div"));
+            grid.appendChild(activeDocument.createElement("div"));
         }
 
         for (let d = 1; d <= daysInMonth; d++) {
             const ds = `${curYear}-${String(curMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-            const cell = document.createElement("div");
+            const cell = activeDocument.createElement("div");
             cell.className = "myworld-cal-day";
             if (ds === todayStr) cell.classList.add("myworld-cal-today");
             if (ds === initialDate) cell.classList.add("myworld-cal-selected");
@@ -129,10 +131,10 @@ export function buildCalendarPopup(
         popup.appendChild(grid);
 
         // Footer
-        const footer = document.createElement("div");
+        const footer = activeDocument.createElement("div");
         footer.className = "myworld-cal-footer";
 
-        const btnDelete = document.createElement("button");
+        const btnDelete = activeDocument.createElement("button");
         btnDelete.className = "myworld-cal-foot-btn";
         btnDelete.textContent = "삭제";
         btnDelete.addEventListener("mousedown", (e) => {
@@ -141,7 +143,7 @@ export function buildCalendarPopup(
             cleanupAndClose();
         });
 
-        const btnToday = document.createElement("button");
+        const btnToday = activeDocument.createElement("button");
         btnToday.className = "myworld-cal-foot-btn myworld-cal-today-btn";
         btnToday.textContent = "오늘";
         btnToday.addEventListener("mousedown", (e) => {
@@ -156,9 +158,9 @@ export function buildCalendarPopup(
     };
 
     render();
-    document.body.appendChild(popup);
-    setTimeout(() => {
-        document.addEventListener("mousedown", outsideClickHandler);
+    activeDocument.body.appendChild(popup);
+    window.setTimeout(() => {
+        activeDocument.addEventListener("mousedown", outsideClickHandler);
     }, 0);
 }
 
@@ -294,7 +296,7 @@ class TodayEmojiWidget extends WidgetType {
     }
 
     toDOM() {
-        const span = document.createElement("span");
+        const span = activeDocument.createElement("span");
         span.className = "myworld-today-btn";
         span.textContent = "📅";
         span.title = "날짜 지정";
@@ -306,16 +308,18 @@ class TodayEmojiWidget extends WidgetType {
             const todayStr = window.moment().format("YYYY-MM-DD");
             const rect = span.getBoundingClientRect();
 
-            buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, async (newDate) => {
-                if (!newDate) return;
-                const view = this.getView();
-                const line = view.state.doc.line(this.lineNo);
-                const idMatch = line.text.match(/\s+\^[a-zA-Z0-9]+$/);
-                const insertPos = idMatch ? line.to - idMatch[0].length : line.to;
-                
-                view.dispatch({
-                    changes: { from: insertPos, insert: ` 📅 ${newDate}` }
-                });
+            buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
+                void (async () => {
+                    if (!newDate) return;
+                    const view = this.getView();
+                    const line = view.state.doc.line(this.lineNo);
+                    const idMatch = line.text.match(/\s+\^[a-zA-Z0-9]+$/);
+                    const insertPos = idMatch ? line.to - idMatch[0].length : line.to;
+                    
+                    view.dispatch({
+                        changes: { from: insertPos, insert: ` 📅 ${newDate}` }
+                    });
+                })();
             });
         });
 

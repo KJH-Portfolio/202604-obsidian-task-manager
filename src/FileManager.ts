@@ -1,4 +1,4 @@
-import { App, TFile, Notice, MarkdownView } from "obsidian";
+import { App, TFile, MarkdownView } from "obsidian";
 
 export class FileManager {
     private app: App;
