@@ -35,14 +35,16 @@ export class FileManager {
     }
 
     async getActiveViewOrFileText(file: TFile): Promise<string> {
-        // --- 성능개선 3번: 활성 에디터 이원화 (Fallback) ---
-        // 현재 사용자가 타자를 치고 있을 위험이 있는 '딱 1개의 활성 뷰'만 확인
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (activeView && activeView.file && activeView.file.path === file.path) {
-            const state = activeView.leaf.getViewState();
-            // 라이브 뷰(source 모드)일 경우에만 에디터의 미저장 최신 입력 내용을 즉시 가져옴
-            if (state.state && state.state.mode === "source") {
-                return activeView.editor.getValue();
+        // --- 성능개선 3번 수정: 모든 열린 탭 스캔 (Fallback) ---
+        // 사용자가 타이핑 직후 다른 탭으로 이동(active-leaf-change)하면 해당 파일은 더 이상 'active'가 아닙니다.
+        // 따라서 getActiveViewOfType 대신 모든 markdown 탭을 순회하여 방금 전까지 치던 미저장 텍스트를 안전하게 가져옵니다.
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of leaves) {
+            if (leaf.view instanceof MarkdownView && leaf.view.file && leaf.view.file.path === file.path) {
+                const state = leaf.getViewState();
+                if (state.state && state.state.mode === "source") {
+                    return leaf.view.editor.getValue();
+                }
             }
         }
         

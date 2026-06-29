@@ -381,6 +381,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         }
                         if (modified) {
                             await this.fileManager.pluginWrite(targetFile, lines.join("\n"));
+                            this.modifiedFiles.add(targetFile.path);
                         }
                     });
                 });
@@ -478,7 +479,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 }
                             }
 
-                            buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
+                            buildCalendarPopup(dateStr, rect.left + rect.width / 2, rect.top + rect.height / 2, (newDate) => {
                                 this.enqueueFileWrite(clickFile.path, async () => {
                                     const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
                                     const lines = fileContent.split("\n");
@@ -494,6 +495,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                         lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
                                                     }
                                                     await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                                    this.modifiedFiles.add(clickFile.path);
                                                     break;
                                                 }
                                                 matchCount++;
@@ -513,17 +515,41 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 if (!hasDateText && !hasDateAttr && !hasButton) {
                     let shouldShow = false;
                     if (isSchedule) {
-                        const leafContainer = taskEl.closest('.workspace-leaf');
-                        if (!leafContainer) return;
-                        const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
-                        const precedingHeaders = allHeaders.filter(h => {
-                            return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-                        });
-                        if (precedingHeaders.length > 0) {
-                            const targetH = precedingHeaders[precedingHeaders.length - 1];
-                            let headerText = targetH.textContent?.trim().toLowerCase() || "";
-                            headerText = headerText.replace(/^#\s*/, "").trim();
-                            if (headerText === "todo" || headerText === "project") shouldShow = true;
+                        const sectionInfo = context.getSectionInfo(element);
+                        if (sectionInfo) {
+                            const lines = sectionInfo.text.split('\n');
+                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                // h1 태그만 찾음 (Live View의 로직과 동일하게 # 하나만 매칭)
+                                const m = lines[i].match(/^#\s+(.*)$/);
+                                if (m) {
+                                    const headerText = m[1].trim().toLowerCase();
+                                    if (headerText === "todo" || headerText === "project") {
+                                        shouldShow = true;
+                                    }
+                                    break;
+                                }
+                            }
+                        } else {
+                            // getSectionInfo가 null을 반환할 때를 대비한 돔 탐색 폴백
+                            const leafContainer = taskEl.closest('.markdown-reading-view') || taskEl.closest('.workspace-leaf') || element.parentElement;
+                            if (leafContainer) {
+                                // h1만 찾음 (##, ### 등 하위 섹션 무시)
+                                const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
+                                const precedingHeaders = allHeaders.filter(h => {
+                                    return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+                                });
+                                if (precedingHeaders.length > 0) {
+                                    const targetH = precedingHeaders[precedingHeaders.length - 1];
+                                    let headerText = targetH.getAttribute("data-heading")?.toLowerCase() || "";
+                                    if (!headerText) {
+                                        headerText = targetH.textContent?.trim().toLowerCase() || "";
+                                        headerText = headerText.replace(/^#\s*/, "").replace(/\u200b/g, "").trim();
+                                    }
+                                    if (headerText === "todo" || headerText === "project") {
+                                        shouldShow = true;
+                                    }
+                                }
+                            }
                         }
                     } else if (isProject) {
                         shouldShow = true;
@@ -555,42 +581,40 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             }
 
                             const todayStr = window.moment().format("YYYY-MM-DD");
-                            const rect = btn.getBoundingClientRect();
 
-                            buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
-                                if (!newDate) return;
-                                this.enqueueFileWrite(clickFile.path, async () => {
-                                    const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                    const lines = fileContent.split("\n");
-                                    let modified = false;
-                                    let matchCount = 0;
+                            this.enqueueFileWrite(clickFile.path, async () => {
+                                const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                const lines = fileContent.split("\n");
+                                let modified = false;
+                                let matchCount = 0;
 
-                                    for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
-                                            if (lineClean === cleanText) {
-                                                if (matchCount === occurrenceIndex) {
-                                                    const text = lines[i];
-                                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                                    if (idMatch) {
-                                                        lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
-                                                    } else {
-                                                        lines[i] = text + ` 📅 ${newDate}`;
-                                                    }
-                                                    modified = true;
-                                                    break;
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                        let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                        if (lineClean === cleanText) {
+                                            if (matchCount === occurrenceIndex) {
+                                                const text = lines[i];
+                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                                if (idMatch) {
+                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${todayStr}` + idMatch[0];
+                                                } else {
+                                                    lines[i] = text + ` 📅 ${todayStr}`;
                                                 }
-                                                matchCount++;
+                                                modified = true;
+                                                break;
                                             }
+                                            matchCount++;
                                         }
                                     }
+                                }
 
-                                    if (modified) {
-                                        await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
-                                        btn.remove();
-                                    }
-                                });
-                            }, doc);
+                                if (modified) {
+                                    await this.fileManager.saveIfChanged(clickFile, fileContent, lines.join("\n"));
+                                    // 사용자가 수동으로 변경한 사항이므로 즉시 수정 플래그를 꽂음
+                                    this.modifiedFiles.add(clickFile.path);
+                                    btn.remove();
+                                }
+                            });
                         });
                         
                         if (taskTextSpan) {
@@ -655,6 +679,16 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             })
         );
 
+
+        this.registerEvent(
+            this.app.workspace.on('editor-change', (editor, info) => {
+                if (info && info.file) {
+                    // 옵시디언의 vault.on('modify')는 2초의 지연 시간이 있으므로, 
+                    // 사용자가 타이핑 직후 탭을 닫거나 옮길 때 동기화가 무시되는 버그를 막기 위해 즉각 추가
+                    this.modifiedFiles.add(info.file.path);
+                }
+            })
+        );
 
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => {

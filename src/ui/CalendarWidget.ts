@@ -17,12 +17,18 @@ export function buildCalendarPopup(
 ) {
     // @ts-ignore
     const today = window.moment();
-    let curYear = parseInt(initialDate.split("-")[0]);
-    let curMonth = parseInt(initialDate.split("-")[1]) - 1;
-    if (isNaN(curYear) || isNaN(curMonth)) {
-        curYear = today.year();
-        curMonth = today.month();
+    // @ts-ignore
+    let baseDate = window.moment(initialDate, "YYYY-MM-DD", true);
+    if (!baseDate.isValid()) {
+        baseDate = today.clone();
     }
+    
+    // 과거 날짜를 보여줄 필요가 없으므로 baseDate가 오늘보다 과거면 오늘 기준으로 덮어씌움
+    if (baseDate.isBefore(today, 'day')) {
+        baseDate = today.clone();
+    }
+
+    let weekOffset = 0;
 
     // 기존 팝업 제거
     doc.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
@@ -33,6 +39,7 @@ export function buildCalendarPopup(
         position: "fixed",
         left: `${posLeft}px`,
         top: `${posTop}px`,
+        transform: "translate(-50%, -50%)",
         zIndex: "9999"
     });
 
@@ -53,11 +60,12 @@ export function buildCalendarPopup(
 
         const todayStr = today.format("YYYY-MM-DD");
         // @ts-ignore
-        const firstDay = window.moment({ year: curYear, month: curMonth, day: 1 });
-        const daysInMonth = firstDay.daysInMonth();
-        const startDow = firstDay.day(); // 0=Sun
+        const primaryDate = baseDate.clone().add(weekOffset, 'weeks');
+        // @ts-ignore
+        const startDate = primaryDate.clone().startOf('week');
 
-        const monthLabel = `${curYear}년 ${curMonth + 1}월`;
+        const primaryMonthNum = primaryDate.month();
+        const monthLabel = `${primaryDate.format('M월')}`;
         const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
         // Header
@@ -69,8 +77,7 @@ export function buildCalendarPopup(
         btnPrev.textContent = "‹";
         btnPrev.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            curMonth--;
-            if (curMonth < 0) { curMonth = 11; curYear--; }
+            weekOffset -= 5;
             render();
         });
 
@@ -83,8 +90,7 @@ export function buildCalendarPopup(
         btnNext.textContent = "›";
         btnNext.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            curMonth++;
-            if (curMonth > 11) { curMonth = 0; curYear++; }
+            weekOffset += 5;
             render();
         });
 
@@ -107,26 +113,35 @@ export function buildCalendarPopup(
         const grid = doc.createElement("div");
         grid.className = "myworld-cal-grid";
 
-        for (let i = 0; i < startDow; i++) {
-            grid.appendChild(doc.createElement("div"));
-        }
-
-        for (let d = 1; d <= daysInMonth; d++) {
-            const ds = `${curYear}-${String(curMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        for (let i = 0; i < 35; i++) {
+            // @ts-ignore
+            const currentCellDate = startDate.clone().add(i, 'days');
+            const ds = currentCellDate.format("YYYY-MM-DD");
+            
             const cell = doc.createElement("div");
             cell.className = "myworld-cal-day";
+            
+            if (ds < todayStr) {
+                cell.classList.add("myworld-cal-past");
+            } else {
+                if (currentCellDate.month() !== primaryMonthNum) {
+                    cell.classList.add("myworld-cal-other-month");
+                }
+                cell.addEventListener("mousedown", (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    onSelect(ds);
+                    cleanupAndClose();
+                });
+            }
+
             if (ds === todayStr) cell.classList.add("myworld-cal-today");
             if (ds === initialDate) cell.classList.add("myworld-cal-selected");
-            const dow = (startDow + d - 1) % 7;
+            const dow = currentCellDate.day(); // 0=Sun
             if (dow === 0) cell.classList.add("myworld-cal-sun");
             if (dow === 6) cell.classList.add("myworld-cal-sat");
-            cell.textContent = String(d);
+            cell.textContent = currentCellDate.format('D');
             cell.setAttribute("data-date", ds);
-            cell.addEventListener("mousedown", (e) => {
-                e.preventDefault(); e.stopPropagation();
-                onSelect(ds);
-                cleanupAndClose();
-            });
+            
             grid.appendChild(cell);
         }
         popup.appendChild(grid);
@@ -253,7 +268,7 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                     // Bug M: 클릭 시점 view를 캡처하여 콜백에서 사용 (getActiveViewOfType 클로저 버그 해결)
                     const clickedView = view;
                     const doc = view.dom.ownerDocument;
-                    buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
+                    buildCalendarPopup(dateStr, rect.left + rect.width / 2, rect.top + rect.height / 2, (newDate) => {
                         try {
                             const line = clickedView.state.doc.line(lineNo);
                             const text = line.text;
@@ -308,22 +323,18 @@ class TodayEmojiWidget extends WidgetType {
             e.stopPropagation();
 
             const todayStr = window.moment().format("YYYY-MM-DD");
-            const rect = span.getBoundingClientRect();
 
-            buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
-                void (async () => {
-                    if (!newDate) return;
-                    const clickedView = this.getView();
-                    const pos = clickedView.posAtDOM(span);
-                    const line = clickedView.state.doc.lineAt(pos);
-                    const idMatch = line.text.match(/\s+\^[a-zA-Z0-9]+$/);
-                    const insertPos = idMatch ? line.to - idMatch[0].length : line.to;
-                    
-                    clickedView.dispatch({
-                        changes: { from: insertPos, insert: ` 📅 ${newDate}` }
-                    });
-                })();
-            }, doc);
+            void (async () => {
+                const clickedView = this.getView();
+                const pos = clickedView.posAtDOM(span);
+                const line = clickedView.state.doc.lineAt(pos);
+                const idMatch = line.text.match(/\s+\^[a-zA-Z0-9]+$/);
+                const insertPos = idMatch ? line.to - idMatch[0].length : line.to;
+                
+                clickedView.dispatch({
+                    changes: { from: insertPos, insert: ` 📅 ${todayStr}` }
+                });
+            })();
         });
 
         return span;
