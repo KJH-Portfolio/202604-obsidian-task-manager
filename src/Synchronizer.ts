@@ -4,6 +4,7 @@ import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
+import { diffLines } from 'diff';
 
 export class Synchronizer {
     app: App;
@@ -24,7 +25,7 @@ export class Synchronizer {
         if (originalContent === newContent) return;
 
         try {
-            const inboxPath = "Inbox/자동동기화_리포트.md";
+            const inboxPath = "0. Inbox/자동동기화_리포트.md";
             let logContent = "";
             const nowStr = this.dateManager.getAdjustedNow().format("YYYY-MM-DD HH:mm:ss");
             
@@ -32,20 +33,33 @@ export class Synchronizer {
             if (existingFile && existingFile instanceof TFile) {
                 logContent = await this.app.vault.read(existingFile);
             } else {
-                const folderPath = "Inbox";
+                const folderPath = "0. Inbox";
                 const folder = this.app.vault.getAbstractFileByPath(folderPath);
                 if (!folder) await this.app.vault.createFolder(folderPath);
                 logContent = `# 자동동기화 리포트\n\n`;
             }
 
-            const diffSummary = `\n## [${nowStr}] ${actionName}\n` +
-                                `- 대상 파일: [[${file.basename}]]\n` +
-                                `<details><summary>변경 전 원본 데이터 백업</summary>\n\n\`\`\`markdown\n${originalContent}\n\`\`\`\n\n</details>\n`;
+            const differences = diffLines(originalContent, newContent);
+            let diffText = "";
+            differences.forEach((part) => {
+                if (part.added || part.removed) {
+                    const lines = part.value.split('\n');
+                    lines.forEach(line => {
+                        if (line.trim() !== '') {
+                            diffText += (part.added ? '+ ' : '- ') + line + '\n';
+                        }
+                    });
+                }
+            });
+
+            const diffSummary = `\n---\n# [${nowStr}] ${actionName}\n` +
+                                `- 대상 파일: [[${file.basename}]]\n\n` +
+                                `## 변경 사항\n${diffText}\n---\n`;
             
             logContent += diffSummary;
             
             if (existingFile && existingFile instanceof TFile) {
-                // BUG-17: vault.modify 직접 호출 시 modifiedFiles에 로그파일이 추가되는 문제 방지
+                // vault.modify 직접 호출 시 modifiedFiles에 로그파일이 추가되는 문제 방지
                 await this.fileManager.pluginWrite(existingFile, logContent);
             } else {
                 await this.app.vault.create(inboxPath, logContent);
@@ -60,7 +74,7 @@ export class Synchronizer {
         try {
             this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
             new Notice("⏳ 프로젝트 동기화 시작...");
-            // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
+            // vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
             const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
             const now = this.dateManager.getAdjustedNow();
@@ -112,7 +126,7 @@ export class Synchronizer {
 
     // 2. 개별 프로젝트 노트 관점 동기화 (기존 102번 스크립트 역할)
     async pushProjectToSchedule(projectFile: TFile): Promise<void> {
-        // BUG-19: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
+        // vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
         const originalActive = await this.fileManager.getActiveViewOrFileText(projectFile);
         let originalSchedule = "";
         
@@ -147,7 +161,7 @@ export class Synchronizer {
                             let { text, id } = this.utils.extractIdAndText(tM[3]);
                             const isDeleted = /;;$/.test(text.trim());
                             if (!id) { 
-                                // BUG-24: 충돌 체크 대상 파일 전달로 ID 중복 방지
+                                // 충돌 체크 대상 파일 전달로 ID 중복 방지
                                 id = this.utils.generateBlockId([projectFile]); 
                                 lines[i] = l + " ^" + id; 
                             }
@@ -284,8 +298,8 @@ export class Synchronizer {
             if (originalActive !== newActiveContent) {
                 await this.logSyncChange(projectFile, "개별 프로젝트 ➔ 스케줄 반영 (프로젝트 노트 갱신)", originalActive, newActiveContent);
             }
-            // BUG-01: pluginWrite로 교체하여 vault.on('modify')의 무한 재동기화 방지
-            await this.fileManager.pluginWrite(projectFile, newActiveContent);
+            // 성능 및 버그 수정: saveIfChanged를 사용하여 에디터 커서 튐 방지 (saveIfChanged 내부에 이미 무한 동기화 방지 해시 락이 존재함)
+            await this.fileManager.saveIfChanged(projectFile, originalActive, newActiveContent);
 
             // 3. 메인 스케줄 파일 업데이트
             const schedulePath = this.settings.mainSchedulePath;
@@ -317,7 +331,6 @@ export class Synchronizer {
                 if (originalSchedule !== sBody) {
                     await this.logSyncChange(scheduleFile, `개별 프로젝트 ➔ 스케줄 반영 (스케줄 대시보드 갱신 - ${noteName})`, originalSchedule, sBody);
                 }
-                // BUG-06: 타입 캐스팅 제거 (이미 instanceof TFile)
                 await this.fileManager.saveIfChanged(scheduleFile, originalSchedule, sBody);
                 if (newSectionText) {
                     new Notice(`✅ [${noteName}] 스케줄 반영 완료!`);
@@ -330,7 +343,8 @@ export class Synchronizer {
         } catch (e) {
             // 실패 시 프로젝트 원본 파일 복구 (에디터가 열려있을 때 Merge Conflict 방지를 위해 saveIfChanged 사용)
             try {
-                await this.fileManager.pluginWrite(projectFile, originalActive);
+                const currentFileState = await this.fileManager.getActiveViewOrFileText(projectFile);
+                await this.fileManager.saveIfChanged(projectFile, currentFileState, originalActive);
             } catch (rollbackErr) {
                 console.error("Rollback failed for project file:", projectFile.path, rollbackErr);
             }
@@ -338,7 +352,8 @@ export class Synchronizer {
                 const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
                 if (scheduleFile && scheduleFile instanceof TFile) {
                     try {
-                        await this.fileManager.pluginWrite(scheduleFile, originalSchedule);
+                        const currentScheduleState = await this.fileManager.getActiveViewOrFileText(scheduleFile);
+                        await this.fileManager.saveIfChanged(scheduleFile, currentScheduleState, originalSchedule);
                     } catch (rollbackErr) {
                         console.error("Rollback failed for schedule file:", rollbackErr);
                     }

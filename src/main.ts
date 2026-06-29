@@ -175,10 +175,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     
     modifiedFiles: Set<string> = new Set<string>();
     lastActiveFile: TFile | null = null;
-    // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
-    // 타임스탬프 방식(1초 임계값)은 클라우드 동기화 환경에서 이벤트 지연으로 무력화될 수 있어 콘텐츠 해시 비교로 전환
+    // Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
     pluginWritingFiles: Map<string, string> = new Map<string, string>();
-    // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
+    // Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
     private fileWriteQueue: Map<string, Promise<void>> = new Map();
 
     /**
@@ -357,7 +356,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     const targetFile = this.app.vault.getAbstractFileByPath(context.sourcePath);
                     if (!targetFile || !(targetFile instanceof TFile)) return;
 
-                    // BUG-02: Race Condition 방지 - read→modify 전 과정을 직렬화 큐로 순서 보장
+                    // Race Condition 방지 - read→modify 전 과정을 직렬화 큐로 순서 보장
                     // pluginWrite 사용으로 vault.on('modify') 해시 필터도 함께 적용
                     this.enqueueFileWrite(targetFile.path, async () => {
                         const fileContent = await this.fileManager.getActiveViewOrFileText(targetFile);
@@ -616,7 +615,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         // 2. 핵심 모듈 인스턴스 생성
         this.dateManager = new DateManager(this.settings);
-        // BUG-01/05: pluginWritingFiles Set을 FileManager에 전달
+        // pluginWritingFiles Map을 FileManager에 전달
         this.fileManager = new FileManager(this.app, this.pluginWritingFiles);
         this.utils = new TaskUtils(this.app, this.settings, this.dateManager, this.fileManager);
         this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
@@ -631,7 +630,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             this.app.vault.on('modify', (file) => {
                 if (!(file instanceof TFile) || file.extension !== 'md') return;
 
-                // BUG-01/05/04: 플러그인이 쓴 파일인지 콘텐츠 해시로 판단 (타임스탬프 저기의 1초 방식 개선)
+                // 플러그인이 쓴 파일인지 콘텐츠 해시로 판단 (타임스탬프 저기의 1초 방식 개선)
                 // cachedHash가 있는 경우에만 vault.read()를 호출하므로 플러그인이 안 쓴 파일은 I/O 추가 없음
                 const cachedHash = this.pluginWritingFiles.get(file.path);
                 if (cachedHash !== undefined) {
@@ -1102,7 +1101,6 @@ ${checklistTable}
 
             let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
             if (!memoFile) {
-                // BUG-07: 미사용 now 변수 제거
                 const defaultContent = `---
 작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
@@ -1139,7 +1137,7 @@ ${checklistTable}
         if (this.synchronizer) this.synchronizer.settings = this.settings;
         if (this.resetManager) this.resetManager.settings = this.settings;
         if (this.templateHelper) this.templateHelper.settings = this.settings;
-        // BUG-20: dateManager.settings도 갱신 (midnightOffsetHour 변경이 재시작 없이 즉시 반영)
+        // dateManager.settings도 갱신 (midnightOffsetHour 변경이 재시작 없이 즉시 반영)
         if (this.dateManager) this.dateManager.settings = this.settings;
     }
 }

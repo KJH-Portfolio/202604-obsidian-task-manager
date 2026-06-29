@@ -67,6 +67,7 @@ export class TaskUtils {
     settings: PluginSettings;
     dateManager: DateManager;
     fileManager: FileManager;
+    private projectResultCache = new Map<string, { mtime: number, result: ProjectResult, todayStr: string, isReset: boolean }>();
 
     constructor(app: App, settings: PluginSettings, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
@@ -187,7 +188,7 @@ export class TaskUtils {
             }
         }
 
-        // BUG-11: fallbackLines가 null인데 useFallback이 true인 경우 TypeError 방지
+        // fallbackLines가 null인데 useFallback이 true인 경우 TypeError 방지
         if ((fallbackLines || useFallback) && fallbackLines !== null) {
             const prefix = "#".repeat(level) + " " + sectionName;
             let startLine = fallbackLines.findIndex(l => l.startsWith(prefix));
@@ -232,7 +233,7 @@ export class TaskUtils {
     generateBlockId(filesToCheck: TFile[] = []): string {
         let id: string;
         let isDuplicate: boolean;
-        // BUG-16: 무한 루프 방지를 위한 최대 시도 횟수 제한
+        // 무한 루프 방지를 위한 최대 시도 횟수 제한
         let maxAttempts = 100;
         do {
             id = Math.random().toString(36).substring(2, 8).padEnd(6, '0');
@@ -372,7 +373,7 @@ export class TaskUtils {
             let currentIndent = isBlank ? 999 : actualIndent;
 
             if (skipIndent !== -1) {
-                // BUG-15: 완료된 태스크 블록 내부의 빈 줄은 소실됨 (의도적 동작 - 완료 항목 제거 시 시각적 공백 방지)
+                // 완료된 태스크 블록 내부의 빈 줄은 소실됨 (의도적 동작 - 완료 항목 제거 시 시각적 공백 방지)
                 if (isBlank) continue;
                 if (currentIndent > skipIndent) continue;
                 else skipIndent = -1;
@@ -1049,12 +1050,23 @@ export class TaskUtils {
 
     async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
         const projectFiles = this.getProjectFiles();
+        const todayStr = todayObj.toISOString().split('T')[0];
         
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
             try {
                 if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return null;
                 
                 const pNoteName = file.basename;
+                
+                // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
+                const mtime = file.stat.mtime;
+                if (!overrideData[pNoteName]) {
+                    const cached = this.projectResultCache.get(file.path);
+                    if (cached && cached.mtime === mtime && cached.todayStr === todayStr && cached.isReset === isReset) {
+                        return cached.result;
+                    }
+                }
+
                 let pExecTasks: string[] = [], pPlanTasksTotal = 0, pPlanTasksDone = 0;
 
                 if (overrideData[pNoteName]) {
@@ -1114,7 +1126,13 @@ export class TaskUtils {
                 
                 const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, isReset);
                 
-                return { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
+                const finalResult = { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
+                
+                if (!overrideData[pNoteName]) {
+                    this.projectResultCache.set(file.path, { mtime, result: finalResult, todayStr, isReset });
+                }
+                
+                return finalResult;
             } catch (err) {
                 console.error(`Error in getAllFullProjectResults for ${file.path}:`, err);
                 return null;
@@ -1175,7 +1193,7 @@ export class TaskUtils {
                 }
             }
         }
-        // BUG-14: syncDailyMap은 외부 호출부(Synchronizer, ResetManager)에서 이미 한 번 더 호출하므로
+        // syncDailyMap은 외부 호출부(Synchronizer, ResetManager)에서 이미 한 번 더 호출하므로
         // 여기서 이중으로 실행하면 불필요한 재처리가 발생함 → 제거하여 외부에서만 호출
         return dailyMap;
     }
@@ -1299,8 +1317,6 @@ export class TaskUtils {
                     wContent = wContent.trimEnd() + `\n\n# 통계\n${weeklyStatsDashboard}\n`;
                 }
             }
-
-            // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
             await this.fileManager.pluginWrite(wFile, wContent.trim() + "\n");
         } else {
             const chkSectionText = `# 체크리스트\n\n${weeklyTableStr}\n\n`;
@@ -1327,7 +1343,6 @@ export class TaskUtils {
             } else {
                 mContent += `\n\n# 통계\n${dashboardStr}\n`;
             }
-            // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
             await this.fileManager.pluginWrite(mFile, mContent.trim() + "\n");
         } else {
             await app.vault.create(monthlyInfo.path, `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${mTitle} 월간 기록\n\n# 기록\n\n# 통계\n${dashboardStr}\n`);
@@ -1572,8 +1587,6 @@ export class TaskUtils {
                         finalSLines = cleanedLines; 
                     }
                 }
-                
-                // BUG-10: pluginWrite로 교체하여 프로젝트 파일 저장이 modifiedFiles에 쌓이는 것을 방지
                 if (mod) await this.fileManager.pluginWrite(file, finalSLines.join("\n"));
 
                 let execTasks: string[] = [], planTasksTotal = 0, planTasksDone = 0;
@@ -1614,7 +1627,7 @@ export class TaskUtils {
         return overrideData;
     }
 
-    // BUG-13: moment의 .date(n) setter는 체이닝으로 받아야 안전함
+    // moment의 .date(n) setter는 체이닝으로 받아야 안전함
     getActualDate(now: moment.Moment, day: number): moment.Moment {
         return now.clone().date(day);
     }

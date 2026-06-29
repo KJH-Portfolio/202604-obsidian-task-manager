@@ -207,22 +207,25 @@ export class ResetManager {
                     const allFiles = this.utils.getProjectFiles();
                     const filesForCollisionCheck = [...allFiles, dailyFile];
 
-                    // [트랜잭션 백업] 프로젝트 파일 원본 캐싱 (미저장 에디터 내용 포함)
-                    for (const f of allFiles) {
+                    // [트랜잭션 백업] 프로젝트 파일 원본 캐싱 (미저장 에디터 내용 포함) - 병렬 처리로 최적화
+                    await Promise.all(allFiles.map(async (f) => {
                         const fileContent = await this.fileManager.getActiveViewOrFileText(f);
                         originalProjectsCache.set(f, fileContent);
-                    }
+                    }));
 
                     if (dailyMap) {
                         this.utils.syncDailyMap(dailyMap);
                         const overrideData = await this.utils.syncDailyToProjects(this.app, dailyMap, allFiles, filesForCollisionCheck, true); // isReset: true
-                        const newProjSectionText = this.utils.renderProjectDashboardSection(await this.utils.getAllFullProjectResults(todayObj, overrideData, true));
+                        
+                        // 성능 개선: 무거운 집계 함수 1회만 호출하여 변수 재사용
+                        const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, true);
+                        
+                        const newProjSectionText = this.utils.renderProjectDashboardSection(projectResults);
                         if (newProjSectionText) {
                             content = this.utils.replaceSection(content, "# Project", newProjSectionText);
                         }
 
                         // #### 프로젝트 섹션 (오늘의 프로젝트 할 일 리스트)
-                        const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, true);
                         const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
                         content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
                     }
