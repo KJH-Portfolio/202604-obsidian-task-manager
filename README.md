@@ -1,130 +1,107 @@
 # MyWorld Task Manager
 
 > **A Powerful Obsidian Plugin for Centralized Task & Schedule Management**
-> MyWorld Task Manager is a core plugin that centralizes fragmented tasks, automates daily routines, and synchronizes your schedule seamlessly with your project notes using a bi-directional sync engine. Eliminate complex Templater scripts and establish a smart PARA & Zettelkasten knowledge management system with just one click!
+>
+> Centralize fragmented tasks, automate daily routines, and synchronize your schedule seamlessly with your project notes using a robust bi-directional sync engine. Eliminate complex Templater scripts and establish a smart PARA & Zettelkasten knowledge management system with a single click.
 
 ---
 
-# 📖 MyWorld Task Manager Plugin Integrated User Manual
+## ✨ Key Features
 
-Welcome! **MyWorld Task Manager** is a powerful core plugin that centralizes fragmented tasks and schedule management within Obsidian, perfectly automating daily routines and monthly statistics. Remove all existing complex Templater scripts and roll out a smart knowledge management system with just one click.
+*   **⚡️ Bi-directional Synchronization**: Tasks created or completed in your daily schedule automatically sync back to their original project notes, and vice versa.
+*   **📅 Smart Priority Sorting**: Utilizing custom markdown checkbox markers (`[0]`, `[1]`, `[!]`, etc.), tasks are automatically calculated for D-Day and sorted by urgency.
+*   **🌤️ Daily Routine Automation**: Reset your daily checklists with a single click. Completed routines are archived into a master statistics table, and tasks are rolled over smoothly.
+*   **🗂️ 1-Click System Setup**: Automatically generates a complete PARA (Project, Area, Resource, Archive) and Zettelkasten folder structure, along with default templates.
+*   **🚀 Perfect Multi-Window Support (NEW)**: Flawless synchronization and UI rendering across multiple Obsidian popout windows. No more context switching bugs.
+*   **🎨 Revamped UI/UX (NEW)**: Beautifully designed Calendar widgets for date picking, an interactive Startup Sync Modal, and inline routine checklists. Fully integrated with CodeMirror 6 for seamless Live Preview and Reading View support.
+*   **⚙️ Standardized Settings (NEW)**: A newly overhauled settings tab featuring togglable update notices, robust path configurations, and developer feedback links.
 
 ---
 
-## ⚙️ 1. Initial Setup Guide (One-time)
+## 🚀 Initial Setup Guide (One-time)
 
-If you have installed the plugin for the first time, please set up the framework (structure) in the following order.
+If you have installed the plugin for the first time, please set up the framework in the following order:
 
-### Step 1. Open Plugin Settings
-1. Go to Obsidian Settings (gear icon) > `Community plugins` tab and ensure **MyWorld Task Manager** is enabled.
-2. If enabled, click on **MyWorld Task Manager** in the bottom plugin settings menu to enter the settings page.
+### Step 1. Enable the Plugin
+1. Go to Obsidian Settings > `Community plugins` tab and ensure **MyWorld Task Manager** is enabled.
+2. Click on **MyWorld Task Manager** in the bottom settings menu to enter the configuration page.
 
-### Step 2. Knowledge Management System (PARA & Zettelkasten) Setup
-Check the **[2. Knowledge Management System Setup Helper]** section in the plugin settings.
-*   **`[Create PARA Structure]` Button**: If your vault doesn't have `1. Project`, `2. Area`, `3. Resource`, and `4. Archive` folders yet, click this button. A clean folder structure and user manuals will be instantly created.
-*   **`[Create Zettelkasten Structure]` Button**: Click this if you don't have a `5. Zettelkasten` folder. A 3-level memo folder structure to store the seeds of your thoughts will be set up.
+### Step 2. Knowledge Management System (PARA & Zettelkasten)
+Navigate to the **[2. Knowledge Management System Setup Helper]** section in settings:
+*   **`[Create PARA Structure]`**: Click to instantly generate `1. Project`, `2. Area`, `3. Resource`, and `4. Archive` folders along with user manuals.
+*   **`[Create Zettelkasten Structure]`**: Click to set up a 3-level memo folder structure (`5. Zettelkasten`) to store your thoughts.
 
 ### Step 3. Create Default Templates
-Check the **[3. Basic Environment and File Creation Helper]** section in the settings.
-*   **`[Create Default Template Notes]` Button**: Creates a daily schedule template and a project template. Upon clicking, a **Path input prompt** will pop up; enter your desired folder (e.g., `3. Resource/01.Templates`) and they will be created there.
-*   **`[Create Schedule Management Note]` Button**: Creates the `스케줄 관리.md` (Schedule Management) file, which is the core control tower note you will open every morning.
+Navigate to the **[3. Basic Environment and File Creation Helper]** section:
+*   **`[Create Default Template Notes]`**: Generates a daily schedule template and a project template. You will be prompted to specify the destination path (e.g., `3. Resource/01.Templates`).
+*   **`[Create Schedule Management Note]`**: Creates the `스케줄 관리.md` (Schedule Management) file, which acts as your core control tower.
 
 > [!TIP] Check Default Setting Paths
-> Go to the **[1. Path Settings]** tab at the top of the settings page and ensure the specified paths match the actual folder names you created! (It is safe to leave them as default.)
+> Go to the **[1. Path Settings]** tab at the top of the settings page and ensure the specified paths match the actual folders you created.
 
 ---
 
-## 🎛️ 2. Core Workflow and Button Controls (Daily Routine)
+## 🎛️ Core Workflow & Controls
 
-Utilize the icon buttons at the top of the Schedule Management note and the buttons in Project notes to carry out your daily routines.
+Use the icon buttons at the top of the Schedule Management note and within Project notes to drive your daily workflow.
 
 ### ⚡️ Sync Button (Lightning Icon)
-*   **Where to click?**: Top of the Daily Schedule note
-*   **What does it do?**: 
-    1. Reads the links written under `# Project` in the schedule note (e.g., `[[Project A]]`) to find the original project files.
-    2. Any text edits or completion marks (`[x]`) you made in the schedule note will be identically **overwritten (reflected)** in the original project.
-    3. Conversely, if new tasks are added to the `# Execution` section of the original project file, it **imports** those contents into the schedule note.
-    4. Calculates the task dates to apply custom D-Day markers (like `[0]`), and elegantly sorts all tasks based on priority.
+*   **Location**: Top of the Daily Schedule note.
+*   **Action**: Reads project links under `# Project`, perfectly syncs task states (edits, completions) bi-directionally, recalculates D-Days, and sorts everything by priority.
 
-### ✏️ Quick Task Capture Button (Pencil Icon)
-*   **Where to click?**: Top of the Daily Schedule note
-*   **What does it do?**: 
-    *   Pops up a window so you don't have to write things down elsewhere.
-    *   If you type "Buy milk" and press enter, `- [ ] Buy milk` is added in real-time right below the `# Todo` section of the schedule note. 
-    *   As soon as it's added, it automatically calculates date markers and sorts them at once, just like pressing the ⚡️ Sync button.
+### ✏️ Quick Task Capture (Pencil Icon)
+*   **Location**: Top of the Daily Schedule note.
+*   **Action**: Opens a quick-entry modal. Type a task, press enter, and it's instantly injected under `# Todo`, automatically sorted and synced.
 
-### 🌤️ Daily Reset and Wrap-up Button (Cloud Icon)
-*   **Where to click?**: Top of the Daily Schedule note
-*   **What does it do?**: 
-    1. Pops up a window to write today's review and tomorrow's goals.
-    2. When you click confirm, it extracts the contents you checked today (color emojis) from the top `# Routine` table and permanently saves them into today's cell in the massive `# Checklist` table at the bottom.
-    3. Reverts all clicked routine buttons (checkboxes) to an empty state (`[ ]`) so you can check them again tomorrow.
-    4. Cleans up completed tasks, redraws the 10-day statistics graph, and sends it to the statistics archive (`4. Archive` folder).
+### 🌤️ Daily Reset & Wrap-up (Cloud Icon)
+*   **Location**: Top of the Daily Schedule note.
+*   **Action**: Prompts for a daily review, extracts checked routines from the top table into the master `# Checklist` statistics table, unchecks routines for tomorrow, and cleans up completed tasks.
 
-### 🗂️ Manual Statistics Archive Button (Folder Icon)
-*   **Where to click?**: Top of the Daily Schedule note
-*   **What does it do?**: Normally this is handled automatically when you do a Daily Reset (🌤️), but this button allows you to manually force the execution if you want to extract and backup the statistics into a file in advance on the day the 10-day period ends.
+### 📋 Fleeting Memo (Clipboard Icon)
+*   **Location**: Top of the Daily Schedule note.
+*   **Action**: Instantly opens a blank note (`임시 메모.md`) to capture long, sudden ideas.
 
-### 📋 Fleeting Memo Button (Clipboard Icon)
-*   **Where to click?**: Top of the Daily Schedule note
-*   **What does it do?**: Instantly opens a blank note (`임시 메모.md`) to temporarily pour out long and massive ideas. If the file doesn't exist, it creates one for you.
-
-### 📤 Push Schedule Button (Export Icon)
-*   **Where to click?**: Top of **each individual Project note**
-*   **What does it do?**: After you actively edit plans and planning within the project note, it pushes those contents into the main schedule note. (You can push immediately without switching to the schedule window.)
+### 📤 Push Schedule (Export Icon)
+*   **Location**: Top of **each individual Project note**.
+*   **Action**: After editing plans within a specific project note, click this to push updates directly to the main schedule without needing to switch tabs.
 
 ---
 
-## 🛠️ 3. Schedule Note Editing Permissions (Customization Guide)
+## 🛠️ Customization & Permissions
 
-Because the plugin automatically writes and erases documents, there is a clear distinction between "Signposts you must never touch (headers)" and "Areas users can freely customize".
+To maintain perfect synchronization, the plugin relies on specific document structures.
 
-### ⛔ [Strictly Prohibited] Parts that break the plugin if touched
-These parts are signposts recognized by the plugin. If text or spacing changes, the plugin will lose its way.
-1. **Major Classification Header Names**: `# Todo`, `#### 할 일`, `#### 프로젝트`, `# Project`, `# 루틴`, `# 체크리스트`, `# 통계`, `# 계획`, `# 실행`
-2. **Block IDs at the end of tasks (`^xxxxxx`)**: Unique identifiers for synchronization. Removing them breaks the sync.
-3. **Markdown table skeleton symbols (`|`)**: Deleting the pipe symbols breaks the table, making statistics accumulation impossible.
+### ⛔ [Strictly Prohibited] Do not edit these signposts
+Modifying these will break the synchronization logic:
+1. **Major Headers**: `# Todo`, `#### 할 일`, `#### 프로젝트`, `# Project`, `# 루틴`, `# 체크리스트`, `# 통계`, `# 계획`, `# 실행`.
+2. **Block IDs (`^xxxxxx`)**: The unique 6-character identifiers at the end of synced tasks.
+3. **Table Skeleton Symbols (`|`)**: Deleting pipe symbols breaks the routine and statistics tables.
 
-### ✅ [Freely Editable] Parts you can change as you like
-As long as you don't touch the signposts and identifiers, the 'contents' inside are 100% customizable to your liking.
-1. **Freely renaming 'Column (Item) Names' in the Routine Table**: Just make sure the names match exactly between the top mini table and the bottom master table. You can rename them to 'Reading', 'Meditation', etc., and the plugin will recognize them and accumulate stats.
-2. **Freely changing task contents and check status**: You can edit the text or put `x`, `-`, `>`, etc. inside the checkbox; it will be perfectly recognized.
-3. **Text inside the `# Routine` callout**: You can freely delete or edit quotes or goal texts without any issues.
-4. **Moving the position (order) of tasks**: As long as the `^identifier` is perfectly attached to the end of each task, you can freely rearrange the order and it will synchronize without problems.
-
----
-
-## 🎨 4. Customizing Your Own Routine (Table) (Details)
-
-**[Core Tip: Operating the Top Table and Bottom Table Separately]**
-Looking at the schedule note, there are two tables: **① The thin mini table at the very top (for input)**, and **② The massive `# Checklist` master table at the bottom (for statistics storage)**.
-*   **You don't need to match the number of columns at all!** The plugin reads the tags (headers) and smartly matches them to transfer the data on its own.
-*   **Recommended Setup**: For the ① top mini table you have to look at every day, leave only 3~4 core columns like 'Reading' or 'Exercise' to keep it thin. For the ② bottom master table, you can extend it long with 10 columns for things you check occasionally, like 'Supplements' or 'Hospital', and they will link perfectly.
+### ✅ [Freely Editable] Customize to your liking
+As long as signposts are intact, the content is 100% yours:
+1. **Routine Table Columns**: Rename 'Reading' to 'Meditation' as long as the top and bottom tables match.
+2. **Task Content**: Edit the text or the checkbox state (`x`, `-`, `/`, `>`).
+3. **Routine Callouts**: Freely edit text inside the `> [!routine]` blocks.
+4. **Task Order**: Rearrange tasks freely; as long as the `^identifier` is attached, it will sync.
 
 ---
 
-## 💡 5. Operating Mechanism (Advanced)
+## 💡 Advanced Mechanics
 
-Understanding the plugin's smart internal logic makes it much easier to use.
-
-### 📅 D-Day Auto Calculation and Downward Propagation
-*   If you write a calendar emoji and date like `📅 2026-06-10` after a task and press ⚡️Sync, the plugin automatically attaches a deadline marker (`- [3] Read book`).
-*   **[Core]**: If a parent task has a deadline attached, the child tasks indented below it will identically inherit the parent's deadline!
-
-### 🗑️ Simple Complete Deletion Magic (`//`)
-*   If you mark something as complete (`[x]`), it remains in the statistics or archive (Plan tab). If you want to permanently delete it without a trace, please write **`//`** at the very end of the task text. (e.g., `- [ ] Task to be canceled // ^a1b2c3`)
-*   When you press ⚡️Sync or 🌤️Daily Reset, it will be permanently deleted without a trace from both the main schedule and the original project.
-
-### 🎯 Urgency-based Auto Sorting
-*   The moment you execute Sync or Quick Capture, the plugin reads the deadline markers and automatically sorts them neatly in the order of **`[!] (Past) ➡️ [0] (Today) ➡️ [1] (Tomorrow) ➡️ ... No Deadline`**.
+*   **📅 D-Day Inheritance**: If a parent task has a date emoji (e.g., `📅 2026-06-10`), indented child tasks will automatically inherit that deadline.
+*   **🗑️ Hard Deletion (`//`)**: To permanently delete a task without leaving an archived trace, append `//` to the end of the line (e.g., `- [ ] Cancelled task // ^a1b2c3`) and click Sync.
+*   **🔍 Multi-Window Resilience**: Whether you are editing in a popout window, Live Preview, or Reading View, the CodeMirror 6 widgets and synchronization engine track your active context perfectly.
 
 ---
 
-## 🚨 6. Frequently Asked Questions (FAQ) & Error Resolution
+## 🚨 Troubleshooting & FAQ
 
-*   **Q. I pressed Daily Reset but it says an error occurred!**
-    *   **A.** It's highly likely that a header name (e.g., `# Todo`) inside the schedule note was damaged. Even if an error occurs, the plugin's **'Transaction Rollback'** feature activates to perfectly restore the file to its original state right before the reset. Please try again after checking the header names.
-*   **Q. Can I delete the past Templater scripts (.js, .md files)?**
-    *   **A.** Yes! You can delete them completely. The plugin replaces all features faster and more safely.
-*   **Q. The table shape broke while I was editing it.**
-    *   **A.** Obsidian tables are separated by `|` symbols. Please just be careful not to delete the `|` symbols when editing the table.
+*   **Q. I pressed Daily Reset but got an error!**
+    *   **A.** A required header (e.g., `# Todo`) might be missing or renamed. The plugin's **Transaction Rollback** feature safely restores the file. Fix the header and try again.
+*   **Q. Can I delete my old Templater scripts?**
+    *   **A.** Yes! This plugin entirely replaces them, operating faster and much safer.
+*   **Q. I can't click checkboxes in Live Preview.**
+    *   **A.** This was fixed in version 1.0.52! Please update the plugin. The `z-index` and `pointer-events` have been optimized to bypass CodeMirror's invisible DOM layers.
+
+---
+*Created by KJH. For support, please check the feedback link in the plugin settings.*
