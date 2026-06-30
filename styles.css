@@ -234,6 +234,8 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     vertical-align: middle;
     position: relative;
     top: -1px;
+    z-index: 10;
+    pointer-events: auto;
 }
 
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line,
