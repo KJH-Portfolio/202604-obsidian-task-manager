@@ -937,7 +937,6 @@ export class TaskUtils {
         const separator = tableLines[1];
         let dataRows = tableLines.slice(2);
         
-
         
         let newTableContent = [header, separator, ...dataRows].join('\n');
         newTableContent = this.convertTableMarkers(newTableContent);
@@ -945,6 +944,20 @@ export class TaskUtils {
         lines.splice(tableStartIndex, tableLines.length, newTableContent);
         
         return content.substring(0, chkRange.start) + lines.join('\n') + content.substring(chkRange.end);
+    }
+
+    parseProjectTimeline(content: string): { startDate: string | null } {
+        const timelineMatch = content.match(/^-\s*기한\s*:\s*(.*)$/m);
+        if (!timelineMatch) return { startDate: null };
+        
+        const timelineText = timelineMatch[1].trim();
+        const dates = timelineText.match(/\d{4}-\d{2}-\d{2}/g);
+        
+        if (!dates || dates.length === 0) {
+            return { startDate: null };
+        }
+        
+        return { startDate: dates[0] };
     }
 
     extractDailyMetadata(content: string): DailyMeta {
@@ -1050,12 +1063,10 @@ export class TaskUtils {
 
     async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
         const projectFiles = this.getProjectFiles();
-        const todayStr = todayObj.toISOString().split('T')[0];
+        const todayStr = moment(todayObj).format("YYYY-MM-DD");
         
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
             try {
-                if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return null;
-                
                 const pNoteName = file.basename;
                 
                 // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
@@ -1067,6 +1078,20 @@ export class TaskUtils {
                     }
                 }
 
+                let pContent = await this.fileManager.getActiveViewOrFileText(file);
+                
+                if (!pContent.includes("# 실행") && !pContent.includes("# 계획")) {
+                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null as any, todayStr, isReset });
+                    return null;
+                }
+                
+                // --- 기한(Timeline) 필터링 ---
+                const timeline = this.parseProjectTimeline(pContent);
+                if (timeline.startDate && todayStr < timeline.startDate) {
+                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null as any, todayStr, isReset });
+                    return null;
+                }
+
                 let pExecTasks: string[] = [], pPlanTasksTotal = 0, pPlanTasksDone = 0;
 
                 if (overrideData[pNoteName]) {
@@ -1074,8 +1099,6 @@ export class TaskUtils {
                     pPlanTasksDone = overrideData[pNoteName].planTasksDone || 0;
                     pPlanTasksTotal = overrideData[pNoteName].planTasksTotal || 0;
                 } else {
-                    // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
-                    let pContent = await this.fileManager.getActiveViewOrFileText(file);
                     let pLines = pContent.split("\n");
                     let pInEx = false, pInPl = false;
                     
@@ -1357,21 +1380,22 @@ export class TaskUtils {
         // Bug C: 에러 발생 시 전체 롤백을 위해 대상 파일 사전 백업
         const backups = new Map<string, string>();
         for (const file of allFiles) {
-            if (this.hasSection(file, "실행", 1) || this.hasSection(file, "계획", 1)) {
-                backups.set(file.path, await this.fileManager.getActiveViewOrFileText(file));
+            const content = await this.fileManager.getActiveViewOrFileText(file);
+            if (content.includes("# 실행") || content.includes("# 계획")) {
+                backups.set(file.path, content);
             }
         }
         const syncErrors: Array<{ file: TFile; error: unknown }> = [];
 
         await Promise.all(allFiles.map(async (file) => {
             try {
-                if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return;
+                // Bug F: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
+                let sContent = await this.fileManager.getActiveViewOrFileText(file);
+                if (!sContent.includes("# 실행") && !sContent.includes("# 계획")) return;
 
                 const noteName = file.basename;
                 const dailyData = dailyMap[noteName] || { byId: {}, byText: {}, orderedTasks: [] };
-                
-                // Bug F: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
-                let sContent = await this.fileManager.getActiveViewOrFileText(file);
+
                 let sLines = sContent.split("\n"), mod = false, inExSec = false; 
                 let finalSLines: string[] = [], skipIndent = -1, skipCheckIndent = -1, skipCheckStatus = " ";
                 let handledInFile = new Set<string>();

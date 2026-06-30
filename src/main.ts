@@ -392,7 +392,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.registerEditorExtension(buildTodayButtonExtension(this.app, () => this));
 
         // CM6: 라이브 프리뷰용 날짜 텍스트 → 클릭 가능한 달력 팝업
-        this.registerEditorExtension(buildDateClickablePlugin(this.app));
+        this.registerEditorExtension(buildDateClickablePlugin(this.app, () => this));
 
         // Reading Mode 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
         this.registerMarkdownPostProcessor((element, context) => {
@@ -519,7 +519,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         if (sectionInfo) {
                             const lines = sectionInfo.text.split('\n');
                             for (let i = sectionInfo.lineStart; i >= 0; i--) {
-                                // h1 태그만 찾음 (Live View의 로직과 동일하게 # 하나만 매칭)
+                                if (lines[i] === undefined) continue;
                                 const m = lines[i].match(/^#\s+(.*)$/);
                                 if (m) {
                                     const headerText = m[1].trim().toLowerCase();
@@ -964,7 +964,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 # 실행
 - 
 # 개요
-- 기한 : 
+- 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
 - 목표 : 
 # 계획
 > **진행도**: **🚨 작성 필요!**

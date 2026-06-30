@@ -23,8 +23,8 @@ export function buildCalendarPopup(
         baseDate = today.clone();
     }
     
-    // 과거 날짜를 보여줄 필요가 없으므로 baseDate가 오늘보다 과거면 오늘 기준으로 덮어씌움
-    if (baseDate.isBefore(today, 'day')) {
+    // 과거 날짜이거나, '미정'을 의미하는 먼 미래(2099년 이상)의 날짜인 경우 오늘 기준으로 덮어씌움
+    if (baseDate.isBefore(today, 'day') || baseDate.year() >= 2099) {
         baseDate = today.clone();
     }
 
@@ -183,26 +183,25 @@ export function buildCalendarPopup(
 // ─────────────────────────────────────────────────────────────
 // 2. 날짜 텍스트를 클릭 가능한 span으로 꾸미는 CM6 플러그인 (라이브 프리뷰용)
 // ─────────────────────────────────────────────────────────────
-function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean; dateStr: string; lineNo: number } {
+function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean, dateStr: string, lineNo: number } {
     const line = view.state.doc.lineAt(pos);
     const text = line.text;
-
-    // 태스크 줄인지 확인
-    if (!/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(text)) return { isMatch: false, dateStr: "", lineNo: 0 };
-
-    const match = text.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
-    if (!match || match.index === undefined) return { isMatch: false, dateStr: "", lineNo: 0 };
-
-    const dateStart = line.from + match.index;
-    const dateEnd = dateStart + match[0].length;
-
-    if (pos >= dateStart && pos <= dateEnd) {
-        return { isMatch: true, dateStr: match[1], lineNo: line.number };
+    
+    // 문서 내 어느 곳이든 📅 뒤에 오는 날짜 인식
+    const regex = /📅\s*(\d{4}-\d{2}-\d{2})/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        const start = line.from + match.index;
+        const end = start + match[0].length;
+        if (pos >= start && pos <= end) {
+            return { isMatch: true, dateStr: match[1], lineNo: line.number };
+        }
     }
+    
     return { isMatch: false, dateStr: "", lineNo: 0 };
 }
 
-export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class {
+export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string } }) => ViewPlugin.fromClass(class {
     decorations: DecorationSet;
 
     constructor(view: EditorView) {
@@ -221,6 +220,12 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
         const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
         if (!activeFile) return builder.finish();
 
+        // 캘린더 클릭 기능 스코프 제한 (스케줄 노트 또는 프로젝트 폴더 내부만)
+        const plugin = getPlugin();
+        const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
+        const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
+        if (!isSchedule && !isProject) return builder.finish();
+
         const processedLines = new Set<number>();
         const marks: { start: number; end: number; isOverdue: boolean }[] = [];
         const todayStr = window.moment().format("YYYY-MM-DD");
@@ -230,14 +235,14 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                 const line = view.state.doc.lineAt(pos);
                 if (!processedLines.has(line.number)) {
                     processedLines.add(line.number);
-                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(line.text)) {
-                        const match = line.text.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
-                        if (match && match.index !== undefined) {
-                            const start = line.from + match.index;
-                            const end = start + match[0].length;
-                            const dateStr = match[1];
-                            marks.push({ start, end, isOverdue: dateStr < todayStr });
-                        }
+                    // 라인 형식 제한 없이 전체 텍스트에서 매칭
+                    const regex = /📅\s*(\d{4}-\d{2}-\d{2})/g;
+                    let match;
+                    while ((match = regex.exec(line.text)) !== null) {
+                        const start = line.from + match.index;
+                        const end = start + match[0].length;
+                        const dateStr = match[1];
+                        marks.push({ start, end, isOverdue: dateStr < todayStr });
                     }
                 }
                 pos = line.to + 1;
@@ -272,7 +277,9 @@ export const buildDateClickablePlugin = (app: App) => ViewPlugin.fromClass(class
                         try {
                             const line = clickedView.state.doc.line(lineNo);
                             const text = line.text;
-                            const match = text.match(/📅\s*\d{4}-\d{2}-\d{2}/);
+                            // 클릭했던 원본 날짜를 정확히 타겟팅하기 위해 dateStr 활용
+                            const regex = new RegExp(`📅\\s*${dateStr}`);
+                            const match = text.match(regex);
                             if (!match || match.index === undefined) return;
 
                             const from = line.from + match.index;

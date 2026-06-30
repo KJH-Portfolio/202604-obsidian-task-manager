@@ -101,10 +101,6 @@ export class Synchronizer {
                 const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
                 content = this.utils.replaceSection(content, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
-
-                // #### 프로젝트 (오늘의 마감 작업 리스트) 갱신
-                const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
-                content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
             }
 
             // # Todo 섹션의 기한 마커 정렬 및 전파
