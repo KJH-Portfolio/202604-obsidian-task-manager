@@ -23,7 +23,7 @@ export class TemplateHelper {
     replacePlaceholder(templateText: string, replacements: Record<string, string>): string {
         let content = templateText;
         for (const [key, value] of Object.entries(replacements)) {
-            content = content.replace(new RegExp(`\\{\\{(?:\\s*)${key}(?:\\s*)\\}\\}`, 'g'), value);
+            content = content.replace(new RegExp(`\\{\\{(?:\\s*)${key}(?:\\s*)\\}\\}`, 'g'), String(value));
         }
         return content;
     }

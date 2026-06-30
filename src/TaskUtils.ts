@@ -67,7 +67,7 @@ export class TaskUtils {
     settings: PluginSettings;
     dateManager: DateManager;
     fileManager: FileManager;
-    private projectResultCache = new Map<string, { mtime: number, result: ProjectResult, todayStr: string, isReset: boolean }>();
+    private projectResultCache = new Map<string, { mtime: number, result: ProjectResult | null, todayStr: string, isReset: boolean }>();
 
     constructor(app: App, settings: PluginSettings, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
@@ -1081,14 +1081,14 @@ export class TaskUtils {
                 let pContent = await this.fileManager.getActiveViewOrFileText(file);
                 
                 if (!pContent.includes("# 실행") && !pContent.includes("# 계획")) {
-                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null as any, todayStr, isReset });
+                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
                     return null;
                 }
                 
                 // --- 기한(Timeline) 필터링 ---
                 const timeline = this.parseProjectTimeline(pContent);
                 if (timeline.startDate && todayStr < timeline.startDate) {
-                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null as any, todayStr, isReset });
+                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
                     return null;
                 }
 
