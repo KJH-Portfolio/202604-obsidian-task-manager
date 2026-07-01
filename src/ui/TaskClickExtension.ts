@@ -1,4 +1,4 @@
-﻿import { App } from 'obsidian';
+import { App } from 'obsidian';
 import { EditorView } from '@codemirror/view';
 
 export const buildTaskClickExtension = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string } }) => {
@@ -15,7 +15,7 @@ export const buildTaskClickExtension = (app: App, getPlugin: () => { settings: {
                     const line = view.state.doc.lineAt(pos);
                     
                     const blockContainer = target.closest('.cm-line, .cm-embed-block') || target.ownerDocument.body;
-                    const allCheckboxes = Array.from(blockContainer.querySelectorAll('input[type="checkbox"]'));
+                    const allCheckboxes = Array.from(blockContainer.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
                     const checkboxIndex = allCheckboxes.indexOf(target as HTMLInputElement);
                     
                     if (checkboxIndex === -1) return false;
@@ -38,7 +38,7 @@ export const buildTaskClickExtension = (app: App, getPlugin: () => { settings: {
                                 const currentMarker = match[2];
                                 const nextMarker = /^[xX]$/.test(currentMarker) ? ' ' : 'x';
 
-                                const from = currentLine.from + match.index!;
+                                const from = currentLine.from + (match.index ?? 0);
                                 const to = from + match[0].length;
                                 const newPrefix = match[1] + nextMarker + match[3];
 

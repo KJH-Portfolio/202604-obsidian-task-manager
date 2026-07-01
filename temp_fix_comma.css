@@ -1,8 +1,0 @@
-﻿/* 1.5. 기본 완료된 항목(x, X) 스타일 지정 (커스텀 항목에는 영향 없음) */
-.markdown-rendered li.task-list-item[data-task="x"],
-.markdown-rendered li.task-list-item[data-task="X"],
-.cm-line.HyperMD-task-line[data-task="x"],
-.cm-line.HyperMD-task-line[data-task="X"] {
-    background-image: none;
-    opacity: 0.4;
-}

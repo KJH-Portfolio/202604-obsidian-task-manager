@@ -1,4 +1,4 @@
-﻿/* stylelint-disable */
+/* stylelint-disable */
 /* NOTE: :has() selectors are intentionally used for Obsidian UI styling.
    Performance impact is acceptable in the plugin context. */
 
@@ -81,8 +81,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"]::after,
 .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::after {
     display: none;
-    mask-image: none;
-    -webkit-mask-image: none;
     content: none;
 }
 .markdown-rendered li[data-task="0"],
