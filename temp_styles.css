@@ -1,0 +1,15 @@
+﻿/* 체크마크 숨김 */
+.markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked::after,
+.markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked::after,
+.cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"]::after,
+.cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"]::after,
+.cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"]::after,
+.cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"]::after,
+.cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"]::after,
+.cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::after {
+    display: none;
+}

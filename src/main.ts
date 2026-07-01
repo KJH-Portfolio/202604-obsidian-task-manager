@@ -276,11 +276,38 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             if (pos === null || pos < 0) return;
 
             const line = view.state.doc.lineAt(pos);
-            const markerMatch = line.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
-            if (!markerMatch) return;
+
+            const blockContainer = target.closest('.cm-line, .cm-embed-block') || target.ownerDocument.body;
+            const allCheckboxes = Array.from(blockContainer.querySelectorAll('input[type="checkbox"]'));
+            const checkboxIndex = allCheckboxes.indexOf(target as HTMLInputElement);
+            
+            if (checkboxIndex === -1) return;
+
+            let matchCount = 0;
+            const doc = view.state.doc;
+            let targetLine = null;
+            let markerMatch = null;
+            
+            for (let i = line.number; i <= doc.lines; i++) {
+                const currentLine = doc.line(i);
+                const match = currentLine.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+                
+                if (match) {
+                    if (matchCount === checkboxIndex) {
+                        targetLine = currentLine;
+                        markerMatch = match;
+                        break;
+                    }
+                    matchCount++;
+                }
+                
+                if (i > line.number + 200) break;
+            }
+
+            if (!targetLine || !markerMatch) return;
 
             const nextMarker = /^[xX]$/.test(markerMatch[2]) ? " " : "x";
-            const markerStart = line.from + markerMatch[1].length;
+            const markerStart = targetLine.from + markerMatch.index! + markerMatch[1].length;
             
             view.dispatch({ changes: { from: markerStart, to: markerStart + 1, insert: nextMarker } });
 

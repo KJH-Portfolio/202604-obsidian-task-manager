@@ -1,0 +1,30 @@
+﻿body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
+    background-color: rgba(255, 60, 80, 0.35);
+    border-color: rgba(255, 60, 80, 0.9);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] {
+    background-color: rgba(255, 210, 0, 0.35);
+    border-color: rgba(255, 210, 0, 0.9);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] {
+    background-color: rgba(68, 225, 120, 0.35);
+    border-color: rgba(68, 225, 120, 0.9);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] {
+    background-color: rgba(50, 150, 255, 0.35);
+    border-color: rgba(50, 150, 255, 0.9);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] {
+    background-color: rgba(180, 180, 180, 0.3);
+    border-color: rgba(180, 180, 180, 0.8);
+}
+body .workspace-leaf-content .markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
+body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
+    background-color: rgba(255, 40, 100, 0.35);
+    border-color: rgba(255, 40, 100, 0.9);
+}

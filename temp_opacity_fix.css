@@ -1,0 +1,17 @@
+﻿/* 기본 상태 복구 (흐려짐 방지, 우선순위 극대화) */
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="3"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="7"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="!"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] {
+    text-decoration: none;
+    opacity: 1;
+    color: var(--text-normal);
+}
