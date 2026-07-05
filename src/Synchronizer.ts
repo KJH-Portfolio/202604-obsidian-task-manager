@@ -38,7 +38,7 @@ export class Synchronizer {
                 const raw = await this.app.vault.read(existingFile);
                 // 헤더(# 자동동기화 리포트)를 제외하고 ## 섹션 단위로 분리
                 const parts = raw.split(/\n(?=## \[)/);
-                sections = parts.filter(p => p.trimStart().startsWith("## ["));
+                sections = parts.filter(p => p.trim().startsWith("## ["));
             } else {
                 const folderPath = "0. Inbox";
                 if (!this.app.vault.getAbstractFileByPath(folderPath)) {
@@ -187,7 +187,7 @@ export class Synchronizer {
                 let newPlanLines: string[] = [];
                 const execMap = new Map<string, SyncTask>();
                 execTasks.forEach(et => {
-                    if (et.id) execMap.set(et.id, et as SyncTask);
+                    if (et.id) execMap.set(et.id, { id: et.id, line: et.line, status: et.status, deleted: et.deleted });
                 });
                 const originalIds = new Set<string>();
                 
