@@ -207,25 +207,22 @@ export class ResetManager {
                     const allFiles = this.utils.getProjectFiles();
                     const filesForCollisionCheck = [...allFiles, dailyFile];
 
-                    // [트랜잭션 백업] 프로젝트 파일 원본 캐싱 (미저장 에디터 내용 포함) - 병렬 처리로 최적화
-                    await Promise.all(allFiles.map(async (f) => {
+                    // [트랜잭션 백업] 프로젝트 파일 원본 캐싱 (미저장 에디터 내용 포함)
+                    for (const f of allFiles) {
                         const fileContent = await this.fileManager.getActiveViewOrFileText(f);
                         originalProjectsCache.set(f, fileContent);
-                    }));
+                    }
 
                     if (dailyMap) {
                         this.utils.syncDailyMap(dailyMap);
                         const overrideData = await this.utils.syncDailyToProjects(this.app, dailyMap, allFiles, filesForCollisionCheck, true); // isReset: true
-                        
-                        // 성능 개선: 무거운 집계 함수 1회만 호출하여 변수 재사용
-                        const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, true);
-                        
-                        const newProjSectionText = this.utils.renderProjectDashboardSection(projectResults);
+                        const newProjSectionText = this.utils.renderProjectDashboardSection(await this.utils.getAllFullProjectResults(todayObj, overrideData, true));
                         if (newProjSectionText) {
                             content = this.utils.replaceSection(content, "# Project", newProjSectionText);
                         }
 
                         // #### 프로젝트 섹션 (오늘의 프로젝트 할 일 리스트)
+                        const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, true);
                         const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
                         content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
                     }
@@ -355,12 +352,14 @@ export class ResetManager {
     }
 
     async runManualArchive(dailyFile: TFile): Promise<void> {
+        // catch 블록에서 롤백에 사용하기 위해 try 바깥에 선언
+        let originalContent = "";
         try {
             this.utils.showLoadingOverlay("⏳ 월간 통계 아카이빙 중...");
             new Notice("⏳ 월간 통계 수동 아카이빙 시작...");
             
             // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
-            const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
+            originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             
             const content = this.utils.preprocessContent(originalContent);
             const now = this.utils.getAdjustedNow(); // 설정된 자정 보정 적용
@@ -414,7 +413,20 @@ export class ResetManager {
             }
         } catch (e) {
             console.error("Manual Archive Error:", e);
-            new Notice("🚨 아카이빙 중 에러가 발생했습니다.");
+            // 실패 시 데일리 파일 원본 복구 시도
+            try {
+                const currentContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
+                // saveIfChanged 호출 전이므로 originalContent와 다를 경우에만 복구
+                if (currentContent !== originalContent) {
+                    await this.fileManager.pluginWrite(dailyFile, originalContent);
+                    new Notice("🚨 아카이빙 실패: 원본 데이터를 복구했습니다.");
+                } else {
+                    new Notice("🚨 아카이빙 중 에러가 발생했습니다.");
+                }
+            } catch (rollbackErr) {
+                console.error("Rollback failed for daily file:", dailyFile.path, rollbackErr);
+                new Notice("🚨 아카이빙 실패 + 복구도 실패했습니다. 파일을 수동으로 확인해주세요.");
+            }
         } finally {
             this.utils.hideLoadingOverlay();
         }

@@ -4,7 +4,6 @@ import { PluginSettings } from "./settings";
 import { TaskUtils, REGEX } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
-import { diffLines } from 'diff';
 
 export class Synchronizer {
     app: App;
@@ -23,46 +22,43 @@ export class Synchronizer {
 
     async logSyncChange(file: TFile, actionName: string, originalContent: string, newContent: string): Promise<void> {
         if (originalContent === newContent) return;
+        const MAX_LOG_ENTRIES = 10;
 
         try {
-            const inboxPath = "0. Inbox/자동동기화_리포트.md";
-            let logContent = "";
+            const inboxPath = "0. Inbox/자동화_노트.md";
             const nowStr = this.dateManager.getAdjustedNow().format("YYYY-MM-DD HH:mm:ss");
-            
+            const newEntry = `## [${nowStr}] ${actionName}\n` +
+                             `- 대상 파일: [[${file.basename}]]\n` +
+                             `<details><summary>변경 전 원본 데이터 백업</summary>\n\n\`\`\`markdown\n${originalContent}\n\`\`\`\n\n</details>`;
+
             const existingFile = this.app.vault.getAbstractFileByPath(inboxPath);
+            let sections: string[] = [];
+
             if (existingFile && existingFile instanceof TFile) {
-                logContent = await this.app.vault.read(existingFile);
+                const raw = await this.app.vault.read(existingFile);
+                // 헤더(# 자동동기화 리포트)를 제외하고 ## 섹션 단위로 분리
+                const parts = raw.split(/\n(?=## \[)/);
+                sections = parts.filter(p => p.trimStart().startsWith("## ["));
             } else {
                 const folderPath = "0. Inbox";
-                const folder = this.app.vault.getAbstractFileByPath(folderPath);
-                if (!folder) await this.app.vault.createFolder(folderPath);
-                logContent = `# 자동동기화 리포트\n\n`;
+                if (!this.app.vault.getAbstractFileByPath(folderPath)) {
+                    await this.app.vault.createFolder(folderPath);
+                }
             }
 
-            const differences = diffLines(originalContent, newContent);
-            let diffText = "";
-            differences.forEach((part) => {
-                if (part.added || part.removed) {
-                    const lines = part.value.split('\n');
-                    lines.forEach(line => {
-                        if (line.trim() !== '') {
-                            diffText += (part.added ? '+ ' : '- ') + line + '\n';
-                        }
-                    });
-                }
-            });
+            // 새 항목 추가 후 MAX_LOG_ENTRIES 초과 시 가장 오래된 항목(앞)부터 제거
+            sections.push(newEntry);
+            if (sections.length > MAX_LOG_ENTRIES) {
+                sections = sections.slice(sections.length - MAX_LOG_ENTRIES);
+            }
 
-            const diffSummary = `\n---\n# [${nowStr}] ${actionName}\n` +
-                                `- 대상 파일: [[${file.basename}]]\n\n` +
-                                `## 변경 사항\n${diffText}\n---\n`;
-            
-            logContent += diffSummary;
-            
+            const finalContent = `# 자동동기화 리포트\n\n` + sections.join("\n");
+
             if (existingFile && existingFile instanceof TFile) {
-                // vault.modify 직접 호출 시 modifiedFiles에 로그파일이 추가되는 문제 방지
-                await this.fileManager.pluginWrite(existingFile, logContent);
+                // BUG-17: vault.modify 직접 호출 시 modifiedFiles에 로그파일이 추가되는 문제 방지
+                await this.fileManager.pluginWrite(existingFile, finalContent);
             } else {
-                await this.app.vault.create(inboxPath, logContent);
+                await this.app.vault.create(inboxPath, finalContent);
             }
         } catch (e) {
             console.error("Failed to log sync change:", e);
@@ -71,11 +67,13 @@ export class Synchronizer {
 
     // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
     async syncDailyTasks(dailyFile: TFile): Promise<void> {
+        // catch 블록에서 롤백에 사용하기 위해 try 바깥에 선언
+        let originalContent = "";
         try {
             this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
             new Notice("⏳ 프로젝트 동기화 시작...");
-            // vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
-            const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
+            // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
+            originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
             const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
@@ -101,6 +99,10 @@ export class Synchronizer {
                 const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
                 content = this.utils.replaceSection(content, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
+
+                // #### 프로젝트 (오늘의 마감 작업 리스트) 갱신
+                const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
+                content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
             }
 
             // # Todo 섹션의 기한 마커 정렬 및 전파
@@ -114,7 +116,14 @@ export class Synchronizer {
             new Notice("✅ 프로젝트 동기화 완료!");
         } catch (e) {
             console.error("Task Manage Error:", e instanceof Error ? e.message : String(e));
-            new Notice("🚨 동기화 실패: 에러가 발생했습니다.");
+            // 스케줄 파일 원본 복구 시도
+            try {
+                await this.fileManager.pluginWrite(dailyFile, originalContent);
+                new Notice("🚨 동기화 실패: 원본 데이터를 복구했습니다.");
+            } catch (rollbackErr) {
+                console.error("Rollback failed for daily file:", dailyFile.path, rollbackErr);
+                new Notice("🚨 동기화 실패 + 복구도 실패했습니다. 파일을 수동으로 확인해주세요.");
+            }
         } finally {
             this.utils.hideLoadingOverlay();
         }
@@ -122,7 +131,7 @@ export class Synchronizer {
 
     // 2. 개별 프로젝트 노트 관점 동기화 (기존 102번 스크립트 역할)
     async pushProjectToSchedule(projectFile: TFile): Promise<void> {
-        // vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
+        // BUG-19: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
         const originalActive = await this.fileManager.getActiveViewOrFileText(projectFile);
         let originalSchedule = "";
         
@@ -136,8 +145,7 @@ export class Synchronizer {
             let content = this.utils.preprocessContent(originalActive);
             let lines = content.split("\n");
             let inExec = false, inPlan = false;
-            let execTasks: { id: string | null; status?: string; indent?: number; line: string; type?: string; deleted?: boolean }[] = [];
-            let planTasks: { id: string; line: string }[] = [];
+            let execTasks: { id: string | null; status?: string; line: string; type?: string; deleted?: boolean }[] = [];
             let planTasksTotal = 0, planTasksDone = 0;
             let originalPlanLines: string[] = [];
             
@@ -157,11 +165,11 @@ export class Synchronizer {
                             let { text, id } = this.utils.extractIdAndText(tM[3]);
                             const isDeleted = /;;$/.test(text.trim());
                             if (!id) { 
-                                // 충돌 체크 대상 파일 전달로 ID 중복 방지
+                                // BUG-24: 충돌 체크 대상 파일 전달로 ID 중복 방지
                                 id = this.utils.generateBlockId([projectFile]); 
                                 lines[i] = l + " ^" + id; 
                             }
-                            execTasks.push({ id, status: tM[2], indent: (l.match(REGEX.INDENT)||[''])[0].length, line: lines[i], deleted: isDeleted });
+                            execTasks.push({ id, status: tM[2], line: lines[i], deleted: isDeleted });
                         } else if (/^##\s/.test(l.trim())) {
                             execTasks.push({ id: null, type: 'header', line: l });
                         }
@@ -172,7 +180,7 @@ export class Synchronizer {
                     const m = l.match(REGEX.TASK_LINE);
                     if (m) {
                         let { id } = this.utils.extractIdAndText(m[3]);
-                        if (id) planTasks.push({ id, line: l });
+                        if (id) { /* planTasks 수집 제거 — 미사용 변수였음 */ }
                     }
                 }
             }
@@ -182,7 +190,7 @@ export class Synchronizer {
                 let newPlanLines: string[] = [];
                 const execMap = new Map<string, SyncTask>();
                 execTasks.forEach(et => {
-                    if (et.id) execMap.set(et.id, et);
+                    if (et.id) execMap.set(et.id, et as SyncTask);
                 });
                 const originalIds = new Set<string>();
                 
@@ -294,8 +302,8 @@ export class Synchronizer {
             if (originalActive !== newActiveContent) {
                 await this.logSyncChange(projectFile, "개별 프로젝트 ➔ 스케줄 반영 (프로젝트 노트 갱신)", originalActive, newActiveContent);
             }
-            // 성능 및 버그 수정: saveIfChanged를 사용하여 에디터 커서 튐 방지 (saveIfChanged 내부에 이미 무한 동기화 방지 해시 락이 존재함)
-            await this.fileManager.saveIfChanged(projectFile, originalActive, newActiveContent);
+            // BUG-01: pluginWrite로 교체하여 vault.on('modify')의 무한 재동기화 방지
+            await this.fileManager.pluginWrite(projectFile, newActiveContent);
 
             // 3. 메인 스케줄 파일 업데이트
             const schedulePath = this.settings.mainSchedulePath;
@@ -327,6 +335,7 @@ export class Synchronizer {
                 if (originalSchedule !== sBody) {
                     await this.logSyncChange(scheduleFile, `개별 프로젝트 ➔ 스케줄 반영 (스케줄 대시보드 갱신 - ${noteName})`, originalSchedule, sBody);
                 }
+                // BUG-06: 타입 캐스팅 제거 (이미 instanceof TFile)
                 await this.fileManager.saveIfChanged(scheduleFile, originalSchedule, sBody);
                 if (newSectionText) {
                     new Notice(`✅ [${noteName}] 스케줄 반영 완료!`);
@@ -337,10 +346,13 @@ export class Synchronizer {
                 new Notice("🚨 메인 스케줄 파일을 찾을 수 없습니다.");
             }
         } catch (e) {
-            // 실패 시 프로젝트 원본 파일 복구 (에디터가 열려있을 때 Merge Conflict 방지를 위해 saveIfChanged 사용)
+            console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));
+            // 실패 시 프로젝트 원본 파일 복구 시도
+            let projectRolledBack = false;
+            let scheduleRolledBack = false;
             try {
-                const currentFileState = await this.fileManager.getActiveViewOrFileText(projectFile);
-                await this.fileManager.saveIfChanged(projectFile, currentFileState, originalActive);
+                await this.fileManager.pluginWrite(projectFile, originalActive);
+                projectRolledBack = true;
             } catch (rollbackErr) {
                 console.error("Rollback failed for project file:", projectFile.path, rollbackErr);
             }
@@ -348,15 +360,19 @@ export class Synchronizer {
                 const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
                 if (scheduleFile && scheduleFile instanceof TFile) {
                     try {
-                        const currentScheduleState = await this.fileManager.getActiveViewOrFileText(scheduleFile);
-                        await this.fileManager.saveIfChanged(scheduleFile, currentScheduleState, originalSchedule);
+                        await this.fileManager.pluginWrite(scheduleFile, originalSchedule);
+                        scheduleRolledBack = true;
                     } catch (rollbackErr) {
                         console.error("Rollback failed for schedule file:", rollbackErr);
                     }
                 }
             }
-            console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));
-            new Notice("🚨 반영 실패: 원본 데이터를 복구했습니다.");
+            // 롤백 성공/실패 여부를 사용자에게 명확히 알림
+            if (projectRolledBack && (!originalSchedule || scheduleRolledBack)) {
+                new Notice("🚨 반영 실패: 원본 데이터를 복구했습니다.");
+            } else {
+                new Notice("🚨 반영 실패 + 복구도 실패했습니다. 파일을 수동으로 확인해주세요.");
+            }
         } finally {
             this.utils.hideLoadingOverlay();
         }

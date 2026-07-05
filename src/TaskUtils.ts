@@ -18,15 +18,11 @@ export const REGEX = {
     MATCH_TASK_COMPLETED: /^[\s]*[-*+]\s+\[[xX-]\]/,
     STATUS_MATCH: /^[\s]*[-*+]\s+\[(.)\]/,
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
-    HEADING_START: /^#+\s+/,
     TOP_HEADING_START: /^#\s+/,
     EXEC_HEADER: /^#\s+실행$/,
     WORK_SUMMARY_HEADER: /^#\s+계획$/,
     NOTE_LINK: /^##\s+(.+)$/,
-    SUMMARY_MATCH: /^[\s]*[-*+]\s+\[([xX ])\]/,
-    MARKER_REPLACE_2: /(\[[^\]]\])\s*/,
     PROJECT_TODO_SECTION: /(?:^|\n)##\s+프로젝트(?:\n|$)(?:[\s\S]*?)(?=\n#{1,6}\s|$)/g,
-    TODO_HEADER: /(?:^|\n)#\s+Todo(?=\n|$)/i,
     INDENT: /^\s*/
 };
 
@@ -67,7 +63,6 @@ export class TaskUtils {
     settings: PluginSettings;
     dateManager: DateManager;
     fileManager: FileManager;
-    private projectResultCache = new Map<string, { mtime: number, result: ProjectResult | null, todayStr: string, isReset: boolean }>();
 
     constructor(app: App, settings: PluginSettings, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
@@ -188,7 +183,7 @@ export class TaskUtils {
             }
         }
 
-        // fallbackLines가 null인데 useFallback이 true인 경우 TypeError 방지
+        // BUG-11: fallbackLines가 null인데 useFallback이 true인 경우 TypeError 방지
         if ((fallbackLines || useFallback) && fallbackLines !== null) {
             const prefix = "#".repeat(level) + " " + sectionName;
             let startLine = fallbackLines.findIndex(l => l.startsWith(prefix));
@@ -233,7 +228,7 @@ export class TaskUtils {
     generateBlockId(filesToCheck: TFile[] = []): string {
         let id: string;
         let isDuplicate: boolean;
-        // 무한 루프 방지를 위한 최대 시도 횟수 제한
+        // BUG-16: 무한 루프 방지를 위한 최대 시도 횟수 제한
         let maxAttempts = 100;
         do {
             id = Math.random().toString(36).substring(2, 8).padEnd(6, '0');
@@ -251,6 +246,11 @@ export class TaskUtils {
             maxAttempts--;
         } while (isDuplicate && maxAttempts > 0);
         
+        // issuedIds 누적 방지: 1000개 초과 시 세션 내 최소 목록 면저 지우기
+        if (this.issuedIds.size >= 1000) {
+            const firstKey = this.issuedIds.values().next().value;
+            if (firstKey !== undefined) this.issuedIds.delete(firstKey);
+        }
         this.issuedIds.add(id);
         return id;
     }
@@ -373,7 +373,7 @@ export class TaskUtils {
             let currentIndent = isBlank ? 999 : actualIndent;
 
             if (skipIndent !== -1) {
-                // 완료된 태스크 블록 내부의 빈 줄은 소실됨 (의도적 동작 - 완료 항목 제거 시 시각적 공백 방지)
+                // BUG-15: 완료된 태스크 블록 내부의 빈 줄은 소실됨 (의도적 동작 - 완료 항목 제거 시 시각적 공백 방지)
                 if (isBlank) continue;
                 if (currentIndent > skipIndent) continue;
                 else skipIndent = -1;
@@ -937,6 +937,7 @@ export class TaskUtils {
         const separator = tableLines[1];
         let dataRows = tableLines.slice(2);
         
+
         
         let newTableContent = [header, separator, ...dataRows].join('\n');
         newTableContent = this.convertTableMarkers(newTableContent);
@@ -944,20 +945,6 @@ export class TaskUtils {
         lines.splice(tableStartIndex, tableLines.length, newTableContent);
         
         return content.substring(0, chkRange.start) + lines.join('\n') + content.substring(chkRange.end);
-    }
-
-    parseProjectTimeline(content: string): { startDate: string | null } {
-        const timelineMatch = content.match(/^-\s*기한\s*:\s*(.*)$/m);
-        if (!timelineMatch) return { startDate: null };
-        
-        const timelineText = timelineMatch[1].trim();
-        const dates = timelineText.match(/\d{4}-\d{2}-\d{2}/g);
-        
-        if (!dates || dates.length === 0) {
-            return { startDate: null };
-        }
-        
-        return { startDate: dates[0] };
     }
 
     extractDailyMetadata(content: string): DailyMeta {
@@ -1063,35 +1050,12 @@ export class TaskUtils {
 
     async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
         const projectFiles = this.getProjectFiles();
-        const todayStr = moment(todayObj).format("YYYY-MM-DD");
         
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
             try {
+                if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return null;
+                
                 const pNoteName = file.basename;
-                
-                // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
-                const mtime = file.stat.mtime;
-                if (!overrideData[pNoteName]) {
-                    const cached = this.projectResultCache.get(file.path);
-                    if (cached && cached.mtime === mtime && cached.todayStr === todayStr && cached.isReset === isReset) {
-                        return cached.result;
-                    }
-                }
-
-                let pContent = await this.fileManager.getActiveViewOrFileText(file);
-                
-                if (!pContent.includes("# 실행") && !pContent.includes("# 계획")) {
-                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
-                    return null;
-                }
-                
-                // --- 기한(Timeline) 필터링 ---
-                const timeline = this.parseProjectTimeline(pContent);
-                if (timeline.startDate && todayStr < timeline.startDate) {
-                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
-                    return null;
-                }
-
                 let pExecTasks: string[] = [], pPlanTasksTotal = 0, pPlanTasksDone = 0;
 
                 if (overrideData[pNoteName]) {
@@ -1099,6 +1063,8 @@ export class TaskUtils {
                     pPlanTasksDone = overrideData[pNoteName].planTasksDone || 0;
                     pPlanTasksTotal = overrideData[pNoteName].planTasksTotal || 0;
                 } else {
+                    // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
+                    let pContent = await this.fileManager.getActiveViewOrFileText(file);
                     let pLines = pContent.split("\n");
                     let pInEx = false, pInPl = false;
                     
@@ -1149,13 +1115,7 @@ export class TaskUtils {
                 
                 const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, isReset);
                 
-                const finalResult = { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
-                
-                if (!overrideData[pNoteName]) {
-                    this.projectResultCache.set(file.path, { mtime, result: finalResult, todayStr, isReset });
-                }
-                
-                return finalResult;
+                return { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
             } catch (err) {
                 console.error(`Error in getAllFullProjectResults for ${file.path}:`, err);
                 return null;
@@ -1216,7 +1176,7 @@ export class TaskUtils {
                 }
             }
         }
-        // syncDailyMap은 외부 호출부(Synchronizer, ResetManager)에서 이미 한 번 더 호출하므로
+        // BUG-14: syncDailyMap은 외부 호출부(Synchronizer, ResetManager)에서 이미 한 번 더 호출하므로
         // 여기서 이중으로 실행하면 불필요한 재처리가 발생함 → 제거하여 외부에서만 호출
         return dailyMap;
     }
@@ -1340,6 +1300,8 @@ export class TaskUtils {
                     wContent = wContent.trimEnd() + `\n\n# 통계\n${weeklyStatsDashboard}\n`;
                 }
             }
+
+            // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
             await this.fileManager.pluginWrite(wFile, wContent.trim() + "\n");
         } else {
             const chkSectionText = `# 체크리스트\n\n${weeklyTableStr}\n\n`;
@@ -1366,6 +1328,7 @@ export class TaskUtils {
             } else {
                 mContent += `\n\n# 통계\n${dashboardStr}\n`;
             }
+            // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
             await this.fileManager.pluginWrite(mFile, mContent.trim() + "\n");
         } else {
             await app.vault.create(monthlyInfo.path, `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${mTitle} 월간 기록\n\n# 기록\n\n# 통계\n${dashboardStr}\n`);
@@ -1380,22 +1343,21 @@ export class TaskUtils {
         // Bug C: 에러 발생 시 전체 롤백을 위해 대상 파일 사전 백업
         const backups = new Map<string, string>();
         for (const file of allFiles) {
-            const content = await this.fileManager.getActiveViewOrFileText(file);
-            if (content.includes("# 실행") || content.includes("# 계획")) {
-                backups.set(file.path, content);
+            if (this.hasSection(file, "실행", 1) || this.hasSection(file, "계획", 1)) {
+                backups.set(file.path, await this.fileManager.getActiveViewOrFileText(file));
             }
         }
         const syncErrors: Array<{ file: TFile; error: unknown }> = [];
 
         await Promise.all(allFiles.map(async (file) => {
             try {
-                // Bug F: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
-                let sContent = await this.fileManager.getActiveViewOrFileText(file);
-                if (!sContent.includes("# 실행") && !sContent.includes("# 계획")) return;
+                if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return;
 
                 const noteName = file.basename;
                 const dailyData = dailyMap[noteName] || { byId: {}, byText: {}, orderedTasks: [] };
-
+                
+                // Bug F: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
+                let sContent = await this.fileManager.getActiveViewOrFileText(file);
                 let sLines = sContent.split("\n"), mod = false, inExSec = false; 
                 let finalSLines: string[] = [], skipIndent = -1, skipCheckIndent = -1, skipCheckStatus = " ";
                 let handledInFile = new Set<string>();
@@ -1611,6 +1573,8 @@ export class TaskUtils {
                         finalSLines = cleanedLines; 
                     }
                 }
+                
+                // BUG-10: pluginWrite로 교체하여 프로젝트 파일 저장이 modifiedFiles에 쌓이는 것을 방지
                 if (mod) await this.fileManager.pluginWrite(file, finalSLines.join("\n"));
 
                 let execTasks: string[] = [], planTasksTotal = 0, planTasksDone = 0;
@@ -1651,7 +1615,7 @@ export class TaskUtils {
         return overrideData;
     }
 
-    // moment의 .date(n) setter는 체이닝으로 받아야 안전함
+    // BUG-13: moment의 .date(n) setter는 체이닝으로 받아야 안전함
     getActualDate(now: moment.Moment, day: number): moment.Moment {
         return now.clone().date(day);
     }
