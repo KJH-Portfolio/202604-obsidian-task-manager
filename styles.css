@@ -1,4 +1,4 @@
-/* stylelint-disable */
+ï»¿/* stylelint-disable */
 /* NOTE: :has() selectors are intentionally used for Obsidian UI styling.
    Performance impact is acceptable in the plugin context. */
 
@@ -128,11 +128,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     font-weight: 600;
 }
 
-/* 2. í•˜ìœ„ í•­ëª© íˆ¬ëª…ë„ ë‚®ì¶°ì„œ ê³„ì¸µ êµ¬ë¶„ */
-.markdown-rendered li > ul > li,
-.markdown-rendered li > ol > li {
-    opacity: 0.75;
-}
 
 /* 3. ë‚ ì§œ(ğŸ“…) í…ìŠ¤íŠ¸ ì‹œì„  ë¶„ë¦¬
    ë‚ ì§œëŠ” ì¼ë°˜ í…ìŠ¤íŠ¸ì´ë¯€ë¡œ li ì „ì²´ì˜ ::after ë³´ë‹¤ëŠ”
@@ -651,7 +646,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-today-btn { cursor: pointer; font-size: 0.8em; padding: 2px 6px; margin-left: 6px; background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 4px; opacity: 0.7; transition: opacity 0.2s, transform 0.1s; vertical-align: middle; }
 .myworld-today-btn:hover { opacity: 1; transform: scale(1.05); }
 
-/* ³¯Â¥ ÅØ½ºÆ®: Èå¸®°í ÀÛ°Ô, Ä¿¼­ º¯°æ */
+/* ï¿½ï¿½Â¥ ï¿½Ø½ï¿½Æ®: ï¿½å¸®ï¿½ï¿½ ï¿½Û°ï¿½, Ä¿ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ */
 .myworld-date-clickable-text {
     opacity: 0.5;
     font-size: 0.82em;
@@ -662,7 +657,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-date-clickable-text:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
 .myworld-date-clickable-text.myworld-overdue { color: var(--text-error); opacity: 0.75; }
 
-/* ÀĞ±â ¸ğµå ³¯Â¥ span */
+/* ï¿½Ğ±ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½Â¥ span */
 .myworld-date-clickable {
     opacity: 0.5;
     font-size: 0.82em;
@@ -673,7 +668,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-date-clickable:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
 .myworld-date-clickable.myworld-overdue { color: var(--text-error); opacity: 0.75; }
 
-/* ¦¡¦¡ ´Ş·Â ÆË¾÷ ¦¡¦¡ */
+/* ï¿½ï¿½ï¿½ï¿½ ï¿½Ş·ï¿½ ï¿½Ë¾ï¿½ ï¿½ï¿½ï¿½ï¿½ */
 .myworld-cal-popup {
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
