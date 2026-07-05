@@ -22,8 +22,9 @@ export class TemplateHelper {
     
     replacePlaceholder(templateText: string, replacements: Record<string, string>): string {
         let content = templateText;
-        for (const [key, value] of Object.entries(replacements)) {
-            content = content.replace(new RegExp(`\\{\\{(?:\\s*)${key}(?:\\s*)\\}\\}`, 'g'), value);
+        for (const key of Object.keys(replacements)) {
+            const value = replacements[key];
+            content = content.replace(new RegExp(`\\{\\{(?:\\s*)${key}(?:\\s*)\\}\\}`, 'g'), String(value));
         }
         return content;
     }
@@ -143,18 +144,10 @@ cssclasses:
 작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
----
-버튼
-<div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 20px;">
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:push-project-to-schedule" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #00cec9;">📤</div>
-  </a>
-</div>
-
 # 실행
 - 
 # 개요
-- 기한 : 
+- 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
 - 목표 : 
 # 계획
 > **진행도**: **🚨 작성 필요!**
@@ -274,17 +267,12 @@ cssclasses:
 작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
----
-버튼
-<div style="display: flex; ... 📤 버튼 영역 (건드리지 마세요) ... </div>
-
 # 실행
 ==- [ ] 메인 페이지 디자인 시안 완성하기==
 ==- [x] 기획안 제출==
-(이곳은 '현재 진행 중이거나 당장 해야 할 작업'을 적는 곳입니다. 이 버튼(📤)을 누르면 완료된 항목은 자동으로 아래 \`# 계획\` 탭으로 넘어갑니다.)
 
 # 개요
-- 기한 : ==2026-07-01 까지==
+- 기한 : ==📅 2026-07-01 ~ 📅 2026-07-20==
 - 목표 : ==플러그인 V1.0 스토어 정식 배포==
 
 # 계획

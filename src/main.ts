@@ -175,10 +175,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     
     modifiedFiles: Set<string> = new Set<string>();
     lastActiveFile: TFile | null = null;
-    // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
-    // 타임스탬프 방식(1초 임계값)은 클라우드 동기화 환경에서 이벤트 지연으로 무력화될 수 있어 콘텐츠 해시 비교로 전환
+    // Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
     pluginWritingFiles: Map<string, string> = new Map<string, string>();
-    // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
+    // Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
     private fileWriteQueue: Map<string, Promise<void>> = new Map();
 
     /**
@@ -277,11 +276,38 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             if (pos === null || pos < 0) return;
 
             const line = view.state.doc.lineAt(pos);
-            const markerMatch = line.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
-            if (!markerMatch) return;
+
+            const blockContainer = target.closest('.cm-line, .cm-embed-block') || target.ownerDocument.body;
+            const allCheckboxes = Array.from(blockContainer.querySelectorAll('input[type="checkbox"]'));
+            const checkboxIndex = allCheckboxes.indexOf(target as HTMLInputElement);
+            
+            if (checkboxIndex === -1) return;
+
+            let matchCount = 0;
+            const doc = view.state.doc;
+            let targetLine = null;
+            let markerMatch = null;
+            
+            for (let i = line.number; i <= doc.lines; i++) {
+                const currentLine = doc.line(i);
+                const match = currentLine.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+                
+                if (match) {
+                    if (matchCount === checkboxIndex) {
+                        targetLine = currentLine;
+                        markerMatch = match;
+                        break;
+                    }
+                    matchCount++;
+                }
+                
+                if (i > line.number + 200) break;
+            }
+
+            if (!targetLine || !markerMatch) return;
 
             const nextMarker = /^[xX]$/.test(markerMatch[2]) ? " " : "x";
-            const markerStart = line.from + markerMatch[1].length;
+            const markerStart = targetLine.from + markerMatch.index! + markerMatch[1].length;
             
             view.dispatch({ changes: { from: markerStart, to: markerStart + 1, insert: nextMarker } });
 
@@ -357,7 +383,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     const targetFile = this.app.vault.getAbstractFileByPath(context.sourcePath);
                     if (!targetFile || !(targetFile instanceof TFile)) return;
 
-                    // BUG-02: Race Condition 방지 - read→modify 전 과정을 직렬화 큐로 순서 보장
+                    // Race Condition 방지 - read→modify 전 과정을 직렬화 큐로 순서 보장
                     // pluginWrite 사용으로 vault.on('modify') 해시 필터도 함께 적용
                     this.enqueueFileWrite(targetFile.path, async () => {
                         const fileContent = await this.fileManager.getActiveViewOrFileText(targetFile);
@@ -382,6 +408,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         }
                         if (modified) {
                             await this.fileManager.pluginWrite(targetFile, lines.join("\n"));
+                            this.modifiedFiles.add(targetFile.path);
                         }
                     });
                 });
@@ -392,7 +419,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.registerEditorExtension(buildTodayButtonExtension(this.app, () => this));
 
         // CM6: 라이브 프리뷰용 날짜 텍스트 → 클릭 가능한 달력 팝업
-        this.registerEditorExtension(buildDateClickablePlugin(this.app));
+        this.registerEditorExtension(buildDateClickablePlugin(this.app, () => this));
 
         // Reading Mode 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
         this.registerMarkdownPostProcessor((element, context) => {
@@ -479,7 +506,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 }
                             }
 
-                            buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
+                            buildCalendarPopup(dateStr, rect.left + rect.width / 2, rect.top + rect.height / 2, (newDate) => {
                                 this.enqueueFileWrite(clickFile.path, async () => {
                                     const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
                                     const lines = fileContent.split("\n");
@@ -495,6 +522,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                                         lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
                                                     }
                                                     await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                                    this.modifiedFiles.add(clickFile.path);
                                                     break;
                                                 }
                                                 matchCount++;
@@ -514,17 +542,41 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 if (!hasDateText && !hasDateAttr && !hasButton) {
                     let shouldShow = false;
                     if (isSchedule) {
-                        const leafContainer = taskEl.closest('.workspace-leaf');
-                        if (!leafContainer) return;
-                        const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
-                        const precedingHeaders = allHeaders.filter(h => {
-                            return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-                        });
-                        if (precedingHeaders.length > 0) {
-                            const targetH = precedingHeaders[precedingHeaders.length - 1];
-                            let headerText = targetH.textContent?.trim().toLowerCase() || "";
-                            headerText = headerText.replace(/^#\s*/, "").trim();
-                            if (headerText === "todo" || headerText === "project") shouldShow = true;
+                        const sectionInfo = context.getSectionInfo(element);
+                        if (sectionInfo) {
+                            const lines = sectionInfo.text.split('\n');
+                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                if (lines[i] === undefined) continue;
+                                const m = lines[i].match(/^#\s+(.*)$/);
+                                if (m) {
+                                    const headerText = m[1].trim().toLowerCase();
+                                    if (headerText === "todo" || headerText === "project") {
+                                        shouldShow = true;
+                                    }
+                                    break;
+                                }
+                            }
+                        } else {
+                            // getSectionInfo가 null을 반환할 때를 대비한 돔 탐색 폴백
+                            const leafContainer = taskEl.closest('.markdown-reading-view') || taskEl.closest('.workspace-leaf') || element.parentElement;
+                            if (leafContainer) {
+                                // h1만 찾음 (##, ### 등 하위 섹션 무시)
+                                const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
+                                const precedingHeaders = allHeaders.filter(h => {
+                                    return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+                                });
+                                if (precedingHeaders.length > 0) {
+                                    const targetH = precedingHeaders[precedingHeaders.length - 1];
+                                    let headerText = targetH.getAttribute("data-heading")?.toLowerCase() || "";
+                                    if (!headerText) {
+                                        headerText = targetH.textContent?.trim().toLowerCase() || "";
+                                        headerText = headerText.replace(/^#\s*/, "").replace(/\u200b/g, "").trim();
+                                    }
+                                    if (headerText === "todo" || headerText === "project") {
+                                        shouldShow = true;
+                                    }
+                                }
+                            }
                         }
                     } else if (isProject) {
                         shouldShow = true;
@@ -556,42 +608,40 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             }
 
                             const todayStr = window.moment().format("YYYY-MM-DD");
-                            const rect = btn.getBoundingClientRect();
 
-                            buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
-                                if (!newDate) return;
-                                this.enqueueFileWrite(clickFile.path, async () => {
-                                    const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                    const lines = fileContent.split("\n");
-                                    let modified = false;
-                                    let matchCount = 0;
+                            this.enqueueFileWrite(clickFile.path, async () => {
+                                const fileContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                const lines = fileContent.split("\n");
+                                let modified = false;
+                                let matchCount = 0;
 
-                                    for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
-                                            if (lineClean === cleanText) {
-                                                if (matchCount === occurrenceIndex) {
-                                                    const text = lines[i];
-                                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                                    if (idMatch) {
-                                                        lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
-                                                    } else {
-                                                        lines[i] = text + ` 📅 ${newDate}`;
-                                                    }
-                                                    modified = true;
-                                                    break;
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                        let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                        if (lineClean === cleanText) {
+                                            if (matchCount === occurrenceIndex) {
+                                                const text = lines[i];
+                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                                if (idMatch) {
+                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${todayStr}` + idMatch[0];
+                                                } else {
+                                                    lines[i] = text + ` 📅 ${todayStr}`;
                                                 }
-                                                matchCount++;
+                                                modified = true;
+                                                break;
                                             }
+                                            matchCount++;
                                         }
                                     }
+                                }
 
-                                    if (modified) {
-                                        await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
-                                        btn.remove();
-                                    }
-                                });
-                            }, doc);
+                                if (modified) {
+                                    await this.fileManager.saveIfChanged(clickFile, fileContent, lines.join("\n"));
+                                    // 사용자가 수동으로 변경한 사항이므로 즉시 수정 플래그를 꽂음
+                                    this.modifiedFiles.add(clickFile.path);
+                                    btn.remove();
+                                }
+                            });
                         });
                         
                         if (taskTextSpan) {
@@ -616,7 +666,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         // 2. 핵심 모듈 인스턴스 생성
         this.dateManager = new DateManager(this.settings);
-        // BUG-01/05: pluginWritingFiles Set을 FileManager에 전달
+        // pluginWritingFiles Map을 FileManager에 전달
         this.fileManager = new FileManager(this.app, this.pluginWritingFiles);
         this.utils = new TaskUtils(this.app, this.settings, this.dateManager, this.fileManager);
         this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
@@ -631,7 +681,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             this.app.vault.on('modify', (file) => {
                 if (!(file instanceof TFile) || file.extension !== 'md') return;
 
-                // BUG-01/05/04: 플러그인이 쓴 파일인지 콘텐츠 해시로 판단 (타임스탬프 저기의 1초 방식 개선)
+                // 플러그인이 쓴 파일인지 콘텐츠 해시로 판단 (타임스탬프 저기의 1초 방식 개선)
                 // cachedHash가 있는 경우에만 vault.read()를 호출하므로 플러그인이 안 쓴 파일은 I/O 추가 없음
                 const cachedHash = this.pluginWritingFiles.get(file.path);
                 if (cachedHash !== undefined) {
@@ -656,6 +706,16 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             })
         );
 
+
+        this.registerEvent(
+            this.app.workspace.on('editor-change', (editor, info) => {
+                if (info && info.file) {
+                    // 옵시디언의 vault.on('modify')는 2초의 지연 시간이 있으므로, 
+                    // 사용자가 타이핑 직후 탭을 닫거나 옮길 때 동기화가 무시되는 버그를 막기 위해 즉각 추가
+                    this.modifiedFiles.add(info.file.path);
+                }
+            })
+        );
 
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => {
@@ -931,7 +991,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 # 실행
 - 
 # 개요
-- 기한 : 
+- 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
 - 목표 : 
 # 계획
 > **진행도**: **🚨 작성 필요!**
@@ -1102,7 +1162,6 @@ ${checklistTable}
 
             let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
             if (!memoFile) {
-                // BUG-07: 미사용 now 변수 제거
                 const defaultContent = `---
 작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
@@ -1139,7 +1198,7 @@ ${checklistTable}
         if (this.synchronizer) this.synchronizer.settings = this.settings;
         if (this.resetManager) this.resetManager.settings = this.settings;
         if (this.templateHelper) this.templateHelper.settings = this.settings;
-        // BUG-20: dateManager.settings도 갱신 (midnightOffsetHour 변경이 재시작 없이 즉시 반영)
+        // dateManager.settings도 갱신 (midnightOffsetHour 변경이 재시작 없이 즉시 반영)
         if (this.dateManager) this.dateManager.settings = this.settings;
     }
 }

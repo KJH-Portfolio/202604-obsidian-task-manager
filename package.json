@@ -1,6 +1,6 @@
 {
   "name": "myworld-task-manager",
-  "version": "1.0.48",
+  "version": "1.0.57",
   "description": "MyWorld 스케줄 및 프로젝트 할 일 양방향 동기화 플러그인",
   "main": "main.js",
   "scripts": {
@@ -19,11 +19,15 @@
   "devDependencies": {
     "@codemirror/state": "6.5.0",
     "@codemirror/view": "6.38.6",
+    "@types/diff": "^7.0.2",
     "@types/node": "^18.15.11",
     "esbuild": "^0.19.11",
     "moment": "^2.30.1",
     "obsidian": "^1.5.7",
     "tslib": "^2.6.2",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "diff": "^9.0.0"
   }
 }

@@ -1,11 +1,10 @@
-﻿/* stylelint-disable */
+/* stylelint-disable */
 /* NOTE: :has() selectors are intentionally used for Obsidian UI styling.
    Performance impact is acceptable in the plugin context. */
 
-
 /* ========================================================
-   [커스텀 마커 기본 동작 재정의]
-   옵시디언 기본 테마가 커스텀 체크박스(0,1,2,3,7,!)를 
+   [커스텀 마커 기본 동작 설정]
+   옵시디언 기본 테마가 커스텀 체크박스(0,1,2,3,7,!)를
    '완료된 작업'으로 간주하여 취소선을 긋는 현상 방지
    ======================================================== */
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
@@ -13,60 +12,62 @@ body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="3"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="7"],
-body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="!"],
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"],
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"],
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"],
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"],
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"],
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] {
+/* 기본 상태 복구 (흐려짐 방지, 우선순위 극대화) */
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="3"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="7"],
+body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="!"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"],
+body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] {
     text-decoration: none;
     opacity: 1;
     color: var(--text-normal);
 }
-
-/* 체크박스 외형을 미완료(진행중) 상태로 렌더링 (체크마크 제거, 테두리 색상 유지) */
-.markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
-.markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
-.cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"],
-.cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"],
-.cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"],
-.cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"],
-.cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"],
-.cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
-    border-color: var(--text-muted);
-}
-
-/* 마커별 체크박스 안쪽 배경색 채우기 */
+/* 체크박스 진행 상태에 따른 색상 (콜아웃 내부에서도 선명하게) */
 body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
-    background-color: rgba(233, 49, 71, 0.18);
+    background-color: rgba(255, 60, 80, 0.5);
+    border-color: rgba(255, 60, 80, 1);
+    background-image: none;
 }
 body .workspace-leaf-content .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] {
-    background-color: rgba(255, 210, 0, 0.18);
+    background-color: rgba(255, 210, 0, 0.5);
+    border-color: rgba(255, 210, 0, 1);
+    background-image: none;
 }
 body .workspace-leaf-content .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] {
-    background-color: rgba(68, 207, 110, 0.18);
+    background-color: rgba(68, 225, 120, 0.5);
+    border-color: rgba(68, 225, 120, 1);
+    background-image: none;
 }
 body .workspace-leaf-content .markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] {
-    background-color: rgba(8, 109, 221, 0.18);
+    background-color: rgba(50, 150, 255, 0.5);
+    border-color: rgba(50, 150, 255, 1);
+    background-image: none;
 }
 body .workspace-leaf-content .markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] {
-    background-color: rgba(150, 150, 150, 0.15);
+    background-color: rgba(180, 180, 180, 0.4);
+    border-color: rgba(180, 180, 180, 1);
+    background-image: none;
 }
 body .workspace-leaf-content .markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
-    background-color: rgba(140, 0, 40, 0.22);
+    background-color: rgba(255, 40, 100, 0.5);
+    border-color: rgba(255, 40, 100, 1);
+    background-image: none;
 }
 
+/* 체크마크(V) 완벽하게 숨김 처리 */
 .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked::after,
 .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked::after,
 .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked::after,
@@ -80,45 +81,8 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"]::after,
 .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"]::after {
     display: none;
-    /* 체크마크 숨김 */
+    content: none;
 }
-
-/* 마커별 테두리(체크박스) 색상 + 두께 증가 — border 숏핸드로 한 번에 지정 */
-body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
-    border: 2px solid rgba(233, 49, 71, 0.8);
-}
-
-body .workspace-leaf-content .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] {
-    border: 2px solid rgba(255, 210, 0, 0.8);
-}
-
-body .workspace-leaf-content .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] {
-    border: 2px solid rgba(68, 207, 110, 0.8);
-}
-
-body .workspace-leaf-content .markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] {
-    border: 2px solid rgba(8, 109, 221, 0.8);
-}
-
-body .workspace-leaf-content .markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] {
-    border: 2px solid rgba(150, 150, 150, 0.8);
-}
-
-body .workspace-leaf-content .markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
-body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
-    border: 2px solid rgba(140, 0, 40, 0.9);
-}
-
-/* ========================================================
-   [가독성 개선 스타일]
-   ======================================================== */
-
-/* 1. 긴급 마커([0], [!])만 글씨 굵게 */
 .markdown-rendered li[data-task="0"],
 .markdown-rendered li[data-task="!"] {
     font-weight: 600;
@@ -128,11 +92,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     font-weight: 600;
 }
 
-
-/* 3. 날짜(📅) 텍스트 시선 분리
-   날짜는 일반 텍스트이므로 li 전체의 ::after 보다는
-   task-manager 플러그인이 렌더링하는 span 클래스를 직접 타겟팅.
-   클래스가 확인되면 아래 셀렉터를 교체할 것. */
+/* 3. 날짜 텍스트 시선 분리 (흐리게 처리) */
 .markdown-rendered li[data-task] .task-due,
 .markdown-rendered li[data-task] .task-date,
 .markdown-rendered li[data-task] time {
@@ -147,10 +107,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 }
 
 /* ========================================================
-   1. 스케줄 강조 하이라이트 (fix-task-indent.css)
-   - 마커 두께: 6px (색상 구분 강화)
-   - 일반노트: 컬러 바 + 은은한 배경색 반영
-   - 콜아웃 내부: 컬러 바(6px) + 공통 무채색 음영 (색상 충돌 방지 및 가독성 확보)
+   1. 들여쓰기 계층 강조 하이라이트 효과 (fix-task-indent.css)
    ======================================================== */
 
 /* 1.1. 레거시 태그 숨기기 */
@@ -180,7 +137,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     height: 0;
 }
 
-/* 1.2. 기본 리스트 구조 및 공통 속성 */
 .markdown-rendered li {
     background-color: transparent;
     border-radius: 4px;
@@ -194,34 +150,23 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 
 .cm-line {
     padding-top: 1px;
-    padding-bottom: 2px;
-    border-radius: 4px;
-}
-
-.markdown-rendered li[data-task="0"],
-.markdown-rendered li[data-task="1"],
-.markdown-rendered li[data-task="2"],
-.markdown-rendered li[data-task="3"],
-.markdown-rendered li[data-task="7"],
-.markdown-rendered li[data-task="!"],
-
-
-/* 1.5. 완료된 항목 배경색 및 마커 제거 */
-.markdown-rendered li.task-list-item.is-checked,
-
+/* 1.5. 기본 완료된 항목(x, X) 스타일 지정 (커스텀 항목에는 영향 없음) */
+.markdown-rendered li.task-list-item[data-task="x"],
+.markdown-rendered li.task-list-item[data-task="X"],
 .cm-line.HyperMD-task-line[data-task="x"],
 .cm-line.HyperMD-task-line[data-task="X"] {
     background-image: none;
     opacity: 0.4;
 }
-
+    background-image: none;
+    opacity: 0.4;
+}
 
 /* ========================================================
-   2. 가로형 클릭 버튼 UI (inline-routine.css)
-   - 오직 `> [!routine]` 콜아웃 상자 내부에서만 작동
+   2. 가로형 인라인 루틴 UI (inline-routine.css)
    ======================================================== */
 
-/* 2.1. 읽기 모드 (Reading View) 강제 */
+/* 2.1. 읽기 모드 (Reading View) 강제 적용 */
 .callout[data-callout="routine"] ul>li.task-list-item,
 .callout[data-callout="routine"] li.task-list-item {
     display: inline-flex;
@@ -252,9 +197,10 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     vertical-align: middle;
     position: relative;
     top: -1px;
+    z-index: 10;
+    pointer-events: auto;
 }
 
-/* 2.2. 라이브 프리뷰 (Live Preview) 강제 */
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line,
 .callout[data-callout="routine"] .HyperMD-task-line {
     display: inline-flex;
@@ -267,7 +213,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     width: auto;
 }
 
-/* 2.3. 완료 시 취소선 및 투명도 */
+/* 2.3. 완료 및 취소선, 투명도 */
 .callout[data-callout="routine"] li.is-checked:not([data-task="-"]):not([data-task="/"]),
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
@@ -276,7 +222,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     text-decoration: line-through;
 }
 
-/* 2.4. 취소 시 디자인 (-) */
+/* 2.4. 취소선 대기자 (-) */
 .callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="-"],
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="-"] {
     opacity: 0.5;
@@ -287,7 +233,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     border: 1px solid rgba(255, 82, 82, 0.5);
 }
 
-/* 2.5. 진행 중 디자인 (/) */
+/* 2.5. 진행 중 대기자 (/) */
 .callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="/"],
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="/"] {
     opacity: 0.5;
@@ -298,7 +244,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     border: 1px solid rgba(255, 208, 75, 0.5);
 }
 
-/* 2.6. 클릭 영역 전체 확장 */
 .callout[data-callout="routine"] ul>li.task-list-item,
 .callout[data-callout="routine"] ul>li.task-list-item,
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line,
@@ -323,7 +268,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     background-color: transparent;
 }
 
-/* 2.7. 대시보드형 헤더 위젯(띠지) 디자인 */
+/* 2.7. 대시보드형 헤더 위젯 디자인 */
 /* --- 읽기 모드 --- */
 .callout[data-callout="routine"] h1 {
     background: linear-gradient(90deg, rgba(52, 152, 219, 0.25) 0%, rgba(52, 152, 219, 0) 100%);
@@ -346,8 +291,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     font-weight: 800;
 }
 
-/* 2.8. 공간 압축 스페이스 (헤더 우측에 태스크 나열) */
-/* --- 읽기 모드 --- */
 .callout[data-callout="routine"] h1,
 .callout[data-callout="routine"] h2,
 .callout[data-callout="routine"] h3,
@@ -387,7 +330,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     font-weight: 500;
 }
 
-/* --- 라이브 프리뷰 --- */
 .callout[data-callout="routine"] .cm-line.HyperMD-header {
     display: block;
     float: left;
@@ -479,7 +421,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     margin-bottom: 20px;
 }
 
-
 .myworld-margin-0 {
     margin: 0;
 }
@@ -552,14 +493,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     display: none;
 }
 
-
-/* ========================================================
-   [체크박스 옆 그라데이션 하이라이트 효과]
-   원래 input[type="checkbox"]::before 방식 유지.
-   li에 isolation: isolate 를 추가하여 z-index: -1 이 페이지 배경 아래로 새지 않게 고정.
-   ======================================================== */
-
-/* li에 Stacking Context 격리 → 자식 ::before 의 z-index: -1 이 li 영역 안에서만 작동 */
 .markdown-rendered li[data-task="0"],
 .markdown-rendered li[data-task="1"],
 .markdown-rendered li[data-task="2"],
@@ -569,7 +502,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     isolation: isolate;
 }
 
-/* 체크박스에 position: relative 유지 */
 .markdown-rendered li[data-task="0"] > input[type="checkbox"],
 .markdown-rendered li[data-task="1"] > input[type="checkbox"],
 .markdown-rendered li[data-task="2"] > input[type="checkbox"],
@@ -585,8 +517,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     position: relative;
 }
 
-/* ::before 공통 속성 — z-index: -1 로 글씨 뒤에 깔림 */
-/* ⬇ 테스트: 그라데이션 하이라이트 임시 비활성화 */
 .markdown-rendered li[data-task="0"] > input[type="checkbox"]::before,
 .markdown-rendered li[data-task="1"] > input[type="checkbox"]::before,
 .markdown-rendered li[data-task="2"] > input[type="checkbox"]::before,
@@ -609,10 +539,8 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     pointer-events: none;
     border-radius: 4px;
     z-index: -1;
-    display: none; /* ← 임시 비활성화 */
+    display: none; 
 }
-
-/* -------- 색상 -------- */
 
 .markdown-rendered li[data-task="0"] > input[type="checkbox"]::before,
 .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"]::before {
@@ -646,7 +574,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-today-btn { cursor: pointer; font-size: 0.8em; padding: 2px 6px; margin-left: 6px; background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 4px; opacity: 0.7; transition: opacity 0.2s, transform 0.1s; vertical-align: middle; }
 .myworld-today-btn:hover { opacity: 1; transform: scale(1.05); }
 
-/* ��¥ �ؽ�Ʈ: �帮�� �۰�, Ŀ�� ���� */
 .myworld-date-clickable-text {
     opacity: 0.5;
     font-size: 0.82em;
@@ -657,7 +584,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-date-clickable-text:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
 .myworld-date-clickable-text.myworld-overdue { color: var(--text-error); opacity: 0.75; }
 
-/* �б� ��� ��¥ span */
 .myworld-date-clickable {
     opacity: 0.5;
     font-size: 0.82em;
@@ -668,7 +594,9 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-date-clickable:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
 .myworld-date-clickable.myworld-overdue { color: var(--text-error); opacity: 0.75; }
 
-/* ���� �޷� �˾� ���� */
+/* ========================================================
+   ── 달력 팝업 ──
+   ======================================================== */
 .myworld-cal-popup {
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
@@ -723,7 +651,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     transition: background 0.1s, color 0.1s;
 }
 .myworld-cal-day:hover { background: var(--interactive-accent); color: var(--text-on-accent); }
-.myworld-cal-today { font-weight: 700; color: var(--interactive-accent); }
+.myworld-cal-today { font-weight: 700; color: var(--interactive-accent); border: 1px solid white; border-radius: 5px; }
 .myworld-cal-selected { background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 5px; }
 .myworld-cal-sat { color: var(--color-blue, #4b8ef0); }
 .myworld-cal-sun { color: var(--color-red, #e93147); }
@@ -750,9 +678,9 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-cal-today-btn { background: var(--interactive-accent); color: var(--text-on-accent); border-color: transparent; }
 .myworld-cal-today-btn:hover { background: var(--interactive-accent-hover, var(--interactive-accent)); opacity: 0.85; }
 
-/* ============================
+/* ========================================================
    StartupSyncModal (부팅 확인 팝업)
-   ============================ */
+   ======================================================== */
 .myworld-startup-modal {
     width: 380px;
     border-radius: 14px;
@@ -856,9 +784,6 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     transform: none;
 }
 
-/* ============================
-   Loading Overlay (Global)
-   ============================ */
 .myworld-loading-overlay {
     position: fixed;
     top: 0;
@@ -893,3 +818,30 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Date Picker Button styling to remove ugly backgrounds from themes */
+body .workspace-leaf-content .markdown-rendered li button.myworld-today-btn,
+body .workspace-leaf-content .cm-line button.myworld-today-btn,
+body .workspace-leaf-content .markdown-rendered li span.myworld-today-btn,
+body .workspace-leaf-content .cm-line span.myworld-today-btn {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0 4px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+body .workspace-leaf-content .markdown-rendered li button.myworld-today-btn:hover,
+body .workspace-leaf-content .cm-line button.myworld-today-btn:hover,
+body .workspace-leaf-content .markdown-rendered li span.myworld-today-btn:hover,
+body .workspace-leaf-content .cm-line span.myworld-today-btn:hover {
+    background: transparent;
+    background-color: transparent;
+    opacity: 1;
+}
+
+body .myworld-cal-popup .myworld-cal-past { opacity: 0.3; cursor: not-allowed; }
+body .myworld-cal-popup .myworld-cal-past:hover { background-color: transparent; color: inherit; }
+body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }

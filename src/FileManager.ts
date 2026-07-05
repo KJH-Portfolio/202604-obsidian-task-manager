@@ -2,7 +2,7 @@ import { App, TFile, MarkdownView } from "obsidian";
 
 export class FileManager {
     private app: App;
-    // BUG-01/05/04: 플러그인이 직접 수정한 파일 경로와 콘텐츠 해시를 추적하여 vault.on('modify')에서 이중 동기화 필터링
+    // 플러그인이 직접 수정한 파일 경로와 콘텐츠 해시를 추적하여 vault.on('modify')에서 이중 동기화 필터링
     // 타임스탬프(1초 임계값) 방식은 클라우드 동기화 환경에서 이벤트 지연으로 무력화될 수 있어 해시 비교로 전환
     private pluginWritingFiles: Map<string, string>;
 
@@ -35,20 +35,20 @@ export class FileManager {
     }
 
     async getActiveViewOrFileText(file: TFile): Promise<string> {
-        // 모든 열려있는 마크다운 탭(Leaf)을 순회하며 해당 파일을 찾음
+        // --- 성능개선 3번 수정: 모든 열린 탭 스캔 (Fallback) ---
+        // 사용자가 타이핑 직후 다른 탭으로 이동(active-leaf-change)하면 해당 파일은 더 이상 'active'가 아닙니다.
+        // 따라서 getActiveViewOfType 대신 모든 markdown 탭을 순회하여 방금 전까지 치던 미저장 텍스트를 안전하게 가져옵니다.
         const leaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of leaves) {
-            const view = leaf.view as MarkdownView;
-            if (view && view.file && view.file.path === file.path) {
+            if (leaf.view instanceof MarkdownView && leaf.view.file && leaf.view.file.path === file.path) {
                 const state = leaf.getViewState();
-                // 라이브 뷰(source 모드)일 경우에만 에디터의 최신 입력 내용을 즉시 가져옴
                 if (state.state && state.state.mode === "source") {
-                    return view.editor.getValue();
+                    return leaf.view.editor.getValue();
                 }
             }
         }
         
-        // 창이 없거나, 읽기 모드(preview)일 경우 옵시디언 캐시(실제 파일) 데이터를 가져옴
+        // 백그라운드 탭에 있거나 아예 열려있지 않은 나머지 파일들은 무조건 빠르고 가벼운 디스크 읽기(vault.read)
         return await this.app.vault.read(file);
     }
 
