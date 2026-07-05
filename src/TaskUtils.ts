@@ -1006,48 +1006,6 @@ export class TaskUtils {
         return { nodes: pruned, hasD0: hasD0Any };
     }
 
-    renderTodayProjectTasks(projectResults: ProjectResult[], todayObj: Date): string {
-        if (!projectResults) return "";
-        let finalLines: string[] = [];
-        
-        projectResults.forEach(p => {
-            if (!p.execTasks || p.execTasks.length === 0) return;
-            const processed = this.applyMarkersToLines(p.execTasks, todayObj);
-            const tree = this.parseTasksToTree(processed);
-            const pruned = this.pruneTree(tree);
-            
-            if (pruned.nodes.length > 0) {
-                finalLines.push(`- ${p.noteName}`);
-                
-                const renderNodes = (nodes: TaskNode[], depth: number) => {
-                    nodes.forEach(node => {
-                        let cleanText = "";
-                        const taskMatch = node.line.match(REGEX.TASK_LINE);
-                        if (taskMatch) {
-                            cleanText = this.cleanTaskText(this.extractIdAndText(taskMatch[3]).text);
-                        } else if (/^##\s/.test(node.line.trim())) {
-                            cleanText = node.line.trim().replace(/^##\s+/, "");
-                        }
-                        
-                        if (cleanText) {
-                            const indent = "    ".repeat(depth);
-                            const isLeaf = node.children.length === 0;
-                            const bullet = isLeaf ? "- !" : "-";
-                            finalLines.push(`${indent}${bullet} ${cleanText}`);
-                        }
-                        
-                        if (node.children.length > 0) {
-                            renderNodes(node.children, depth + 1);
-                        }
-                    });
-                };
-                renderNodes(pruned.nodes, 1);
-            }
-        });
-        
-        return finalLines.join('\n');
-    }
-
     async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
         const projectFiles = this.getProjectFiles();
         

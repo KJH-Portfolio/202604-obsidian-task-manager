@@ -221,10 +221,6 @@ export class ResetManager {
                             content = this.utils.replaceSection(content, "# Project", newProjSectionText);
                         }
 
-                        // #### 프로젝트 섹션 (오늘의 프로젝트 할 일 리스트)
-                        const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, true);
-                        const todayProjectTasks = this.utils.renderTodayProjectTasks(projectResults, todayObj);
-                        content = this.utils.replaceSection(content, "#### 프로젝트", todayProjectTasks || "> (오늘 할 일 없음)");
                     }
 
                     // --- [Step 3] 할 일 리셋 및 정렬 ---

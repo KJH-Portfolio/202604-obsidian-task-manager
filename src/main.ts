@@ -222,6 +222,15 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // 1. 설정 불러오기
         await this.loadSettings();
 
+        // 2. 핵심 모듈 인스턴스 생성
+        this.dateManager = new DateManager(this.settings);
+        // BUG-01/05: pluginWritingFiles Set을 FileManager에 전달
+        this.fileManager = new FileManager(this.app, this.pluginWritingFiles);
+        this.utils = new TaskUtils(this.app, this.settings, this.dateManager, this.fileManager);
+        this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
+        this.resetManager = new ResetManager(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
+        this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
+
         // --- [Tasks 플러그인 특정 경고창 차단 옵저버] ---
         const attachNoticeObserver = (doc: Document) => {
             const noticeObserver = new MutationObserver((mutations) => {
@@ -396,7 +405,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.registerEditorExtension(buildTodayButtonExtension(this.app, () => this));
 
         // CM6: 라이브 프리뷰용 날짜 텍스트 → 클릭 가능한 달력 팝업
-        this.registerEditorExtension(buildDateClickablePlugin(this.app));
+        this.registerEditorExtension(buildDateClickablePlugin(this.app, () => this));
 
         // Reading Mode 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
         this.registerMarkdownPostProcessor((element, context) => {
@@ -620,15 +629,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             });
         });
 
-        // 2. 핵심 모듈 인스턴스 생성
-        this.dateManager = new DateManager(this.settings);
-        // BUG-01/05: pluginWritingFiles Set을 FileManager에 전달
-        this.fileManager = new FileManager(this.app, this.pluginWritingFiles);
-        this.utils = new TaskUtils(this.app, this.settings, this.dateManager, this.fileManager);
-        this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
-        this.resetManager = new ResetManager(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
-        this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
-
         // 3. 설정 탭 등록
         this.addSettingTab(new MyWorldTaskManagerSettingTab(this.app, this));
 
@@ -809,7 +809,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 await this.fileManager.saveIfChanged(scheduleFile, original, text);
                                 new Notice(`✅ 할 일이 메인 스케줄에 추가되었습니다: "${content}"`);
                             } catch (err) {
-            console.error(err instanceof Error ? err.message : String(err));
+                                console.error(err instanceof Error ? err.message : String(err));
                                 new Notice("🚨 할 일 추가 도중 에러가 발생했습니다.");
                             }
                         } else {
@@ -883,7 +883,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     await this.templateHelper.setupParaStructure();
                     new Notice("✅ PARA 시스템 폴더 구조 및 가이드 문서가 생성되었습니다.");
                 } catch (err) {
-            console.error(err instanceof Error ? err.message : String(err));
+                    console.error(err instanceof Error ? err.message : String(err));
                     new Notice("🚨 PARA 시스템 구조 생성 중 에러가 발생했습니다.");
                 }
             }
@@ -898,7 +898,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     await this.templateHelper.setupZettelkastenStructure();
                     new Notice("✅ 제텔카스텐 폴더 구조 및 가이드 문서가 생성되었습니다.");
                 } catch (err) {
-            console.error(err instanceof Error ? err.message : String(err));
+                    console.error(err instanceof Error ? err.message : String(err));
                     new Notice("🚨 제텔카스텐 구조 생성 중 에러가 발생했습니다.");
                 }
             }
