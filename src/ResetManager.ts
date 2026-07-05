@@ -259,7 +259,7 @@ export class ResetManager {
                     const tableStr = this.utils.getChecklistTable(mainContent);
                     let archiveStatsDashboard = "";
                     const archiveDayLabel = now.format("YYYY-MM-DD (ddd)");
-                    const dailyRecord = (reviewInput || dailyMeta.step !== "미작성") ? `> [!quote]+ 📅 **${archiveDayLabel}**\n> **Step**: ${dailyMeta.step}\n> **회고**: ${reviewInput || "미작성"}\n` : "";
+                    const dailyRecord = (reviewInput.trim() || stepInput.trim()) ? `> [!quote]+ 📅 **${archiveDayLabel}**\n> **Step**: ${stepInput.trim() || dailyMeta.step}\n> **회고**: ${reviewInput || "미작성"}\n` : "";
 
                     if (tableStr) {
                         const tableLines = tableStr.trim().split("\n").filter(l => l.includes("|"));

@@ -246,6 +246,11 @@ export class TaskUtils {
             maxAttempts--;
         } while (isDuplicate && maxAttempts > 0);
         
+        // 100회 시도해도 중복이면 경고 로그 (실제 발생 확률 극히 낮음)
+        if (isDuplicate) {
+            console.warn('[generateBlockId] 100회 시도에도 고유 ID 생성 실패, 중복 가능성 있음:', id);
+        }
+        
         // issuedIds 누적 방지: 1000개 초과 시 세션 내 최소 목록 면저 지우기
         if (this.issuedIds.size >= 1000) {
             const firstKey = this.issuedIds.values().next().value;
@@ -965,7 +970,7 @@ export class TaskUtils {
         return dashboardHtml ? dashboardHtml + "\n\n" + calloutsHtml : calloutsHtml;
     }
 
-        getProjectFiles(): TFile[] {
+    getProjectFiles(): TFile[] {
         const dir = this.settings.projectDirectory;
         const folder = this.app.vault.getAbstractFileByPath(dir);
         const files: TFile[] = [];

@@ -26,7 +26,7 @@ export class DateManager {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         if (now.hour() < offset) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- Type inference limitation
-            return now.subtract(1, 'days');
+            return now.clone().subtract(1, 'days');
         }
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- Type inference limitation
         return now;

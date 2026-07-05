@@ -71,7 +71,7 @@ export class Synchronizer {
         let originalContent = "";
         try {
             this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
-            new Notice("⏳ 프로젝트 동기화 시작...");
+            new Notice("⏳ 스케줄 전체 동기화 시작...");
             // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
             originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
@@ -110,7 +110,7 @@ export class Synchronizer {
                 await this.logSyncChange(dailyFile, "스케줄 노트 전체 동기화", originalContent, content);
             }
             await this.fileManager.saveIfChanged(dailyFile, originalContent, content);
-            new Notice("✅ 프로젝트 동기화 완료!");
+            new Notice("✅ 스케줄 전체 동기화 완료!");
         } catch (e) {
             console.error("Task Manage Error:", e instanceof Error ? e.message : String(e));
             // 스케줄 파일 원본 복구 시도
