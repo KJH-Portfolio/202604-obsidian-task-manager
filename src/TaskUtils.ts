@@ -63,6 +63,7 @@ export class TaskUtils {
     settings: PluginSettings;
     dateManager: DateManager;
     fileManager: FileManager;
+    private projectResultCache = new Map<string, { mtime: number, result: ProjectResult | null, todayStr: string, isReset: boolean }>();
 
     constructor(app: App, settings: PluginSettings, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
@@ -952,6 +953,23 @@ export class TaskUtils {
         return content.substring(0, chkRange.start) + lines.join('\n') + content.substring(chkRange.end);
     }
 
+    parseProjectTimeline(content: string): { startDate: string | null, endDate: string | null } {
+        const timelineMatch = content.match(/^-\s*기한\s*:\s*(.*)$/m);
+        if (!timelineMatch) return { startDate: null, endDate: null };
+        
+        const timelineText = timelineMatch[1].trim();
+        const dates = timelineText.match(/\d{4}-\d{2}-\d{2}/g);
+        
+        if (!dates || dates.length === 0) {
+            return { startDate: null, endDate: null };
+        }
+        
+        return { 
+            startDate: dates[0], 
+            endDate: dates.length > 1 ? dates[1] : null 
+        };
+    }
+
     extractDailyMetadata(content: string): DailyMeta {
         let step = "미작성", review = "미작성";
         const stepMatch = content.match(/^((?:>|\s*[-*+])\s*.*?(?:[Ss]tep|도전)\s*:\s*)(.*)$/m);
@@ -1019,6 +1037,33 @@ export class TaskUtils {
                 if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return null;
                 
                 const pNoteName = file.basename;
+
+                // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
+                const mtime = file.stat.mtime;
+                const todayStr = moment(todayObj).format("YYYY-MM-DD");
+                if (!overrideData[pNoteName] && this.projectResultCache.has(file.path)) {
+                    const cache = this.projectResultCache.get(file.path)!;
+                    if (cache.mtime === mtime && cache.todayStr === todayStr && cache.isReset === isReset) {
+                        return cache.result;
+                    }
+                }
+
+                // --- 기한(Timeline) 필터링 ---
+                // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
+                let pContent = await this.fileManager.getActiveViewOrFileText(file);
+                const todayStr = moment(todayObj).format("YYYY-MM-DD");
+                const timeline = this.parseProjectTimeline(pContent);
+                
+                // 현재 날짜가 기한을 벗어난 프로젝트는 제외
+                if (timeline.startDate && todayStr < timeline.startDate) {
+                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
+                    return null;
+                }
+                if (timeline.endDate && todayStr > timeline.endDate) {
+                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
+                    return null;
+                }
+
                 let pExecTasks: string[] = [], pPlanTasksTotal = 0, pPlanTasksDone = 0;
 
                 if (overrideData[pNoteName]) {
@@ -1026,8 +1071,6 @@ export class TaskUtils {
                     pPlanTasksDone = overrideData[pNoteName].planTasksDone || 0;
                     pPlanTasksTotal = overrideData[pNoteName].planTasksTotal || 0;
                 } else {
-                    // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
-                    let pContent = await this.fileManager.getActiveViewOrFileText(file);
                     let pLines = pContent.split("\n");
                     let pInEx = false, pInPl = false;
                     
@@ -1078,7 +1121,13 @@ export class TaskUtils {
                 
                 const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, isReset);
                 
-                return { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
+                const finalResult = { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
+                
+                if (!overrideData[pNoteName]) {
+                    this.projectResultCache.set(file.path, { mtime, result: finalResult, todayStr, isReset });
+                }
+                
+                return finalResult;
             } catch (err) {
                 console.error(`Error in getAllFullProjectResults for ${file.path}:`, err);
                 return null;
