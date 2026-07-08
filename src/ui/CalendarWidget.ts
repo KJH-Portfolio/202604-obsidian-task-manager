@@ -183,7 +183,7 @@ export function buildCalendarPopup(
 // ─────────────────────────────────────────────────────────────
 // 2. 날짜 텍스트를 클릭 가능한 span으로 꾸미는 CM6 플러그인 (라이브 프리뷰용)
 // ─────────────────────────────────────────────────────────────
-function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean, dateStr: string, lineNo: number } {
+function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean, dateStr: string, lineNo: number, exactFrom: number, exactTo: number } {
     const line = view.state.doc.lineAt(pos);
     const text = line.text;
     
@@ -194,11 +194,11 @@ function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean
         const start = line.from + match.index;
         const end = start + match[0].length;
         if (pos >= start && pos <= end) {
-            return { isMatch: true, dateStr: match[1], lineNo: line.number };
+            return { isMatch: true, dateStr: match[1], lineNo: line.number, exactFrom: start, exactTo: end };
         }
     }
     
-    return { isMatch: false, dateStr: "", lineNo: 0 };
+    return { isMatch: false, dateStr: "", lineNo: 0, exactFrom: 0, exactTo: 0 };
 }
 
 export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string } }) => ViewPlugin.fromClass(class {
@@ -266,31 +266,26 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
             // 날짜 클릭 처리
             if (target && target.classList.contains("myworld-date-clickable-text")) {
                 const pos = view.posAtDOM(target);
-                const { isMatch, dateStr, lineNo } = isDateClickableRange(view, pos);
+                                const { isMatch, dateStr, lineNo, exactFrom, exactTo } = isDateClickableRange(view, pos);
                 if (isMatch) {
                     e.preventDefault();
                     const rect = target.getBoundingClientRect();
-                    // Bug M: 클릭 시점 view를 캡처하여 콜백에서 사용 (getActiveViewOfType 클로저 버그 해결)
+                    // Bug M: 클릭 시점 view를 캡처하여 콜백에서 사용
                     const clickedView = view;
                     const doc = view.dom.ownerDocument;
                     buildCalendarPopup(dateStr, rect.left + rect.width / 2, rect.top + rect.height / 2, (newDate) => {
                         try {
-                            const line = clickedView.state.doc.line(lineNo);
-                            const text = line.text;
-                            // 클릭했던 원본 날짜를 정확히 타겟팅하기 위해 dateStr 활용
-                            const regex = new RegExp(`📅\\s*${dateStr}`);
-                            const match = text.match(regex);
-                            if (!match || match.index === undefined) return;
-
-                            const from = line.from + match.index;
-                            const to = from + match[0].length;
+                            const targetText = clickedView.state.doc.sliceString(exactFrom, exactTo);
+                            if (!targetText.includes(dateStr)) {
+                                console.warn("Date clickable position changed, aborting replacement.");
+                                return;
+                            }
 
                             if (newDate === null) {
-                                // 날짜 앞 공백이 있으면 함께 제거
-                                const removeFrom = (match.index > 0 && text[match.index - 1] === ' ') ? from - 1 : from;
-                                clickedView.dispatch({ changes: { from: removeFrom, to, insert: '' } });
+                                const removeFrom = (exactFrom > 0 && clickedView.state.doc.sliceString(exactFrom - 1, exactFrom) === ' ') ? exactFrom - 1 : exactFrom;
+                                clickedView.dispatch({ changes: { from: removeFrom, to: exactTo, insert: '' } });
                             } else {
-                                clickedView.dispatch({ changes: { from, to, insert: `📅 ${newDate}` } });
+                                clickedView.dispatch({ changes: { from: exactFrom, to: exactTo, insert: `\uD83D\uDCC5 ${newDate}` } });
                             }
                         } catch (err) {
                             console.error("[Bug M] view dispatch 실패:", err);

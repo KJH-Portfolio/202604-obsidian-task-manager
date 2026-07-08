@@ -16,6 +16,8 @@ export class FileManager {
      * vault.on('modify') 이벤트 필터링 시 콘텐츠 동일 여부를 확인하는 데 사용.
      */
     public simpleHash(str: string): string {
+        // BUG FIX: Windows \r\n 차이로 인한 해시 불일치 무한루프 방지
+        str = str.replace(/\r/g, '');
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);

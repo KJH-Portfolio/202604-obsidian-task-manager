@@ -14,43 +14,26 @@ export const buildTaskClickExtension = (app: App, getPlugin: () => { settings: {
                     const pos = view.posAtDOM(target);
                     const line = view.state.doc.lineAt(pos);
                     
-                    const blockContainer = target.closest('.cm-line, .cm-embed-block') || target.ownerDocument.body;
-                    const allCheckboxes = Array.from(blockContainer.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
-                    const checkboxIndex = allCheckboxes.indexOf(target as HTMLInputElement);
+                    const text = line.text;
                     
-                    if (checkboxIndex === -1) return false;
-
-                    let matchCount = 0;
-                    const doc = view.state.doc;
+                    const regex = /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/;
+                    const match = text.match(regex);
                     
-                    for (let i = line.number; i <= doc.lines; i++) {
-                        const currentLine = doc.line(i);
-                        const text = currentLine.text;
-                        
-                        const regex = /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/;
-                        const match = text.match(regex);
-                        
-                        if (match) {
-                            if (matchCount === checkboxIndex) {
-                                e.preventDefault();
-                                e.stopPropagation();
+                    if (match) {
+                        e.preventDefault();
+                        e.stopPropagation();
 
-                                const currentMarker = match[2];
-                                const nextMarker = /^[xX]$/.test(currentMarker) ? ' ' : 'x';
+                        const currentMarker = match[2];
+                        const nextMarker = /^[xX]$/.test(currentMarker) ? ' ' : 'x';
 
-                                const from = currentLine.from + (match.index ?? 0);
-                                const to = from + match[0].length;
-                                const newPrefix = match[1] + nextMarker + match[3];
+                        const from = line.from + (match.index ?? 0);
+                        const to = from + match[0].length;
+                        const newPrefix = match[1] + nextMarker + match[3];
 
-                                view.dispatch({
-                                    changes: { from, to, insert: newPrefix }
-                                });
-                                return true;
-                            }
-                            matchCount++;
-                        }
-                        
-                        if (i > line.number + 200) break;
+                        view.dispatch({
+                            changes: { from, to, insert: newPrefix }
+                        });
+                        return true;
                     }
                 } catch (err) {
                     console.error('Task click handling failed in CodeMirror:', err);

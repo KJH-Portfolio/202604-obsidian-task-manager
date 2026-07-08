@@ -413,15 +413,16 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const isProject = context.sourcePath.startsWith(this.settings.projectDirectory);
             if (!isSchedule && !isProject) return;
 
-            const tasks = Array.from(element.querySelectorAll(".task-list-item")) as HTMLElement[];
-            if (!tasks.length) return;
+            const listItems = Array.from(element.querySelectorAll("li")) as HTMLElement[];
+            if (!listItems.length) return;
 
             const clickFile = this.app.vault.getAbstractFileByPath(context.sourcePath);
             if (!clickFile || !(clickFile instanceof TFile)) return;
 
-            tasks.forEach(taskEl => {
+            listItems.forEach(taskEl => {
+                const isTaskItem = taskEl.classList.contains("task-list-item");
                 // [x] / [X] 만 스킵 — [1],[0],[!] 등 커스텀 마커는 처리 대상
-                if (/^[xX]$/.test(taskEl.getAttribute("data-task") ?? "")) return;
+                if (isTaskItem && /^[xX]$/.test(taskEl.getAttribute("data-task") ?? "")) return;
 
                 const cloned = taskEl.cloneNode(true) as HTMLElement;
                 cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
@@ -429,7 +430,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 const rawHtml = cloned.innerHTML;
                 
                 const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText) || /\d{4}-\d{2}-\d{2}/.test(rawHtml);
-                const hasDateAttr = Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value));
+                const hasDateAttr = isTaskItem ? Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value)) : false;
 
                 const taskTextSpan = taskEl.querySelector(".tasks-list-text");
                 const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
@@ -441,7 +442,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         acceptNode: (node) => {
                             let p = node.parentElement;
                             while (p && p !== taskEl) {
-                                if (p.classList.contains("task-list-item")) return NodeFilter.FILTER_REJECT;
+                                if (p.classList.contains("task-list-item") || p.tagName === "LI") {
+                                    if (p !== taskEl) return NodeFilter.FILTER_REJECT;
+                                }
                                 p = p.parentElement;
                             }
                             return NodeFilter.FILTER_ACCEPT;
@@ -454,11 +457,14 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             nodesToProcess.push(n);
                         }
                     }
-                    nodesToProcess.forEach(textNode => {
+                                        let globalDateIndex = 0;
+                    
+                    const processTextNode = (textNode) => {
                         const text = textNode.textContent || "";
-                        const match = text.match(/(📅\s*)(\d{4}-\d{2}-\d{2})/);
+                        const match = text.match(/(\uD83D\uDCC5\s*)(\d{4}-\d{2}-\d{2})/);
                         if (!match || match.index === undefined) return;
 
+                        const currentTargetIndex = globalDateIndex++;
                         const dateStr = match[2];
                         const before = text.slice(0, match.index);
                         const after = text.slice(match.index + match[0].length);
@@ -468,7 +474,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
                         const dateSpan = doc.createElement("span");
                         dateSpan.className = "myworld-date-clickable";
-                        dateSpan.textContent = match[0];
+                        dateSpan.textContent = "\uD83D\uDCC5 " + dateStr;
 
                         const todayStr = this.dateManager?.getAdjustedNow().format("YYYY-MM-DD") || window.moment().format("YYYY-MM-DD");
                         if (dateStr < todayStr) dateSpan.classList.add("myworld-overdue");
@@ -478,14 +484,14 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             ev.stopPropagation();
                             const rect = dateSpan.getBoundingClientRect();
 
-                            const cleanTextForMatch = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
+                            const cleanTextForMatch = rawText.replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
                             const container = taskEl.closest(".markdown-reading-view") || doc.body;
-                            const allTasks = Array.from(container.querySelectorAll(".task-list-item"));
+                            const allTasks = Array.from(container.querySelectorAll(isTaskItem ? ".task-list-item" : "li:not(.task-list-item)"));
                             let occurrenceIndex = 0;
                             for (const t of allTasks) {
-                                const tCloned = t.cloneNode(true) as HTMLElement;
+                                const tCloned = t.cloneNode(true);
                                 tCloned.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(e => e.remove());
-                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
+                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
                                 if (tClean === cleanTextForMatch) {
                                     if (t === taskEl) break;
                                     occurrenceIndex++;
@@ -499,15 +505,24 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     const lines = fileContent.split("\n");
                                     let matchCount = 0;
                                     for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(dateStr)) {
-                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                        const lineHasDate = lines[i].includes(dateStr);
+                                        const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
+                                        const isLineList = /^\s*(?:>\s*)*[-*+]/.test(lines[i]);
+
+                                        if (lineHasDate && ((isTaskItem && isLineTask) || (!isTaskItem && isLineList && !isLineTask))) {
+                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
                                             if (lineClean === cleanTextForMatch) {
                                                 if (matchCount === occurrenceIndex) {
-                                                    if (newDate === null) {
-                                                        lines[i] = lines[i].replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
-                                                    } else {
-                                                        lines[i] = lines[i].replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
-                                                    }
+                                                    let dateOccurrence = 0;
+                                                    lines[i] = lines[i].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
+                                                        if (dateOccurrence === currentTargetIndex) {
+                                                            dateOccurrence++;
+                                                            if (newDate === null) return "";
+                                                            return m.replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/, `\uD83D\uDCC5 ${newDate}`);
+                                                        }
+                                                        dateOccurrence++;
+                                                        return m;
+                                                    });
                                                     await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
                                                     break;
                                                 }
@@ -520,12 +535,21 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         });
 
                         frag.appendChild(dateSpan);
-                        if (after) frag.appendChild(doc.createTextNode(after));
-                        textNode.parentNode?.replaceChild(frag, textNode);
-                    });
+                        
+                        const afterNode = doc.createTextNode(after);
+                        frag.appendChild(afterNode);
+                        
+                        if (textNode.parentNode) {
+                            textNode.parentNode.replaceChild(frag, textNode);
+                        }
+                        
+                        processTextNode(afterNode);
+                    };
+
+                    nodesToProcess.forEach(processTextNode);
                 }
 
-                if (!hasDateText && !hasDateAttr && !hasButton) {
+                if (isTaskItem && !hasDateText && !hasDateAttr && !hasButton) {
                     let shouldShow = false;
                     if (isSchedule) {
                         const leafContainer = taskEl.closest('.workspace-leaf');
@@ -609,20 +633,18 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             }, doc);
                         });
                         
-                        if (taskTextSpan) {
+                        const checkbox = taskEl.querySelector("input[type='checkbox']");
+                        if (checkbox && checkbox.nextSibling) {
+                            const nextNode = checkbox.nextSibling;
+                            if (nextNode.nodeType === 3 && nextNode.textContent) {
+                                nextNode.textContent = nextNode.textContent.replace(/\n$/, '');
+                            }
+                            taskEl.insertBefore(btn, nextNode.nextSibling);
+                        } else if (taskTextSpan) {
                             taskTextSpan.appendChild(btn);
                         } else {
-                            const checkbox = taskEl.querySelector("input[type='checkbox']");
-                            if (checkbox && checkbox.nextSibling) {
-                                taskEl.insertBefore(btn, checkbox.nextSibling.nextSibling);
-                            } else {
-                                const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
-                                if (childList) {
-                                    taskEl.insertBefore(btn, childList);
-                                } else {
-                                    taskEl.appendChild(btn);
-                                }
-                            }
+                            const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
+                            taskEl.insertBefore(btn, childList || null);
                         }
                     }
                 }

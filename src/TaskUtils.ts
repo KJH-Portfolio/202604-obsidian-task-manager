@@ -253,6 +253,8 @@ export class TaskUtils {
         }
         
         // issuedIds 누적 방지: 1000개 초과 시 세션 내 최소 목록 면저 지우기
+
+        // issuedIds 크기 제한: 1000개 초과 시 가장 오래된 것 삭제
         if (this.issuedIds.size >= 1000) {
             const firstKey = this.issuedIds.values().next().value;
             if (firstKey !== undefined) this.issuedIds.delete(firstKey);
@@ -271,7 +273,10 @@ export class TaskUtils {
 
     replaceSection(content: string, headerName: string, newBody: string): string {
         const range = this.getSectionRange(content, headerName) as { start: number, end: number };
-        if (!range) return content;
+        if (!range) {
+            // BUG FIX: 필수 섹션 누락 시 데이터 증발을 막기 위해 맨 밑에 강제 복구
+            return content.trimEnd() + "\n\n" + headerName + "\n" + newBody.trimEnd() + "\n";
+        }
         return content.substring(0, range.start) + headerName + "\n" + newBody.trimEnd() + "\n\n" + content.substring(range.end).trimStart();
     }
 
@@ -1032,6 +1037,16 @@ export class TaskUtils {
     async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
         const projectFiles = this.getProjectFiles();
         
+        // 수정됨: 현재 마크다운 에디터 탭에 열려있는 파일 경로들을 미리 수집 (캐시 Bypass 용도)
+        const openFilePaths = new Set<string>();
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of leaves) {
+            const leafFile = (leaf.view as any).file;
+            if (leafFile && leafFile.path) {
+                openFilePaths.add(leafFile.path);
+            }
+        }
+        
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
             try {
                 if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return null;
@@ -1041,7 +1056,11 @@ export class TaskUtils {
                 // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
                 const mtime = file.stat.mtime;
                 const todayStr = moment(todayObj).format("YYYY-MM-DD");
-                if (!overrideData[pNoteName] && this.projectResultCache.has(file.path)) {
+                
+                // 에디터에 열려있으면 미저장 내용이 있을 수 있으므로 캐시 무조건 무시 (Bypass)
+                const isOpenInEditor = openFilePaths.has(file.path);
+                
+                if (!overrideData[pNoteName] && !isOpenInEditor && this.projectResultCache.has(file.path)) {
                     const cache = this.projectResultCache.get(file.path)!;
                     if (cache.mtime === mtime && cache.todayStr === todayStr && cache.isReset === isReset) {
                         return cache.result;
@@ -1051,7 +1070,6 @@ export class TaskUtils {
                 // --- 기한(Timeline) 필터링 ---
                 // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
                 let pContent = await this.fileManager.getActiveViewOrFileText(file);
-                const todayStr = moment(todayObj).format("YYYY-MM-DD");
                 const timeline = this.parseProjectTimeline(pContent);
                 
                 // 현재 날짜가 기한을 벗어난 프로젝트는 제외
