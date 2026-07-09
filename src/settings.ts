@@ -8,6 +8,7 @@ export interface PluginSettings {
     archiveDirectory: string;
     fleetingMemoPath: string;
     templatesDirectory: string;
+    syncLogPath: string;
     midnightOffsetHour: number;
     syncOnStartup: boolean;
     customTemplates: {
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     archiveDirectory: "4. Archive/98.Schedule",
     fleetingMemoPath: "5. Zettelkasten/01.Fleeting/임시 메모.md",
     templatesDirectory: "3. Resource/01.Templates",
+    syncLogPath: "0. Inbox/자동화_노트.md",
     midnightOffsetHour: 4,
     syncOnStartup: false,
     customTemplates: {
@@ -129,6 +131,19 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
                 new FolderSuggest(this.app, text.inputEl);
+            });
+
+        new Setting(containerEl)
+            .setName("동기화 로그 파일 경로")
+            .setDesc("동기화 실행 시 변경 이력이 기록될 마크다운 파일 경로를 지정하세요. (BUG-H: 하드코딩 제거)")
+            .addText(text => {
+                text.setPlaceholder("0. Inbox/자동화_노트.md")
+                    .setValue(this.plugin.settings.syncLogPath || "0. Inbox/자동화_노트.md")
+                    .onChange(async (value) => {
+                        this.plugin.settings.syncLogPath = value.trim();
+                        await this.plugin.saveSettings();
+                    });
+                new FileSuggest(this.app, text.inputEl);
             });
 
         new Setting(containerEl)

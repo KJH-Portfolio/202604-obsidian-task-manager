@@ -136,11 +136,12 @@ export class ResetManager {
                 try {
                     this.utils.showLoadingOverlay("⏳ 일간 마감 처리 중...");
                     new Notice("⏳ 일간 마감 및 리셋 시작...");
-                    let content = this.utils.preprocessContent(originalContent);
+                    // BUG-G: 외부 스코프의 content(dailyMeta 파싱용)와 섀도잉 방지
+                    let resetContent = this.utils.preprocessContent(originalContent);
 
                     // --- [Step 1] 미니 테이블 데이터 추출 및 체크리스트 본 표 이관 ---
                     const miniTableRegex = /(\|.*\|\n\|(?:\s*[:-]+[ -]*\|)+\n)([^\n]+)/;
-                    const miniMatch = content.match(miniTableRegex);
+                    const miniMatch = resetContent.match(miniTableRegex);
                     
                     if (miniMatch) {
                         const fullMatch = miniMatch[0];
@@ -163,11 +164,11 @@ export class ResetManager {
                         const todayDateNum = now.date();
                         const dateStr = currentDateStr || todayDateNum.toString();
                         
-                        const chkRange = this.utils.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
+                        const chkRange = this.utils.getSectionRange(resetContent, "# 체크리스트") as { start: number, end: number };
                         if (chkRange) {
-                            let beforeChk = content.substring(0, chkRange.start);
-                            let chkSection = content.substring(chkRange.start, chkRange.end);
-                            const afterChk = content.substring(chkRange.end);
+                            let beforeChk = resetContent.substring(0, chkRange.start);
+                            let chkSection = resetContent.substring(chkRange.start, chkRange.end);
+                            const afterChk = resetContent.substring(chkRange.end);
                             
                             // [추가] 하단 마스터 표의 헤더를 읽어와 동적으로 데이터 행 생성
                             const botTableRegex = /(\|.*\|\n\|(?:\s*[:-]+[ -]*\|)+\n)/;
@@ -198,12 +199,12 @@ export class ResetManager {
                             
                             beforeChk = beforeChk.replace(fullMatch, headerPart + newMiniTableRow);
                             
-                            content = beforeChk + chkSection + afterChk;
+                            resetContent = beforeChk + chkSection + afterChk;
                         }
                     }
 
                     // --- [Step 2] 프로젝트 파일 동기화 (# Project 리셋 모드) ---
-                    const dailyMap = this.utils.parseDailyProjectMap(content);
+                    const dailyMap = this.utils.parseDailyProjectMap(resetContent);
                     const allFiles = this.utils.getProjectFiles();
                     const filesForCollisionCheck = [...allFiles, dailyFile];
 
@@ -218,17 +219,17 @@ export class ResetManager {
                         const overrideData = await this.utils.syncDailyToProjects(this.app, dailyMap, allFiles, filesForCollisionCheck, true); // isReset: true
                         const newProjSectionText = this.utils.renderProjectDashboardSection(await this.utils.getAllFullProjectResults(todayObj, overrideData, true));
                         if (newProjSectionText) {
-                            content = this.utils.replaceSection(content, "# Project", newProjSectionText);
+                            resetContent = this.utils.replaceSection(resetContent, "# Project", newProjSectionText);
                         }
 
                     }
 
                     // --- [Step 3] 할 일 리셋 및 정렬 ---
-                    content = this.utils.processSectionLogic(content, "# Todo", todayObj, true, true);
-                    content = this.utils.formatChecklistTable(content);
+                    resetContent = this.utils.processSectionLogic(resetContent, "# Todo", todayObj, true, true);
+                    resetContent = this.utils.formatChecklistTable(resetContent);
 
                     // --- [Step 4] 루틴 체크박스 리셋 및 Step(목표) 업데이트 ---
-                    let finalL: string[] = [], allL = content.split('\n'), inRoutine = false, routineType = "";
+                    let finalL: string[] = [], allL = resetContent.split('\n'), inRoutine = false, routineType = "";
                     for (let i = 0; i < allL.length; i++) {
                         let l = allL[i];
                         if (/^>\s*\[!routine\]/i.test(l)) { inRoutine = true; routineType = "callout"; }

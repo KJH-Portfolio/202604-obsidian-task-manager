@@ -916,7 +916,7 @@ export class TaskUtils {
         const lines = content.substring(chkRange.start, chkRange.end).split('\n');
         for (let line of lines) {
             if (line.trim().startsWith("|")) tableLines.push(line);
-            else if (tableLines.length > 0 && line.trim() !== "" && !line.includes("# 체크리스트")) break; 
+            else if (tableLines.length > 0 && line.trim() !== "" && !line.trim().startsWith('#')) break; 
         }
         return tableLines.join('\n');
     }
@@ -934,7 +934,7 @@ export class TaskUtils {
             if (lines[i].trim().startsWith("|")) {
                 if (tableStartIndex === -1) tableStartIndex = i;
                 tableEndIndex = i;
-            } else if (tableStartIndex !== -1 && lines[i].trim() !== "" && !lines[i].includes("# 체크리스트")) {
+            } else if (tableStartIndex !== -1 && lines[i].trim() !== "" && !lines[i].trim().startsWith('#')) {
                 break;
             }
         }

@@ -281,14 +281,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const view = EditorView.findFromDOM(cmEditorEl as HTMLElement);
             if (!view) return;
 
-            let pos: number | null = null;
-            const cmLineEl = target.closest(".cm-line");
-            if (cmLineEl) {
-                pos = view.posAtDOM(cmLineEl);
-            }
-            if (pos === null || pos < 0) {
-                pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false) ?? view.posAtDOM(target);
-            }
+            // posAtDOM(cmLineEl)은 콜아웃 컨텍스트에서 잘못된 위치를 반환하므로
+            // 마우스 좌표 기반을 primary로, target DOM 기반을 fallback으로 사용
+            const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false)
+                     ?? view.posAtDOM(target);
             if (pos === null || pos < 0) return;
 
             const line = view.state.doc.lineAt(pos);

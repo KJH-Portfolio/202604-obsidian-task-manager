@@ -25,7 +25,7 @@ export class Synchronizer {
         const MAX_LOG_ENTRIES = 10;
 
         try {
-            const inboxPath = "0. Inbox/자동화_노트.md";
+            const inboxPath = this.settings.syncLogPath || "0. Inbox/자동화_노트.md";
             const nowStr = this.dateManager.getAdjustedNow().format("YYYY-MM-DD HH:mm:ss");
             const newEntry = `## [${nowStr}] ${actionName}\n` +
                              `- 대상 파일: [[${file.basename}]]\n` +
@@ -40,8 +40,8 @@ export class Synchronizer {
                 const parts = raw.split(/\n(?=## \[)/);
                 sections = parts.filter(p => p.trim().startsWith("## ["));
             } else {
-                const folderPath = "0. Inbox";
-                if (!this.app.vault.getAbstractFileByPath(folderPath)) {
+                const folderPath = inboxPath.includes("/") ? inboxPath.substring(0, inboxPath.lastIndexOf("/")) : "";
+                if (folderPath && !this.app.vault.getAbstractFileByPath(folderPath)) {
                     await this.app.vault.createFolder(folderPath);
                 }
             }
