@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { DailyData, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
-import { App, TFile, TFolder } from "obsidian";
+import { App, TFile, TFolder, MarkdownView } from "obsidian";
 import { moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
@@ -1041,7 +1041,7 @@ export class TaskUtils {
         const openFilePaths = new Set<string>();
         const leaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of leaves) {
-            const leafFile = (leaf.view as any).file;
+            const leafFile = (leaf.view as MarkdownView).file;
             if (leafFile && leafFile.path) {
                 openFilePaths.add(leafFile.path);
             }
