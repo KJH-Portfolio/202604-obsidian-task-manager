@@ -226,43 +226,6 @@ export class Synchronizer {
                     }
                 });
 
-                // 신규 태스크 계획에 추가
-                const newExecTasks = execTasks.filter(et => et.id && !et.deleted && !originalIds.has(et.id));
-                if (newExecTasks.length > 0) {
-                    newExecTasks.forEach(net => {
-                        let anchorId: string | null = null;
-                        const idx = execTasks.indexOf(net);
-                        for (let j = idx - 1; j >= 0; j--) {
-                            if (execTasks[j].id) { anchorId = execTasks[j].id; break; }
-                        }
-
-                        let inserted = false;
-                        if (anchorId) {
-                            let anchorIdx = -1;
-                            for (let k = newPlanLines.length - 1; k >= 0; k--) {
-                                if (newPlanLines[k].includes(`^${anchorId}`)) { anchorIdx = k; break; }
-                            }
-                            if (anchorIdx !== -1) {
-                                const parentIndentLevel = (newPlanLines[anchorIdx].match(REGEX.INDENT) || [""])[0].length;
-                                let insertAt = anchorIdx + 1;
-                                while (insertAt < newPlanLines.length) {
-                                    let nextL = newPlanLines[insertAt];
-                                    const nextIndent = nextL.trim() === "" ? 999 : (nextL.match(REGEX.INDENT) || [""])[0].length;
-                                    if (nextIndent > parentIndentLevel) insertAt++;
-                                    else break;
-                                }
-                                newPlanLines.splice(insertAt, 0, net.line);
-                                inserted = true;
-                            }
-                        }
-                        if (!inserted) {
-                            newPlanLines.push(net.line);
-                        }
-                        planTasksTotal++;
-                        if (REGEX.MATCH_TASK_COMPLETED.test(net.line)) planTasksDone++;
-                    });
-                }
-
                 const statBar = this.utils.renderProgressBar(planTasksDone, planTasksTotal, noteName);
                 const newPlanBody = "> " + statBar + "\n" + newPlanLines.join("\n");
                 

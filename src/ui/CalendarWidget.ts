@@ -312,6 +312,10 @@ class TodayEmojiWidget extends WidgetType {
         return true;
     }
 
+    ignoreEvent() {
+        return true;
+    }
+
     toDOM() {
         const view = this.getView();
         const doc = view?.dom.ownerDocument || activeDocument;
@@ -319,6 +323,7 @@ class TodayEmojiWidget extends WidgetType {
         span.className = "myworld-today-btn";
         span.textContent = "📅";
         span.title = "날짜 지정";
+        span.contentEditable = "false";
 
         span.addEventListener("mousedown", (e) => {
             e.preventDefault();

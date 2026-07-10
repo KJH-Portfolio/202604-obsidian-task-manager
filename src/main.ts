@@ -274,10 +274,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const isProject = targetFile.path.startsWith(this.settings.projectDirectory);
             if (!isSchedule && !isProject) return;
 
-            // 옵시디언 코어 및 타 플러그인 개입 원천 차단
-            e.preventDefault();
-            e.stopImmediatePropagation();
-
             const view = EditorView.findFromDOM(cmEditorEl as HTMLElement);
             if (!view) return;
 
@@ -287,9 +283,36 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                      ?? view.posAtDOM(target);
             if (pos === null || pos < 0) return;
 
-            const line = view.state.doc.lineAt(pos);
-            const markerMatch = line.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+            let line = view.state.doc.lineAt(pos);
+            let markerMatch = line.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+            
+            // 콜아웃(Live Preview Widget) 내부 클릭 시 pos가 콜아웃 시작점으로 잡혀서 매칭 실패하는 경우 대비 폴백
+            if (!markerMatch) {
+                const taskEl = target.closest(".task-list-item") as HTMLElement | null;
+                if (taskEl) {
+                    const clonedForMatch = taskEl.cloneNode(true) as HTMLElement;
+                    clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
+                    const cleanText = (clonedForMatch.textContent?.trim() || "").replace(/📅.*/, "").trim();
+                    
+                    if (cleanText) {
+                        for (let i = line.number; i <= Math.min(line.number + 50, view.state.doc.lines); i++) {
+                            const l = view.state.doc.line(i);
+                            const m = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+                            if (m && l.text.includes(cleanText)) {
+                                line = l;
+                                markerMatch = m;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (!markerMatch) return;
+
+            // 옵시디언 코어 및 타 플러그인 개입 원천 차단 (우리가 직접 처리할 수 있는 경우에만 차단)
+            e.preventDefault();
+            e.stopImmediatePropagation();
 
             const nextMarker = /^[xX]$/.test(markerMatch[2]) ? " " : "x";
             const markerStart = line.from + markerMatch[1].length;
@@ -548,17 +571,20 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 if (isTaskItem && !hasDateText && !hasDateAttr && !hasButton) {
                     let shouldShow = false;
                     if (isSchedule) {
-                        const leafContainer = taskEl.closest('.workspace-leaf');
-                        if (!leafContainer) return;
-                        const allHeaders = Array.from(leafContainer.querySelectorAll("h1, .HyperMD-header-1"));
-                        const precedingHeaders = allHeaders.filter(h => {
-                            return (h.compareDocumentPosition(taskEl) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-                        });
-                        if (precedingHeaders.length > 0) {
-                            const targetH = precedingHeaders[precedingHeaders.length - 1];
-                            let headerText = targetH.textContent?.trim().toLowerCase() || "";
-                            headerText = headerText.replace(/^#\s*/, "").trim();
-                            if (headerText === "todo" || headerText === "project") shouldShow = true;
+                        // DOM 렌더링 순서에 의존하는 방식 대신 소스 텍스트 기반으로 상위 헤더 탐색
+                        // → 파일 재저장 후 re-render 시에도 안정적으로 동작
+                        const sectionInfo = context.getSectionInfo(element);
+                        if (sectionInfo) {
+                            const sourceLines = sectionInfo.text.split('\n');
+                            let foundHeader = '';
+                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                const m = sourceLines[i]?.match(/^#\s+(.+)$/);
+                                if (m) {
+                                    foundHeader = m[1].trim().toLowerCase();
+                                    break;
+                                }
+                            }
+                            if (foundHeader === 'todo' || foundHeader === 'project') shouldShow = true;
                         }
                     } else if (isProject) {
                         shouldShow = true;
