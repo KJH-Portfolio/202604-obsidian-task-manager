@@ -615,44 +615,40 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 }
                             }
 
+                            // 팝업 없이 오늘 날짜 즉시 삽입 (Live Preview의 TodayEmojiWidget과 동일한 동작)
                             const todayStr = window.moment().format("YYYY-MM-DD");
-                            const rect = btn.getBoundingClientRect();
+                            this.enqueueFileWrite(clickFile.path, async () => {
+                                const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                const fileContent = this.utils.preprocessContent(rawContent);
+                                const lines = fileContent.split("\n");
+                                let modified = false;
+                                let matchCount = 0;
 
-                            buildCalendarPopup(todayStr, rect.left, rect.bottom + 5, (newDate) => {
-                                if (!newDate) return;
-                                this.enqueueFileWrite(clickFile.path, async () => {
-                                    const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                    const fileContent = this.utils.preprocessContent(rawContent);
-                                    const lines = fileContent.split("\n");
-                                    let modified = false;
-                                    let matchCount = 0;
-
-                                    for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
-                                            if (lineClean === cleanText) {
-                                                if (matchCount === occurrenceIndex) {
-                                                    const text = lines[i];
-                                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                                    if (idMatch) {
-                                                        lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${newDate}` + idMatch[0];
-                                                    } else {
-                                                        lines[i] = text + ` 📅 ${newDate}`;
-                                                    }
-                                                    modified = true;
-                                                    break;
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                        let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                        if (lineClean === cleanText) {
+                                            if (matchCount === occurrenceIndex) {
+                                                const text = lines[i];
+                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                                if (idMatch) {
+                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${todayStr}` + idMatch[0];
+                                                } else {
+                                                    lines[i] = text + ` 📅 ${todayStr}`;
                                                 }
-                                                matchCount++;
+                                                modified = true;
+                                                break;
                                             }
+                                            matchCount++;
                                         }
                                     }
+                                }
 
-                                    if (modified) {
-                                        await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
-                                        btn.remove();
-                                    }
-                                });
-                            }, doc);
+                                if (modified) {
+                                    await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                    btn.remove();
+                                }
+                            });
                         });
                         
                         const checkbox = taskEl.querySelector("input[type='checkbox']");

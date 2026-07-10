@@ -266,7 +266,7 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
             // 날짜 클릭 처리
             if (target && target.classList.contains("myworld-date-clickable-text")) {
                 const pos = view.posAtDOM(target);
-                                const { isMatch, dateStr, lineNo, exactFrom, exactTo } = isDateClickableRange(view, pos);
+                const { isMatch, dateStr, lineNo: _lineNo, exactFrom, exactTo } = isDateClickableRange(view, pos);
                 if (isMatch) {
                     e.preventDefault();
                     const rect = target.getBoundingClientRect();
