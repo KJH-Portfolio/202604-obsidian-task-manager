@@ -233,32 +233,8 @@ export class Synchronizer {
                 lines = updatedContent.split("\n");
             }
 
-            // 실행 섹션 내 완료 항목(및 하위 자식) 삭제
-            let execBuf: string[] = [], cleanedLines: string[] = [], inCleanExSec = false;
-            for (let i = 0; i < lines.length; i++) {
-                const cl = lines[i];
-                if (REGEX.TOP_HEADING_START.test(cl)) {
-                    const wasExec = inCleanExSec;
-                    inCleanExSec = REGEX.EXEC_HEADER.test(cl.trim());
-                    if (wasExec && !inCleanExSec && execBuf.length > 0) {
-                        cleanedLines.push(...this.utils.filterResetTasks(execBuf, true));
-                        execBuf = [];
-                    }
-                    cleanedLines.push(cl);
-                    continue;
-                }
-                if (inCleanExSec) {
-                    execBuf.push(cl);
-                } else {
-                    cleanedLines.push(cl);
-                }
-            }
-            if (execBuf.length > 0) { 
-                cleanedLines.push(...this.utils.filterResetTasks(execBuf, true)); 
-            }
-
-            // 프로젝트 노트 최종 저장
-            const newActiveContent = cleanedLines.join("\n");
+            // 프로젝트 노트 최종 저장 (완료 항목 삭제는 일일 리셋에서만 수행)
+            const newActiveContent = lines.join("\n");
             if (originalActive !== newActiveContent) {
                 await this.logSyncChange(projectFile, "개별 프로젝트 ➔ 스케줄 반영 (프로젝트 노트 갱신)", originalActive, newActiveContent);
             }

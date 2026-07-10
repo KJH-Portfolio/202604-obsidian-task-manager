@@ -9,6 +9,7 @@ import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
+import { REGEX } from "./Constants";
 // 1. 일간 마감 입력 팝업 모달 정의
 export class DailyResetModal extends Modal {
     review: string;
@@ -222,6 +223,40 @@ export class ResetManager {
                             resetContent = this.utils.replaceSection(resetContent, "# Project", newProjSectionText);
                         }
 
+                    }
+
+                    // --- [Step 2-1] 프로젝트 파일 실행 섹션 완료 항목 정리 ---
+                    for (const projFile of allFiles) {
+                        const projContent = await this.fileManager.getActiveViewOrFileText(projFile);
+                        const projLines = projContent.split("\n");
+
+                        let execBuf: string[] = [], cleanedProjLines: string[] = [], inExecSec = false;
+                        for (let i = 0; i < projLines.length; i++) {
+                            const cl = projLines[i];
+                            if (REGEX.TOP_HEADING_START.test(cl)) {
+                                const wasExec = inExecSec;
+                                inExecSec = REGEX.EXEC_HEADER.test(cl.trim());
+                                if (wasExec && !inExecSec && execBuf.length > 0) {
+                                    cleanedProjLines.push(...this.utils.filterResetTasks(execBuf, true));
+                                    execBuf = [];
+                                }
+                                cleanedProjLines.push(cl);
+                                continue;
+                            }
+                            if (inExecSec) {
+                                execBuf.push(cl);
+                            } else {
+                                cleanedProjLines.push(cl);
+                            }
+                        }
+                        if (execBuf.length > 0) {
+                            cleanedProjLines.push(...this.utils.filterResetTasks(execBuf, true));
+                        }
+
+                        const newProjContent = cleanedProjLines.join("\n");
+                        if (projContent !== newProjContent) {
+                            await this.fileManager.pluginWrite(projFile, newProjContent);
+                        }
                     }
 
                     // --- [Step 3] 할 일 리셋 및 정렬 ---

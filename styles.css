@@ -157,7 +157,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .cm-line.HyperMD-task-line[data-task="x"],
 .cm-line.HyperMD-task-line[data-task="X"] {
     background-image: none;
-    opacity: 0.4;
+    color: var(--text-muted);
 }
 
 /* ========================================================
@@ -215,7 +215,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .callout[data-callout="routine"] li.is-checked:not([data-task="-"]):not([data-task="/"]),
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
-    opacity: 0.4;
+    color: var(--text-muted);
     background-color: var(--background-primary);
     text-decoration: line-through;
 }
