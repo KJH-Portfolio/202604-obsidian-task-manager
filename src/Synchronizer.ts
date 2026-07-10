@@ -251,7 +251,7 @@ export class Synchronizer {
                 overrideData[noteName] = { 
                     execTasks: (() => {
                         let buf: string[] = [], inEx = false;
-                        for (const cl of cleanedLines) {
+                        for (const cl of lines) {
                             if (REGEX.TOP_HEADING_START.test(cl)) { 
                                 inEx = REGEX.EXEC_HEADER.test(cl.trim()); 
                                 continue; 
