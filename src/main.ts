@@ -702,7 +702,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             })
         );
 
-
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => {
                 const activeFile = this.app.workspace.getActiveFile();

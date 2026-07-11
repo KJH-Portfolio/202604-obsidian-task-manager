@@ -102,6 +102,13 @@ export class FileManager {
             if (changes.length > 0) {
                 editor.transaction({ changes });
             }
+
+            // BUG FIX: editor.transaction()은 vault.modify 이벤트를 발생시키지 않는다.
+            // 따라서 pluginWritingFiles에 해시가 남아있으면, 이후 사용자 편집 시 vault.modify가
+            // 발생했을 때 비동기 해시비교를 거치게 되어 탭 전환 타이밍에 따라 modifiedFiles에
+            // 파일이 추가되기 전에 active-leaf-change가 먼저 발생하는 경쟁 조건(Race Condition)이 생긴다.
+            // editor.transaction 경로에서는 vault.modify가 없으므로 여기서 즉시 정리한다.
+            this.pluginWritingFiles.delete(file.path);
         } else {
             // 에디터에 열려있지 않거나 읽기 모드라면 조용히 백그라운드 실제 파일 수정
             await this.app.vault.modify(file, newContent);
