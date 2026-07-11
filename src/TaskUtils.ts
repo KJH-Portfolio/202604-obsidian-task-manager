@@ -1115,8 +1115,6 @@ export class TaskUtils {
                     }
                     return true;
                 });
-
-                if (!pExecTasks.some(t => REGEX.MATCH_TASK.test(t))) return null;
                 
                 let pMinDiff = Infinity, pSortPri = 99;
                 const pProcessed = this.applyMarkersToLines(pExecTasks.filter(t => t), todayObj);
