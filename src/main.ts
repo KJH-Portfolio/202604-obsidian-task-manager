@@ -31,13 +31,13 @@ class QuickCaptureModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        
+
         // Add padding and spacing to the entire content
         contentEl.addClass("myworld-padding-20-10");
-        
+
         // Header with simple description and date picker
         const headerContainer = contentEl.createDiv({ cls: "myworld-flex-center-between-mb20" });
-        
+
         // Left part: Title and Subtitle
         const leftGroup = headerContainer.createDiv({ cls: "myworld-flex-baseline-gap10" });
         const title = leftGroup.createEl("h3", { text: "✏️ 할 일 등록" });
@@ -46,7 +46,7 @@ class QuickCaptureModal extends Modal {
 
         // Right part: Date Picker & Tomorrow Button
         const rightGroup = headerContainer.createDiv({ cls: "myworld-flex-center-gap8" });
-        
+
         const dateInput = rightGroup.createEl("input", { type: "date" });
         dateInput.value = this.selectedDate;
         dateInput.addClass("myworld-p-4");
@@ -59,7 +59,7 @@ class QuickCaptureModal extends Modal {
         tomorrowBtn.addClass("myworld-p-4-10");
         tomorrowBtn.addClass("myworld-text-10em");
         tomorrowBtn.addClass("myworld-shadow-none");
-        
+
         dateInput.addEventListener("change", (e) => {
             this.selectedDate = (e.target as HTMLInputElement).value;
         });
@@ -75,7 +75,7 @@ class QuickCaptureModal extends Modal {
         const inputEl = inputContainer.createEl("input", { type: "text", placeholder: "예: 물 2L 마시기" });
         inputEl.addClass("myworld-w-100");
         inputEl.addClass("myworld-p-10");
-        
+
         inputEl.addEventListener("input", (e) => {
             this.content = (e.target as HTMLInputElement).value;
         });
@@ -172,7 +172,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     synchronizer!: Synchronizer;
     resetManager!: ResetManager;
     templateHelper!: TemplateHelper;
-    
+
     modifiedFiles: Set<string> = new Set<string>();
     lastActiveFile: TFile | null = null;
     // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
@@ -201,7 +201,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
     private async triggerAutoSyncForFile(fileToSync: TFile, force: boolean = false) {
         if (!force && !this.modifiedFiles.has(fileToSync.path)) return;
-        
+
         const path = fileToSync.path;
         try {
             if (path === this.settings.mainSchedulePath) {
@@ -285,7 +285,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
             let line = view.state.doc.lineAt(pos);
             let markerMatch = line.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
-            
+
             // 콜아웃(Live Preview Widget) 내부 클릭 시 pos가 콜아웃 시작점으로 잡혀서 매칭 실패하는 경우 대비 폴백
             if (!markerMatch) {
                 const taskEl = target.closest(".task-list-item") as HTMLElement | null;
@@ -293,7 +293,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     const clonedForMatch = taskEl.cloneNode(true) as HTMLElement;
                     clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
                     const cleanText = (clonedForMatch.textContent?.trim() || "").replace(/📅.*/, "").trim();
-                    
+
                     if (cleanText) {
                         for (let i = line.number; i <= Math.min(line.number + 50, view.state.doc.lines); i++) {
                             const l = view.state.doc.line(i);
@@ -316,10 +316,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
             const nextMarker = /^[xX]$/.test(markerMatch[2]) ? " " : "x";
             const markerStart = line.from + markerMatch[1].length;
-            
+
             view.dispatch({ changes: { from: markerStart, to: markerStart + 1, insert: nextMarker } });
 
-            // Tasks 플러그인의 Dirty Workaround 방식: 
+            // Tasks 플러그인의 Dirty Workaround 방식:
             // 옵시디언이 강제로 상태를 되돌리는 것을 막기 위해 명시적으로 상태 재지정
             const desiredChecked = nextMarker !== " ";
             window.setTimeout(() => {
@@ -447,7 +447,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
                 const rawText = cloned.textContent?.trim() || "";
                 const rawHtml = cloned.innerHTML;
-                
+
                 const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText) || /\d{4}-\d{2}-\d{2}/.test(rawHtml);
                 const hasDateAttr = isTaskItem ? Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value)) : false;
 
@@ -477,7 +477,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         }
                     }
                                         let globalDateIndex = 0;
-                    
+
                     const processTextNode = (textNode) => {
                         const text = textNode.textContent || "";
                         const match = text.match(/(\uD83D\uDCC5\s*)(\d{4}-\d{2}-\d{2})/);
@@ -554,14 +554,14 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         });
 
                         frag.appendChild(dateSpan);
-                        
+
                         const afterNode = doc.createTextNode(after);
                         frag.appendChild(afterNode);
-                        
+
                         if (textNode.parentNode) {
                             textNode.parentNode.replaceChild(frag, textNode);
                         }
-                        
+
                         processTextNode(afterNode);
                     };
 
@@ -650,7 +650,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 }
                             });
                         });
-                        
+
                         const checkbox = taskEl.querySelector("input[type='checkbox']");
                         if (checkbox && checkbox.nextSibling) {
                             const nextNode = checkbox.nextSibling;
@@ -705,7 +705,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => {
                 const activeFile = this.app.workspace.getActiveFile();
-                
+
                 // 만약 이전 활성 파일이 있었고, 그것이 현재 활성 파일과 다르고, 수정된 목록에 있다면
                 if (this.lastActiveFile && (!activeFile || this.lastActiveFile.path !== activeFile.path)) {
                     if (this.modifiedFiles.has(this.lastActiveFile.path)) {
@@ -813,16 +813,16 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 // # Todo 섹션 하단의 #### 할 일 아래에 추가 시도
                                 const todoHeader = "#### 할 일";
                                 const todoRange = this.utils.getSectionRange(text, todoHeader, 4);
-                                
+
                                 const newTaskLine = `- [ ] ${content}`;
-                                
+
                                 if (todoRange) {
                                     // #### 할 일 바로 아랫줄에 추가
                                     const startIdx = (todoRange as { start: number; end: number }).start;
-                                    
+
                                     const before = text.substring(0, startIdx + todoHeader.length);
                                     const after = text.substring(startIdx + todoHeader.length);
-                                    
+
                                     text = before + "\n" + newTaskLine + after;
                                 } else {
                                     // # Todo 섹션 아래에 추가
@@ -832,19 +832,19 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                         const startIdx = (mainTodoRange as { start: number; end: number }).start;
                                         const before = text.substring(0, startIdx + mainTodoHeader.length);
                                         const after = text.substring(startIdx + mainTodoHeader.length);
-                                        
+
                                         text = before + "\n" + newTaskLine + after;
                                     } else {
                                         // 섹션이 전혀 없으면 파일 끝에 추가
                                         text = text.trimEnd() + "\n\n" + newTaskLine;
                                     }
                                 }
-                                
+
                                 // 추가 후 자동 정렬 및 디데이 마킹 프로세스 수행
 
                                 const todayObj = this.dateManager.getTodayStart();
                                 text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
-                                
+
                                 await this.fileManager.saveIfChanged(scheduleFile, original, text);
                                 new Notice(`✅ 할 일이 메인 스케줄에 추가되었습니다: "${content}"`);
                             } catch (err) {
@@ -953,7 +953,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         try {
             const projectDir = this.settings.projectDirectory;
             await this.utils.ensureFolder(projectDir);
-            
+
             const projectFilePath = `${projectDir}/${projectName}.md`;
             const existing = this.app.vault.getAbstractFileByPath(projectFilePath);
             if (existing) {
@@ -974,13 +974,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
 # 실행
-- 
+-
 # 개요
-- 기한 : 
-- 목표 : 
+- 기한 :
+- 목표 :
 # 계획
 > **진행도**: **🚨 작성 필요!**
-- 
+-
 # 세부 사항
 `;
                 }
@@ -1013,7 +1013,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const parts = schedulePath.split("/");
             parts.pop();
             const folderPath = parts.join("/");
-            
+
             await this.utils.ensureFolder(folderPath);
 
             const existingFile = this.app.vault.getAbstractFileByPath(schedulePath);
@@ -1034,14 +1034,14 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     for (let i = 1; i <= 31; i++) {
                         checklistTable += `|  ${i.toString().padEnd(2, ' ')}  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |\n`;
                     }
-                    
+
                     templateText = `---
 작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 cssclasses:
   - inline-routine
 ---
-- 
+-
 <div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; justify-content: center;">
   <a href="obsidian://advanced-uri?commandid=myworld-task-manager:quick-capture" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
     <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #a29bfe;">✏️</div>
@@ -1138,7 +1138,7 @@ ${checklistTable}
             const parts = memoPath.split("/");
             parts.pop();
             const folderPath = parts.join("/");
-            
+
             // 폴더가 존재하지 않는다면 자동 생성
             await this.utils.ensureFolder(folderPath);
 
@@ -1175,7 +1175,7 @@ ${checklistTable}
 
     async saveSettings() {
         await this.saveData(this.settings);
-        
+
         // 의존성 모듈의 설정 객체 갱신
         if (this.utils) this.utils.settings = this.settings;
         if (this.synchronizer) this.synchronizer.settings = this.settings;

@@ -35,7 +35,7 @@ export class DailyResetModal extends Modal {
         const reviewLabel = reviewHeader.createEl("h4", { text: "오늘의 회고" });
         reviewLabel.addClass("myworld-margin-0");
         reviewHeader.createEl("span", { text: "오늘 하루의 생각이나 소회를 기입하세요.", cls: "myworld-text-muted-sm" });
-        
+
         const reviewInputEl = reviewContainer.createEl("textarea", { attr: { placeholder: "여기에 오늘의 회고를 작성하세요..." } });
         reviewInputEl.value = this.review;
         reviewInputEl.addClass("myworld-w-100");
@@ -55,7 +55,7 @@ export class DailyResetModal extends Modal {
         const stepLabel = stepHeader.createEl("h4", { text: "내일의 Step" });
         stepLabel.addClass("myworld-margin-0");
         stepHeader.createEl("span", { text: "내일 실행할 핵심 디데이 목표를 기입하세요.", cls: "myworld-text-muted-sm" });
-        
+
         const stepInputEl = stepContainer.createEl("input", { type: "text", attr: { placeholder: "예: 계획 따라 움직이기 등..." } });
         stepInputEl.value = this.step;
         stepInputEl.addClass("myworld-w-100");
@@ -66,7 +66,7 @@ export class DailyResetModal extends Modal {
         stepInputEl.addEventListener("input", (e) => {
             this.step = (e.target as HTMLInputElement).value;
         });
-        
+
         const submitAction = () => {
             this.close();
             void this.onSubmit(this.review, this.step);
@@ -87,7 +87,7 @@ export class DailyResetModal extends Modal {
         btn.addClass("myworld-p-10-30");
         btn.addClass("myworld-text-1em");
         btn.addEventListener("click", submitAction);
-        
+
         // Focus review input automatically
         window.setTimeout(() => reviewInputEl.focus(), 50);
     }
@@ -117,16 +117,16 @@ export class ResetManager {
     async runDailyReset(dailyFile: TFile): Promise<void> {
         try {
             new Notice("⏳ 일간 마감 준비 중...");
-            
+
             // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
             const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
-            
+
             let content = this.utils.preprocessContent(originalContent);
             const now = this.utils.getAdjustedNow(); // 설정된 자정 보정 적용
-            
+
             // 리셋 기준일을 내일 아침으로 설정하기 위해 하루 더함
             const todayObj = now.clone().add(1, 'days').startOf('day').toDate();
-            
+
             // 기존 오늘의 Step 및 회고 추출
             const dailyMeta = this.utils.extractDailyMetadata(content);
             const defaultReview = dailyMeta.review === "미작성" ? "" : dailyMeta.review;
@@ -143,43 +143,43 @@ export class ResetManager {
                     // --- [Step 1] 미니 테이블 데이터 추출 및 체크리스트 본 표 이관 ---
                     const miniTableRegex = /(\|.*\|\n\|(?:\s*[:-]+[ -]*\|)+\n)([^\n]+)/;
                     const miniMatch = resetContent.match(miniTableRegex);
-                    
+
                     if (miniMatch) {
                         const fullMatch = miniMatch[0];
                         const headerPart = miniMatch[1];
                         const dataLine = miniMatch[2];
-                        
+
                         // [추가] 상단 미니 표의 헤더와 데이터 매핑
                         const topHeaderLine = headerPart.split('\n')[0];
                         const topHeaders = topHeaderLine.trim().replace(/^\||\|$/g, '').split('|').map(s => s.trim());
-                        
+
                         const innerData = dataLine.trim().replace(/^\||\|$/g, '');
                         const rowCols = innerData.split('|');
-                        
+
                         const topDataMap = new Map<string, string>();
                         topHeaders.forEach((h, i) => {
                             topDataMap.set(h, rowCols[i] || '      ');
                         });
-                        
+
                         const currentDateStr = (rowCols[0] || "").trim();
                         const todayDateNum = now.date();
                         const dateStr = currentDateStr || todayDateNum.toString();
-                        
+
                         const chkRange = this.utils.getSectionRange(resetContent, "# 체크리스트") as { start: number, end: number };
                         if (chkRange) {
                             let beforeChk = resetContent.substring(0, chkRange.start);
                             let chkSection = resetContent.substring(chkRange.start, chkRange.end);
                             const afterChk = resetContent.substring(chkRange.end);
-                            
+
                             // [추가] 하단 마스터 표의 헤더를 읽어와 동적으로 데이터 행 생성
                             const botTableRegex = /(\|.*\|\n\|(?:\s*[:-]+[ -]*\|)+\n)/;
                             const botMatch = chkSection.match(botTableRegex);
                             let newChecklistRow = "";
-                            
+
                             if (botMatch) {
                                 const botHeaderLine = botMatch[1].split('\n')[0];
                                 const botHeaders = botHeaderLine.trim().replace(/^\||\|$/g, '').split('|').map(s => s.trim());
-                                
+
                                 const botRowCols = botHeaders.map(h => {
                                     if (h === '날짜' || h === 'Date') return ` ${dateStr.padEnd(3, ' ')} `;
                                     return topDataMap.has(h) ? topDataMap.get(h) : '      ';
@@ -188,18 +188,18 @@ export class ResetManager {
                             } else {
                                 newChecklistRow = `| ${dateStr.padEnd(3, ' ')} |${rowCols.slice(1).join('|')}|`;
                             }
-                            
+
                             const rowToReplaceRegex = new RegExp(`\\|\\s*${dateStr}\\s*\\|.*\\|`);
                             if (rowToReplaceRegex.test(chkSection)) {
                                 chkSection = chkSection.replace(rowToReplaceRegex, newChecklistRow);
                             }
-                            
+
                             const nextDateNum = todayObj.getDate();
                             const emptyRowCols = [` ${nextDateNum.toString().padEnd(3, ' ')} `].concat(Array(Math.max(0, rowCols.length - 1)).fill('      '));
                             const newMiniTableRow = `|${emptyRowCols.join('|')}|`;
-                            
+
                             beforeChk = beforeChk.replace(fullMatch, headerPart + newMiniTableRow);
-                            
+
                             resetContent = beforeChk + chkSection + afterChk;
                         }
                     }
@@ -317,7 +317,7 @@ export class ResetManager {
                         new Notice(`📂 주간 아카이브 갱신 중...`);
                         const tableLines = tableStr ? tableStr.split('\n').filter(l => l.trim().startsWith("|")) : [];
                         const tableHeader = tableLines[0] || "| 날짜 | Step | Block | 멘탈 | 식단 | 운동 | 취침 | 디톡스 |";
-                        
+
                         const dataRows = tableLines.filter(l => {
                             const cols = l.split("|");
                             return cols.length > 2 && !isNaN(parseInt(cols[1]));
@@ -355,7 +355,7 @@ export class ResetManager {
                     new Notice("✅ 새로운 하루 준비 완료!");
                 } catch (innerErr) {
                     console.error("Daily Reset Execution Error:", innerErr);
-                    
+
                     // [트랜잭션 롤백] 데일리 파일 복구 (해시 필터 등록 후 안전하게 저장)
                     try {
                         await this.fileManager.pluginWrite(dailyFile, originalContent);
@@ -371,7 +371,7 @@ export class ResetManager {
                             console.error("Rollback failed for", f.path, e);
                         }
                     }
-                    
+
                     new Notice("🚨 리셋 실패: 모든 연관 파일을 복구했습니다.");
                 } finally {
                     this.utils.hideLoadingOverlay();
@@ -389,10 +389,10 @@ export class ResetManager {
         try {
             this.utils.showLoadingOverlay("⏳ 월간 통계 아카이빙 중...");
             new Notice("⏳ 월간 통계 수동 아카이빙 시작...");
-            
+
             // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
             originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
-            
+
             const content = this.utils.preprocessContent(originalContent);
             const now = this.utils.getAdjustedNow(); // 설정된 자정 보정 적용
 
@@ -417,27 +417,27 @@ export class ResetManager {
             const archiveStatsDashboard = this.utils.generateSegmentedDashboards(tableHeader, dataRows);
             if (archiveStatsDashboard) {
                 await this.utils.updateMonthlyArchiveStats(this.app, now, archiveStatsDashboard);
-                
+
                 // 스케줄 노트의 # 통계 섹션도 업데이트
                 const dailyStatsHeader = "# 통계";
                 let mainContent = content;
                 const fullStatsRange = this.utils.getSectionRange(mainContent, dailyStatsHeader) as { start: number, end: number };
-                
+
                 let tailContent = "";
                 if (fullStatsRange) {
                     tailContent = mainContent.substring(fullStatsRange.end);
                     mainContent = mainContent.substring(0, fullStatsRange.start).trimEnd();
                 }
-                
+
                 const statsSection = "\n\n" + dailyStatsHeader + "\n\n" + archiveStatsDashboard;
                 const newContent = mainContent + statsSection + tailContent;
-                
+
                 // 취약 항목 볼드 강조 갱신
                 let updatedContent = this.utils.updateRoutineSectionBold(newContent, this.utils.getDeficientItems(tableHeader, dataRows));
-                
+
                 // 통계 숫자 파싱 로직 포함 (테이블 내 숫자 1~4를 이모지로 치환)
                 updatedContent = this.utils.formatChecklistTable(updatedContent);
-                
+
                 await this.fileManager.saveIfChanged(dailyFile, originalContent, updatedContent);
                 new Notice("✅ 월간 통계 수동 아카이빙 및 대시보드 갱신 완료!");
             } else {

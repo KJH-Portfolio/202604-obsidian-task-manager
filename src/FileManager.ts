@@ -49,7 +49,7 @@ export class FileManager {
                 }
             }
         }
-        
+
         // 백그라운드 탭에 있거나 아예 열려있지 않은 나머지 파일들은 무조건 빠르고 가벼운 디스크 읽기(vault.read)
         return await this.app.vault.read(file);
     }

@@ -86,12 +86,12 @@ export class Synchronizer {
                 // 프로젝트 파일들로 전파 동기화
                 const projectFiles = this.utils.getProjectFiles();
                 const filesForCollisionCheck = [...projectFiles, dailyFile];
-                
+
                 const overrideData = await this.utils.syncDailyToProjects(
-                    this.app, 
-                    dailyMap, 
-                    projectFiles, 
-                    filesForCollisionCheck, 
+                    this.app,
+                    dailyMap,
+                    projectFiles,
+                    filesForCollisionCheck,
                     false // isReset: false
                 );
 
@@ -131,7 +131,7 @@ export class Synchronizer {
         // BUG-19: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
         const originalActive = await this.fileManager.getActiveViewOrFileText(projectFile);
         let originalSchedule = "";
-        
+
         try {
             this.utils.showLoadingOverlay("⏳ 스케줄 반영 중...");
             const noteName = projectFile.basename;
@@ -145,14 +145,14 @@ export class Synchronizer {
             let execTasks: { id: string | null; status?: string; line: string; type?: string; deleted?: boolean }[] = [];
             let planTasksTotal = 0, planTasksDone = 0;
             let originalPlanLines: string[] = [];
-            
+
 
             let planStartLine = -1;
             // 데이터 수집
             for (let i = 0; i < lines.length; i++) {
                 let l = lines[i];
                 if (REGEX.TOP_HEADING_START.test(l)) {
-                    inExec = REGEX.EXEC_HEADER.test(l.trim()); 
+                    inExec = REGEX.EXEC_HEADER.test(l.trim());
                     inPlan = REGEX.WORK_SUMMARY_HEADER.test(l.trim());
                     if (inPlan) planStartLine = i;
                 } else if (inExec) {
@@ -161,10 +161,10 @@ export class Synchronizer {
                         if (tM) {
                             let { text, id } = this.utils.extractIdAndText(tM[3]);
                             const isDeleted = /;;$/.test(text.trim());
-                            if (!id) { 
+                            if (!id) {
                                 // BUG-24: 충돌 체크 대상 파일 전달로 ID 중복 방지
-                                id = this.utils.generateBlockId([projectFile]); 
-                                lines[i] = l + " ^" + id; 
+                                id = this.utils.generateBlockId([projectFile]);
+                                lines[i] = l + " ^" + id;
                             }
                             execTasks.push({ id, status: tM[2], line: lines[i], deleted: isDeleted });
                         } else if (/^##\s/.test(l.trim())) {
@@ -190,7 +190,7 @@ export class Synchronizer {
                     if (et.id) execMap.set(et.id, { id: et.id, line: et.line, status: et.status, deleted: et.deleted });
                 });
                 const originalIds = new Set<string>();
-                
+
                 originalPlanLines.forEach(l => {
                     const pMatch = l.match(REGEX.TASK_LINE);
                     if (pMatch) {
@@ -228,7 +228,7 @@ export class Synchronizer {
 
                 const statBar = this.utils.renderProgressBar(planTasksDone, planTasksTotal, noteName);
                 const newPlanBody = "> " + statBar + "\n" + newPlanLines.join("\n");
-                
+
                 const updatedContent = this.utils.replaceSection(lines.join("\n"), "# 계획", newPlanBody);
                 lines = updatedContent.split("\n");
             }
@@ -246,27 +246,27 @@ export class Synchronizer {
             const scheduleFile = this.app.vault.getAbstractFileByPath(schedulePath);
             if (scheduleFile && scheduleFile instanceof TFile) {
                 originalSchedule = await this.fileManager.getActiveViewOrFileText(scheduleFile);
-                
+
                 const overrideData: Record<string, { execTasks: string[]; planTasksDone: number; planTasksTotal: number }> = {};
-                overrideData[noteName] = { 
+                overrideData[noteName] = {
                     execTasks: (() => {
                         let buf: string[] = [], inEx = false;
                         for (const cl of lines) {
-                            if (REGEX.TOP_HEADING_START.test(cl)) { 
-                                inEx = REGEX.EXEC_HEADER.test(cl.trim()); 
-                                continue; 
+                            if (REGEX.TOP_HEADING_START.test(cl)) {
+                                inEx = REGEX.EXEC_HEADER.test(cl.trim());
+                                continue;
                             }
                             if (inEx && (REGEX.MATCH_TASK.test(cl) || /^##\s/.test(cl.trim()))) buf.push(cl);
                         }
                         return buf;
-                    })(), 
-                    planTasksDone, 
-                    planTasksTotal 
+                    })(),
+                    planTasksDone,
+                    planTasksTotal
                 };
-                
+
                 const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
-                
+
                 let sBody = this.utils.replaceSection(originalSchedule, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
                 if (originalSchedule !== sBody) {
                     await this.logSyncChange(scheduleFile, `개별 프로젝트 ➔ 스케줄 반영 (스케줄 대시보드 갱신 - ${noteName})`, originalSchedule, sBody);

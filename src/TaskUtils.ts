@@ -26,21 +26,21 @@ export const REGEX = {
     INDENT: /^\s*/
 };
 
-export const MARKER_PRI: Record<string, number> = { 
-    '!': 1, 
-    '0': 2, 
-    '1': 3, 
-    '2': 4, 
-    '3': 5, 
-    '7': 6, 
-    '': 99 
+export const MARKER_PRI: Record<string, number> = {
+    '!': 1,
+    '0': 2,
+    '1': 3,
+    '2': 4,
+    '3': 5,
+    '7': 6,
+    '': 99
 };
 
-export const EMOJI_MAP: Record<string, string> = { 
-    "1": "🟦", 
-    "2": "🟩", 
-    "3": "🟨", 
-    "4": "🟥" 
+export const EMOJI_MAP: Record<string, string> = {
+    "1": "🟦",
+    "2": "🟩",
+    "3": "🟨",
+    "4": "🟥"
 };
 
 export interface TaskNode {
@@ -83,13 +83,13 @@ export class TaskUtils {
         if (this.overlayEl) return;
         this.overlayEl = activeDocument.createElement("div");
         this.overlayEl.classList.add("myworld-loading-overlay");
-        
+
         const spinner = activeDocument.createElement("div");
         spinner.classList.add("myworld-spinner");
 
         const msgEl = activeDocument.createElement("div");
         msgEl.innerText = message;
-        
+
         this.overlayEl.appendChild(spinner);
         this.overlayEl.appendChild(msgEl);
         activeDocument.body.appendChild(this.overlayEl);
@@ -144,14 +144,14 @@ export class TaskUtils {
             const safeRegex = new RegExp(`(^|\\n)${escapedSectionName}[ \\t]*(?=\\n|$)`);
             const sMatch = safeRegex.exec(fileOrContent);
             if (!sMatch) return null;
-            
+
             const sIdx = sMatch.index + (sMatch[1] === '\n' ? 1 : 0);
             const hLevel = (sectionName.match(/^#+/) || ["#"])[0].length;
             const nextHRegex = new RegExp(`\\n(?!>)#{1,${hLevel}}\\s`, 'g');
             nextHRegex.lastIndex = sIdx + sectionName.length;
             const m = nextHRegex.exec(fileOrContent);
             const eIdx = m ? m.index : fileOrContent.length;
-            
+
             return { start: sIdx, end: eIdx };
         }
 
@@ -163,14 +163,14 @@ export class TaskUtils {
             const hIdx = cache.headings.findIndex((h: import("obsidian").HeadingCache) => h.heading === sectionName && h.level === level);
             if (hIdx !== -1) {
                 const startLine = cache.headings[hIdx].position.start.line;
-                
+
                 if (fallbackLines) {
                     const prefix = "#".repeat(level) + " " + sectionName;
                     if (!fallbackLines[startLine] || !fallbackLines[startLine].startsWith(prefix)) {
                         useFallback = true;
                     }
                 }
-                
+
                 if (!useFallback) {
                     let endLine = -1;
                     for (let i = hIdx + 1; i < cache.headings.length; i++) {
@@ -190,7 +190,7 @@ export class TaskUtils {
             let startLine = fallbackLines.findIndex(l => l.startsWith(prefix));
             if (startLine === -1) return null;
             let endLine = -1;
-            const stopRegex = new RegExp(`^#{1,${level}}\\s`); 
+            const stopRegex = new RegExp(`^#{1,${level}}\\s`);
             for (let i = startLine + 1; i < fallbackLines.length; i++) {
                 if (stopRegex.test(fallbackLines[i])) { endLine = i; break; }
             }
@@ -205,7 +205,7 @@ export class TaskUtils {
         const quarter = `Q${dateMoment.quarter()}`;
         const mm = dateMoment.format("MM");
         const yyyy_mm = dateMoment.format("YYYY-MM");
-        
+
         return {
             folder: `${root}/${yyyy}/${quarter}/${mm}`,
             path: `${root}/${yyyy}/${quarter}/${mm}/${yyyy_mm}.md`,
@@ -216,7 +216,7 @@ export class TaskUtils {
     getWeeklyArchivePath(dateMoment: moment.Moment) {
         const root = this.settings.archiveDirectory;
         const gggg = dateMoment.format("gggg");
-        const weekStr = dateMoment.format("gggg-[W]ww"); 
+        const weekStr = dateMoment.format("gggg-[W]ww");
         return {
             folder: `${root}/${gggg}/Weekly`,
             path: `${root}/${gggg}/Weekly/${weekStr}.md`,
@@ -246,12 +246,12 @@ export class TaskUtils {
             }
             maxAttempts--;
         } while (isDuplicate && maxAttempts > 0);
-        
+
         // 100회 시도해도 중복이면 경고 로그 (실제 발생 확률 극히 낮음)
         if (isDuplicate) {
             console.warn('[generateBlockId] 100회 시도에도 고유 ID 생성 실패, 중복 가능성 있음:', id);
         }
-        
+
         // issuedIds 누적 방지: 1000개 초과 시 세션 내 최소 목록 면저 지우기
 
         // issuedIds 크기 제한: 1000개 초과 시 가장 오래된 것 삭제
@@ -355,12 +355,12 @@ export class TaskUtils {
         return lineInfos.map((d) => {
             if (!d.isTask) return d.line;
             let l = d.line;
-            
+
             // Clean legacy #D- and #Past tags to completely migrate to new markers
             l = l.replace(/\s*#(?:D-\d+|Past)\s*/ig, ' ');
-            
+
             let status = (d as { propStatus?: string }).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", " "])[1];
-            
+
             if (!d.isCompleted) {
                 if (d.m) {
                     status = d.m.trim();
@@ -369,7 +369,7 @@ export class TaskUtils {
                     status = " ";
                 }
             }
-            
+
             l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${status}]`);
             return l;
         });
@@ -646,7 +646,7 @@ export class TaskUtils {
                 const goodCount = (counts["🟦"] || 0) + (counts["🟩"] || 0);
                 const isBelowGoal = (goodCount / total) < 0.5;
                 const displayName = isBelowGoal ? `${name} ⚠️` : name;
-                
+
                 const bar = `<div style="position: relative; width: 100%; background: var(--background-modifier-hover); height: 7px; border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);"><div style="display: flex; width: 100%; height: 100%;">${innerBars}</div>${GRID}</div>`;
                 rows += `<tr style="border-bottom: 1px solid var(--background-modifier-border-hover);"><td style="padding: 6px 10px; text-align: left; font-weight: bold;">${displayName}</td><td style="padding: 6px 15px 6px 0; vertical-align: middle;">${bar}</td></tr>`;
             }
@@ -798,7 +798,7 @@ export class TaskUtils {
 
     generateProjectDashboard(projects: ProjectResult[]): string {
         if (!projects || projects.length === 0) return "";
-        
+
         let html = `<div style="padding: 16px; background: var(--background-secondary); border-radius: 12px; border: 1px solid var(--background-modifier-border); margin: 10px 0 25px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">\n`;
         html += `    <div style="font-weight: 800; font-size: 1.1em; margin-bottom: 15px; color: var(--text-accent); display: flex; align-items: center; gap: 8px;">🚀 전체 프로젝트 요약</div>\n`;
 
@@ -806,11 +806,11 @@ export class TaskUtils {
             let pct = p.planTasksTotal > 0 ? Math.round((p.planTasksDone / p.planTasksTotal) * 100) : 0;
             let isLast = idx === projects.length - 1;
             let marginStyle = isLast ? "" : "margin-bottom: 20px;";
-            
+
             let color = "#969696";
             let icon = "📝";
             let titleName = p.noteName;
-            
+
             if (p.sortPri === 0) { color = "#8c0028"; icon = "🔥"; }
             else if (p.sortPri === 1) { color = "#e93147"; icon = "🚨"; }
             else if (p.sortPri === 2) { color = "#ffd200"; icon = "⚠️"; }
@@ -882,7 +882,7 @@ export class TaskUtils {
         if (!content) return content;
         let lines = content.split('\n');
         let inRoutine = false, routineType = "";
-        
+
         for (let i = 0; i < lines.length; i++) {
             let l = lines[i];
             if (/^>\s*\[!routine\]/i.test(l)) { inRoutine = true; routineType = "callout"; }
@@ -891,12 +891,12 @@ export class TaskUtils {
                 if (routineType === "header" && l.startsWith('#') && !/^#+\s*루틴/i.test(l)) inRoutine = false;
                 else if (routineType === "callout" && !l.startsWith('>') && l.trim() !== '') inRoutine = false;
             }
-            
+
             let m = l.match(/^((?:>\s*)*)##\s+(.*)$/);
             if (inRoutine && m) {
                 let prefix = m[1] + "## ";
                 let cleanText = m[2].replace(/[*=]+/g, '').trim();
-                
+
                 if (deficientItems.has(cleanText)) {
                     l = prefix + `==${cleanText}==`;
                 } else {
@@ -911,12 +911,12 @@ export class TaskUtils {
     getChecklistTable(content: string): string {
         const chkRange = this.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
         if (!chkRange) return "";
-        
+
         const tableLines = [];
         const lines = content.substring(chkRange.start, chkRange.end).split('\n');
         for (let line of lines) {
             if (line.trim().startsWith("|")) tableLines.push(line);
-            else if (tableLines.length > 0 && line.trim() !== "" && !line.trim().startsWith('#')) break; 
+            else if (tableLines.length > 0 && line.trim() !== "" && !line.trim().startsWith('#')) break;
         }
         return tableLines.join('\n');
     }
@@ -924,12 +924,12 @@ export class TaskUtils {
     formatChecklistTable(content: string): string {
         const chkRange = this.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
         if (!chkRange) return content;
-        
+
         const chkSection = content.substring(chkRange.start, chkRange.end);
         let lines = chkSection.split('\n');
         let tableStartIndex = -1;
         let tableEndIndex = -1;
-        
+
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].trim().startsWith("|")) {
                 if (tableStartIndex === -1) tableStartIndex = i;
@@ -938,40 +938,40 @@ export class TaskUtils {
                 break;
             }
         }
-        
+
         if (tableStartIndex === -1) return content;
-        
+
         let tableLines = lines.slice(tableStartIndex, tableEndIndex + 1);
         if (tableLines.length < 3) return content; // Header, Separator, and at least 1 data row
-        
+
         let header = tableLines[0];
         const separator = tableLines[1];
         let dataRows = tableLines.slice(2);
-        
 
-        
+
+
         let newTableContent = [header, separator, ...dataRows].join('\n');
         newTableContent = this.convertTableMarkers(newTableContent);
-        
+
         lines.splice(tableStartIndex, tableLines.length, newTableContent);
-        
+
         return content.substring(0, chkRange.start) + lines.join('\n') + content.substring(chkRange.end);
     }
 
     parseProjectTimeline(content: string): { startDate: string | null, endDate: string | null } {
         const timelineMatch = content.match(/^-\s*기한\s*:\s*(.*)$/m);
         if (!timelineMatch) return { startDate: null, endDate: null };
-        
+
         const timelineText = timelineMatch[1].trim();
         const dates = timelineText.match(/\d{4}-\d{2}-\d{2}/g);
-        
+
         if (!dates || dates.length === 0) {
             return { startDate: null, endDate: null };
         }
-        
-        return { 
-            startDate: dates[0], 
-            endDate: dates.length > 1 ? dates[1] : null 
+
+        return {
+            startDate: dates[0],
+            endDate: dates.length > 1 ? dates[1] : null
         };
     }
 
@@ -982,7 +982,7 @@ export class TaskUtils {
 
         const reviewMatch = content.match(/^((?:>|\s*[-*+])\s*.*?(?:회고|Review)\s*:\s*)(.*)$/m);
         if (reviewMatch && reviewMatch[2].trim()) review = reviewMatch[2].trim();
-        
+
         return { step, review };
     }
 
@@ -997,7 +997,7 @@ export class TaskUtils {
         const dir = this.settings.projectDirectory;
         const folder = this.app.vault.getAbstractFileByPath(dir);
         const files: TFile[] = [];
-        
+
         const traverse = (f: TFolder) => {
             if (!f.children) return;
             for (const child of f.children) {
@@ -1012,7 +1012,7 @@ export class TaskUtils {
         if (folder instanceof TFolder) {
             traverse(folder);
         }
-        
+
         return files;
     }
 
@@ -1024,7 +1024,7 @@ export class TaskUtils {
             const statusChar = sMatch ? sMatch[1] : '';
             const isD0Task = (statusChar === '0' || statusChar === '!');
             const childResults = this.pruneTree(node.children);
-            
+
             if (isD0Task || childResults.hasD0) {
                 node.children = childResults.nodes;
                 pruned.push(node);
@@ -1036,7 +1036,7 @@ export class TaskUtils {
 
     async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
         const projectFiles = this.getProjectFiles();
-        
+
         // 수정됨: 현재 마크다운 에디터 탭에 열려있는 파일 경로들을 미리 수집 (캐시 Bypass 용도)
         const openFilePaths = new Set<string>();
         const leaves = this.app.workspace.getLeavesOfType("markdown");
@@ -1046,20 +1046,20 @@ export class TaskUtils {
                 openFilePaths.add(leafFile.path);
             }
         }
-        
+
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
             try {
                 if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return null;
-                
+
                 const pNoteName = file.basename;
 
                 // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
                 const mtime = file.stat.mtime;
                 const todayStr = moment(todayObj).format("YYYY-MM-DD");
-                
+
                 // 에디터에 열려있으면 미저장 내용이 있을 수 있으므로 캐시 무조건 무시 (Bypass)
                 const isOpenInEditor = openFilePaths.has(file.path);
-                
+
                 if (!overrideData[pNoteName] && !isOpenInEditor && this.projectResultCache.has(file.path)) {
                     const cache = this.projectResultCache.get(file.path)!;
                     if (cache.mtime === mtime && cache.todayStr === todayStr && cache.isReset === isReset) {
@@ -1071,7 +1071,7 @@ export class TaskUtils {
                 // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
                 let pContent = await this.fileManager.getActiveViewOrFileText(file);
                 const timeline = this.parseProjectTimeline(pContent);
-                
+
                 // 현재 날짜가 기한을 벗어난 프로젝트는 제외
                 if (timeline.startDate && todayStr < timeline.startDate) {
                     if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
@@ -1091,7 +1091,7 @@ export class TaskUtils {
                 } else {
                     let pLines = pContent.split("\n");
                     let pInEx = false, pInPl = false;
-                    
+
                     for (let l of pLines) {
                         if (REGEX.TOP_HEADING_START.test(l)) {
                             pInEx = REGEX.EXEC_HEADER.test(l.trim());
@@ -1115,7 +1115,7 @@ export class TaskUtils {
                     }
                     return true;
                 });
-                
+
                 let pMinDiff = Infinity, pSortPri = 99;
                 const pProcessed = this.applyMarkersToLines(pExecTasks.filter(t => t), todayObj);
                 pProcessed.forEach(t => {
@@ -1127,22 +1127,22 @@ export class TaskUtils {
                         if (diff < pMinDiff) pMinDiff = diff;
                     }
                 });
-                
+
                 if (pPlanTasksTotal > 0 && pPlanTasksDone === pPlanTasksTotal && pExecTasks.length > 0) pSortPri = 100;
-                else if (pMinDiff < 0) pSortPri = 0; 
-                else if (pMinDiff === 0) pSortPri = 1; 
-                else if (pMinDiff === 1) pSortPri = 2; 
-                else if (pMinDiff === 2) pSortPri = 3; 
+                else if (pMinDiff < 0) pSortPri = 0;
+                else if (pMinDiff === 0) pSortPri = 1;
+                else if (pMinDiff === 1) pSortPri = 2;
+                else if (pMinDiff === 2) pSortPri = 3;
                 else if (pMinDiff === 3) pSortPri = 4;
-                
+
                 const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, isReset);
-                
+
                 const finalResult = { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
-                
+
                 if (!overrideData[pNoteName]) {
                     this.projectResultCache.set(file.path, { mtime, result: finalResult, todayStr, isReset });
                 }
-                
+
                 return finalResult;
             } catch (err) {
                 console.error(`Error in getAllFullProjectResults for ${file.path}:`, err);
@@ -1182,12 +1182,12 @@ export class TaskUtils {
                         let { text, id } = this.extractIdAndText(tM[3]);
                         const isDeleted = /;;$/.test(text.trim());
                         const cleanText = isDeleted ? text.replace(/;;$/, '').trim() : text;
-                        const taskData = { 
-                            status: tM[2], 
-                            checked: (tM[2].toLowerCase() === 'x' || tM[2] === '-'), 
-                            text: cleanText, 
-                            indent: tM[1], 
-                            deleted: isDeleted 
+                        const taskData = {
+                            status: tM[2],
+                            checked: (tM[2].toLowerCase() === 'x' || tM[2] === '-'),
+                            text: cleanText,
+                            indent: tM[1],
+                            deleted: isDeleted
                         };
                         if (id) {
 
@@ -1214,7 +1214,7 @@ export class TaskUtils {
         const weeklyInfo = this.getWeeklyArchivePath(targetDate);
         await this.ensureFolder(weeklyInfo.folder);
         let wFile = app.vault.getAbstractFileByPath(weeklyInfo.path);
-        
+
         const start = targetDate.clone().startOf('week');
         const end = targetDate.clone().endOf('week');
         const weekDaysMap: Record<string, boolean> = {};
@@ -1383,194 +1383,194 @@ export class TaskUtils {
 
                 const noteName = file.basename;
                 const dailyData = dailyMap[noteName] || { byId: {}, byText: {}, orderedTasks: [] };
-                
+
                 // Bug F: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
                 let sContent = await this.fileManager.getActiveViewOrFileText(file);
-                let sLines = sContent.split("\n"), mod = false, inExSec = false; 
+                let sLines = sContent.split("\n"), mod = false, inExSec = false;
                 let finalSLines: string[] = [], skipIndent = -1, skipCheckIndent = -1, skipCheckStatus = " ";
                 let handledInFile = new Set<string>();
                 let execBuf: string[] = [];
 
                 for (let l of sLines) {
-                    if (REGEX.TOP_HEADING_START.test(l)) { 
-                        inExSec = REGEX.EXEC_HEADER.test(l.trim()); 
-                        skipIndent = -1; 
-                        skipCheckIndent = -1; 
-                        finalSLines.push(l); 
-                        continue; 
+                    if (REGEX.TOP_HEADING_START.test(l)) {
+                        inExSec = REGEX.EXEC_HEADER.test(l.trim());
+                        skipIndent = -1;
+                        skipCheckIndent = -1;
+                        finalSLines.push(l);
+                        continue;
                     }
-                    let isBlank = l.trim() === ""; 
+                    let isBlank = l.trim() === "";
                     let currentIndent = isBlank ? 999 : (l.match(REGEX.INDENT) || [""])[0].length;
-                    
-                    if (inExSec && skipIndent !== -1) { 
-                        if (isBlank) { mod = true; continue; } 
-                        if (currentIndent > skipIndent) { mod = true; continue; } 
-                        else skipIndent = -1; 
+
+                    if (inExSec && skipIndent !== -1) {
+                        if (isBlank) { mod = true; continue; }
+                        if (currentIndent > skipIndent) { mod = true; continue; }
+                        else skipIndent = -1;
                     }
-                    if (inExSec && skipCheckIndent !== -1) { 
-                        if (currentIndent > skipCheckIndent) { 
-                            if (REGEX.MATCH_TASK.test(l)) { 
-                                const tM = l.match(REGEX.TASK_LINE); 
-                                if (tM && tM[2] !== skipCheckStatus) { 
-                                    l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${skipCheckStatus}]`); 
-                                    mod = true; 
-                                } 
-                            } 
-                        } else skipCheckIndent = -1; 
+                    if (inExSec && skipCheckIndent !== -1) {
+                        if (currentIndent > skipCheckIndent) {
+                            if (REGEX.MATCH_TASK.test(l)) {
+                                const tM = l.match(REGEX.TASK_LINE);
+                                if (tM && tM[2] !== skipCheckStatus) {
+                                    l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${skipCheckStatus}]`);
+                                    mod = true;
+                                }
+                            }
+                        } else skipCheckIndent = -1;
                     }
                     if (inExSec && REGEX.MATCH_TASK.test(l)) {
                         let tM = l.match(REGEX.TASK_LINE);
                         if (tM) {
-                            let { text, id } = this.extractIdAndText(tM[3]); 
+                            let { text, id } = this.extractIdAndText(tM[3]);
 
                             let data = (id && dailyData.byId[id]) ? dailyData.byId[id] : (dailyData.byText[text] && dailyData.byText[text].length > 0 ? dailyData.byText[text].shift() : null);
                             if (data) handledInFile.add(id || text);
                             let currentStat = tM[2], newStat = currentStat;
-                            if (data) { 
+                            if (data) {
 
-                                if (data.deleted) { skipIndent = currentIndent; mod = true; continue; } 
+                                if (data.deleted) { skipIndent = currentIndent; mod = true; continue; }
 
-                                if (data.status && data.status !== ' ') newStat = data.status; 
+                                if (data.status && data.status !== ' ') newStat = data.status;
 
-                                else if (data.checked) newStat = 'x'; 
-                                else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat; 
+                                else if (data.checked) newStat = 'x';
+                                else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat;
                             } else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat;
-                            
-                            if (newStat.toLowerCase() === 'x' || newStat === '-') { 
-                                skipCheckIndent = currentIndent; 
-                                skipCheckStatus = newStat; 
-                            }
-                            if (data && (currentStat !== newStat || text !== data.text)) { 
 
-                                l = `${tM[1]} [${newStat}] ${data.text}${id ? ` ^${id}` : ''}`; 
-                                mod = true; 
-                            } else if (currentStat !== newStat) { 
-                                l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${newStat}]`); 
-                                mod = true; 
+                            if (newStat.toLowerCase() === 'x' || newStat === '-') {
+                                skipCheckIndent = currentIndent;
+                                skipCheckStatus = newStat;
+                            }
+                            if (data && (currentStat !== newStat || text !== data.text)) {
+
+                                l = `${tM[1]} [${newStat}] ${data.text}${id ? ` ^${id}` : ''}`;
+                                mod = true;
+                            } else if (currentStat !== newStat) {
+                                l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${newStat}]`);
+                                mod = true;
                             }
                         }
                     }
                     finalSLines.push(l);
                 }
 
-                let execCompletedMap = new Map<string, string>(); 
+                let execCompletedMap = new Map<string, string>();
                 let tempInEx = false;
-                for (let l of finalSLines) { 
-                    if (!l) continue; 
-                    if (REGEX.TOP_HEADING_START.test(l)) { tempInEx = REGEX.EXEC_HEADER.test(l.trim()); continue; } 
-                    if (tempInEx && REGEX.MATCH_TASK_COMPLETED.test(l)) { 
-                        let match = l.match(REGEX.TASK_LINE); 
-                        if (match) { 
-                            let { text } = this.extractIdAndText(match[3]); 
-                            execCompletedMap.set(text.trim(), match[2]); 
-                        } 
-                    } 
+                for (let l of finalSLines) {
+                    if (!l) continue;
+                    if (REGEX.TOP_HEADING_START.test(l)) { tempInEx = REGEX.EXEC_HEADER.test(l.trim()); continue; }
+                    if (tempInEx && REGEX.MATCH_TASK_COMPLETED.test(l)) {
+                        let match = l.match(REGEX.TASK_LINE);
+                        if (match) {
+                            let { text } = this.extractIdAndText(match[3]);
+                            execCompletedMap.set(text.trim(), match[2]);
+                        }
+                    }
                 }
                 if (execCompletedMap.size > 0) {
                     let tempInPl = false, plSkipIdx = -1;
-                    for (let i = 0; i < finalSLines.length; i++) { 
-                        let l = finalSLines[i]; 
-                        if (!l) continue; 
-                        if (REGEX.TOP_HEADING_START.test(l)) { tempInPl = REGEX.WORK_SUMMARY_HEADER.test(l.trim()); plSkipIdx = -1; continue; } 
-                        if (tempInPl) { 
-                            let cInd = l.trim() === "" ? 999 : (l.match(REGEX.INDENT) || [""])[0].length; 
-                            if (plSkipIdx !== -1) { 
-                                if (cInd > plSkipIdx) { 
-                                    if (REGEX.MATCH_TASK.test(l) && !REGEX.MATCH_TASK_COMPLETED.test(l)) { 
-                                        finalSLines[i] = l.replace(/^(\s*[-*+]\s+)\[.\]/, "$1[x]"); 
-                                        mod = true; 
-                                    } 
-                                    continue; 
-                                } else plSkipIdx = -1; 
-                            } 
-                            if (REGEX.MATCH_TASK.test(l)) { 
-                                if (REGEX.MATCH_TASK_COMPLETED.test(l)) plSkipIdx = cInd; 
-                                else { 
-                                    let match = l.match(REGEX.TASK_LINE); 
-                                    if (match) { 
-                                        const cleanText = this.extractIdAndText(match[3]).text.trim(); 
-                                        if (execCompletedMap.has(cleanText)) { 
-                                            const os = execCompletedMap.get(cleanText)!; 
-                                            finalSLines[i] = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${os}]`); 
-                                            mod = true; 
-                                            plSkipIdx = cInd; 
-                                        } 
-                                    } 
-                                } 
-                            } 
-                        } 
+                    for (let i = 0; i < finalSLines.length; i++) {
+                        let l = finalSLines[i];
+                        if (!l) continue;
+                        if (REGEX.TOP_HEADING_START.test(l)) { tempInPl = REGEX.WORK_SUMMARY_HEADER.test(l.trim()); plSkipIdx = -1; continue; }
+                        if (tempInPl) {
+                            let cInd = l.trim() === "" ? 999 : (l.match(REGEX.INDENT) || [""])[0].length;
+                            if (plSkipIdx !== -1) {
+                                if (cInd > plSkipIdx) {
+                                    if (REGEX.MATCH_TASK.test(l) && !REGEX.MATCH_TASK_COMPLETED.test(l)) {
+                                        finalSLines[i] = l.replace(/^(\s*[-*+]\s+)\[.\]/, "$1[x]");
+                                        mod = true;
+                                    }
+                                    continue;
+                                } else plSkipIdx = -1;
+                            }
+                            if (REGEX.MATCH_TASK.test(l)) {
+                                if (REGEX.MATCH_TASK_COMPLETED.test(l)) plSkipIdx = cInd;
+                                else {
+                                    let match = l.match(REGEX.TASK_LINE);
+                                    if (match) {
+                                        const cleanText = this.extractIdAndText(match[3]).text.trim();
+                                        if (execCompletedMap.has(cleanText)) {
+                                            const os = execCompletedMap.get(cleanText)!;
+                                            finalSLines[i] = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${os}]`);
+                                            mod = true;
+                                            plSkipIdx = cInd;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
                 if (dailyData) {
-                    let lastAnchorId: string | null = null; 
+                    let lastAnchorId: string | null = null;
                     const tasksToInsert = [];
-                    if (dailyData.orderedTasks) { 
-                        for (let ot of dailyData.orderedTasks) { 
+                    if (dailyData.orderedTasks) {
+                        for (let ot of dailyData.orderedTasks) {
 
-                            if (ot.type === 'id') lastAnchorId = ot.key; 
+                            if (ot.type === 'id') lastAnchorId = ot.key;
 
                             else if (dailyData.byText[ot.key] && dailyData.byText[ot.key].length > 0) {
 
-                                tasksToInsert.push({ anchorId: lastAnchorId, task: { ...dailyData.byText[ot.key].shift(), id: this.generateBlockId(collisionFiles) } }); 
+                                tasksToInsert.push({ anchorId: lastAnchorId, task: { ...dailyData.byText[ot.key].shift(), id: this.generateBlockId(collisionFiles) } });
                             }
-                        } 
+                        }
                     }
-                    for (const [id, d] of Object.entries(dailyData.byId)) { 
-                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...(d as TaskData), id } }); 
+                    for (const [id, d] of Object.entries(dailyData.byId)) {
+                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...(d as TaskData), id } });
                     }
                     if (tasksToInsert.length > 0) {
                         let exStart = -1, exEnd = finalSLines.length, inExSec = false;
-                        for (let i = 0; i < finalSLines.length; i++) { 
-                            let l = finalSLines[i]; 
-                            if (!l) continue; 
-                            if (REGEX.TOP_HEADING_START.test(l)) { 
-                                if (inExSec) { exEnd = i; break; } 
-                                inExSec = REGEX.EXEC_HEADER.test(l.trim()); 
-                                if (inExSec) exStart = i; 
-                            } 
+                        for (let i = 0; i < finalSLines.length; i++) {
+                            let l = finalSLines[i];
+                            if (!l) continue;
+                            if (REGEX.TOP_HEADING_START.test(l)) {
+                                if (inExSec) { exEnd = i; break; }
+                                inExSec = REGEX.EXEC_HEADER.test(l.trim());
+                                if (inExSec) exStart = i;
+                            }
                         }
                         if (exStart !== -1) {
-                            const ins = new Map<string, TaskData[]>(); 
+                            const ins = new Map<string, TaskData[]>();
                             const fbt: TaskData[] = [];
-                            for (let item of tasksToInsert) { 
-                                if (item.anchorId) { 
-                                    if (!ins.has(item.anchorId)) ins.set(item.anchorId, []); 
-                                    ins.get(item.anchorId)!.push(item.task as TaskData); 
-                                } else fbt.push(item.task as TaskData); 
+                            for (let item of tasksToInsert) {
+                                if (item.anchorId) {
+                                    if (!ins.has(item.anchorId)) ins.set(item.anchorId, []);
+                                    ins.get(item.anchorId)!.push(item.task as TaskData);
+                                } else fbt.push(item.task as TaskData);
                             }
                             let lastTIdx = exStart;
-                            for (let i = exEnd - 1; i > exStart; i--) { 
-                                let l = finalSLines[i]; 
-                                if (!l) continue; 
-                                if (REGEX.MATCH_TASK.test(l)) { 
-                                    if (lastTIdx === exStart) lastTIdx = i; 
-                                    const m = l.match(REGEX.TASK_LINE); 
-                                    if (m) { 
-                                        const { id } = this.extractIdAndText(m[3]); 
-                                        if (id && ins.has(id)) { 
-                                            const tl = ins.get(id)!; 
-                                            let ia = i + 1; 
+                            for (let i = exEnd - 1; i > exStart; i--) {
+                                let l = finalSLines[i];
+                                if (!l) continue;
+                                if (REGEX.MATCH_TASK.test(l)) {
+                                    if (lastTIdx === exStart) lastTIdx = i;
+                                    const m = l.match(REGEX.TASK_LINE);
+                                    if (m) {
+                                        const { id } = this.extractIdAndText(m[3]);
+                                        if (id && ins.has(id)) {
+                                            const tl = ins.get(id)!;
+                                            let ia = i + 1;
                                             const ntl = tl.map(nt => {
 
                                                 return `${nt.indent} [${nt.status || (nt.checked ? 'x' : ' ')}] ${nt.text} ^${nt.id}`;
-                                            }); 
-                                            finalSLines.splice(ia, 0, ...ntl); 
-                                            mod = true; 
-                                            exEnd += ntl.length; 
-                                            if (lastTIdx === i) lastTIdx = ia + ntl.length - 1; 
-                                            ins.delete(id); 
-                                        } 
-                                    } 
-                                } 
+                                            });
+                                            finalSLines.splice(ia, 0, ...ntl);
+                                            mod = true;
+                                            exEnd += ntl.length;
+                                            if (lastTIdx === i) lastTIdx = ia + ntl.length - 1;
+                                            ins.delete(id);
+                                        }
+                                    }
+                                }
                             }
-                            const rem = []; 
-                            for (let list of ins.values()) rem.push(...list); 
+                            const rem = [];
+                            for (let list of ins.values()) rem.push(...list);
                             rem.push(...fbt);
-                            if (rem.length > 0) { 
-                                const ntl = rem.map(nt => `${nt.indent} [${nt.status || (nt.checked ? 'x' : ' ')}] ${nt.text} ^${nt.id}`); 
-                                finalSLines.splice(lastTIdx + 1, 0, ...ntl); 
-                                mod = true; 
+                            if (rem.length > 0) {
+                                const ntl = rem.map(nt => `${nt.indent} [${nt.status || (nt.checked ? 'x' : ' ')}] ${nt.text} ^${nt.id}`);
+                                finalSLines.splice(lastTIdx + 1, 0, ...ntl);
+                                mod = true;
                             }
                         }
                     }
@@ -1578,50 +1578,50 @@ export class TaskUtils {
 
                 if (isReset) {
                     let cleanedLines: string[] = [], inCleanExSec = false;
-                    for (let i = 0; i < finalSLines.length; i++) { 
-                        const cl = finalSLines[i]; 
-                        if (REGEX.TOP_HEADING_START.test(cl)) { 
-                            inCleanExSec = REGEX.EXEC_HEADER.test(cl.trim()); 
-                            if (!inCleanExSec && execBuf.length > 0) { 
-                                cleanedLines.push(...this.filterResetTasks(execBuf, true)); 
-                                execBuf = []; 
-                            } 
-                            cleanedLines.push(cl); 
-                            continue; 
-                        } 
-                        if (inCleanExSec) execBuf.push(cl); 
-                        else cleanedLines.push(cl); 
+                    for (let i = 0; i < finalSLines.length; i++) {
+                        const cl = finalSLines[i];
+                        if (REGEX.TOP_HEADING_START.test(cl)) {
+                            inCleanExSec = REGEX.EXEC_HEADER.test(cl.trim());
+                            if (!inCleanExSec && execBuf.length > 0) {
+                                cleanedLines.push(...this.filterResetTasks(execBuf, true));
+                                execBuf = [];
+                            }
+                            cleanedLines.push(cl);
+                            continue;
+                        }
+                        if (inCleanExSec) execBuf.push(cl);
+                        else cleanedLines.push(cl);
                     }
-                    if (execBuf.length > 0) { 
-                        cleanedLines.push(...this.filterResetTasks(execBuf, true)); 
-                        execBuf = []; 
+                    if (execBuf.length > 0) {
+                        cleanedLines.push(...this.filterResetTasks(execBuf, true));
+                        execBuf = [];
                     }
-                    if (mod || cleanedLines.join("\n") !== finalSLines.join("\n")) { 
-                        mod = true; 
-                        finalSLines = cleanedLines; 
+                    if (mod || cleanedLines.join("\n") !== finalSLines.join("\n")) {
+                        mod = true;
+                        finalSLines = cleanedLines;
                     }
                 }
-                
+
                 // BUG-10: pluginWrite로 교체하여 프로젝트 파일 저장이 modifiedFiles에 쌓이는 것을 방지
                 if (mod) await this.fileManager.pluginWrite(file, finalSLines.join("\n"));
 
                 let execTasks: string[] = [], planTasksTotal = 0, planTasksDone = 0;
                 let pInEx = false, pInPl = false;
-                for (let l of finalSLines) { 
-                    if (!l) continue; 
-                    if (REGEX.TOP_HEADING_START.test(l)) { 
-                        pInEx = REGEX.EXEC_HEADER.test(l.trim()); 
-                        pInPl = REGEX.WORK_SUMMARY_HEADER.test(l.trim()); 
-                    } else if (pInEx) { 
-                        if (REGEX.MATCH_TASK.test(l) || /^##\s/.test(l.trim())) execTasks.push(l); 
-                    } else if (pInPl && REGEX.MATCH_TASK.test(l)) { 
-                        planTasksTotal++; 
-                        if (REGEX.MATCH_TASK_COMPLETED.test(l)) planTasksDone++; 
-                    } 
+                for (let l of finalSLines) {
+                    if (!l) continue;
+                    if (REGEX.TOP_HEADING_START.test(l)) {
+                        pInEx = REGEX.EXEC_HEADER.test(l.trim());
+                        pInPl = REGEX.WORK_SUMMARY_HEADER.test(l.trim());
+                    } else if (pInEx) {
+                        if (REGEX.MATCH_TASK.test(l) || /^##\s/.test(l.trim())) execTasks.push(l);
+                    } else if (pInPl && REGEX.MATCH_TASK.test(l)) {
+                        planTasksTotal++;
+                        if (REGEX.MATCH_TASK_COMPLETED.test(l)) planTasksDone++;
+                    }
                 }
                 overrideData[noteName] = { execTasks, planTasksDone, planTasksTotal };
 
-            } catch (e) { 
+            } catch (e) {
                 console.error(`Sync error on [${file.path}]:`, e);
                 syncErrors.push({ file, error: e });
             }

@@ -17,21 +17,21 @@ export const REGEX = {
     INDENT: /^\s*/
 };
 
-export const MARKER_PRI: Record<string, number> = { 
-    '!': 1, 
-    '0': 2, 
-    '1': 3, 
-    '2': 4, 
-    '3': 5, 
-    '7': 6, 
-    '': 99 
+export const MARKER_PRI: Record<string, number> = {
+    '!': 1,
+    '0': 2,
+    '1': 3,
+    '2': 4,
+    '3': 5,
+    '7': 6,
+    '': 99
 };
 
-export const EMOJI_MAP: Record<string, string> = { 
-    "1": "🟦", 
-    "2": "🟩", 
-    "3": "🟨", 
-    "4": "🟥" 
+export const EMOJI_MAP: Record<string, string> = {
+    "1": "🟦",
+    "2": "🟩",
+    "3": "🟨",
+    "4": "🟥"
 };
 
 export const HEADERS = {

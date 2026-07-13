@@ -19,7 +19,7 @@ export class TemplateHelper {
         this.fileManager = fileManager;
     }
 
-    
+
     replacePlaceholder(templateText: string, replacements: Record<string, string>): string {
         let content = templateText;
         for (const key of Object.keys(replacements)) {
@@ -41,7 +41,7 @@ export class TemplateHelper {
 cssclasses:
   - inline-routine
 ---
-- 
+-
 <div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; justify-content: center;">
   <a href="obsidian://advanced-uri?commandid=myworld-task-manager:quick-capture" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
     <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #00cec9;">✏️</div>
@@ -142,13 +142,13 @@ cssclasses:
 수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
 ---
 # 실행
-- 
+-
 # 개요
 - 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
-- 목표 : 
+- 목표 :
 # 계획
 > **진행도**: **🚨 작성 필요!**
-- 
+-
 # 세부 사항
 `;
 
@@ -211,7 +211,7 @@ cssclasses:
 > A. 카테고리 이름을 변경하려면, 현재 스케줄 노트 안에서 **두 군데의 표 1행(헤더)을 모두 동일하게 수정**해 주셔야 합니다!
 > 1. 루틴 영역 바로 밑에 있는 **임시 저장 테이블(미니 테이블)**의 1행
 > 2. 스케줄 노트 하단에 있는 **\`# 체크리스트\` (월간 누적 테이블)**의 1행
-> 
+>
 > 이 두 곳의 항목명이 똑같아야만 매일 밤 '일간 마감(🌤️)' 버튼을 눌렀을 때, 오늘의 루틴 데이터가 월간 표로 고장 없이 무사히 누적됩니다.
 
 # Todo
@@ -247,7 +247,7 @@ cssclasses:
 
 ## 🔘 상단 컨트롤 버튼 (매직 버튼)
 
-- 📤 **(스케줄로 동기화 / Push to Schedule)**: 프로젝트 노트에서 할 일을 적거나 완료 처리한 뒤, 이 버튼을 누르면 **변경된 진행 상황과 할 일 목록이 메인 데일리 스케줄 노트의 대시보드(\`# Project\` 영역)로 실시간 덮어씌워집니다.** 
+- 📤 **(스케줄로 동기화 / Push to Schedule)**: 프로젝트 노트에서 할 일을 적거나 완료 처리한 뒤, 이 버튼을 누르면 **변경된 진행 상황과 할 일 목록이 메인 데일리 스케줄 노트의 대시보드(\`# Project\` 영역)로 실시간 덮어씌워집니다.**
   - 팁: 프로젝트 문서에서 뭔가 할 일을 추가하거나 체크했다면 무조건 이 버튼을 한 번 눌러준다고 생각하시면 됩니다.
 
 ---
@@ -298,7 +298,7 @@ cssclasses:
     async setupParaStructure(): Promise<number> {
         let createdCount = 0;
         const paraDirs = ["0. Inbox", "1. Project", "2. Area", "3. Resource", "4. Archive", "10.File"];
-        
+
         for (const dir of paraDirs) {
             await this.utils.ensureFolder(dir);
         }
@@ -306,7 +306,7 @@ cssclasses:
         const guidePath = "0. Inbox/00.지식관리_시스템_통합_가이드.md";
         const guideContent = `# 🧠 제2의 두뇌: 통합 지식 관리 시스템 가이드
 
-이 옵시디언 환경은 파편화된 할 일과 지식들을 체계적으로 관리하기 위해 세팅되었습니다. 
+이 옵시디언 환경은 파편화된 할 일과 지식들을 체계적으로 관리하기 위해 세팅되었습니다.
 우리의 지식 관리 생태계는 크게 **[수집(Inbox)] ➡️ [분류 및 행동(PARA)] ➡️ [영구 지식화(Zettelkasten)]** 의 3단계 흐름으로 굴러갑니다.
 
 ---
@@ -372,7 +372,7 @@ Inbox에서 걸러진 정보 중 **'어떤 목적이나 행동'**이 수반되�
             await this.app.vault.create(guidePath, guideContent);
             createdCount++;
         }
-        
+
         return createdCount;
     }
 
@@ -384,11 +384,11 @@ Inbox에서 걸러진 정보 중 **'어떤 목적이나 행동'**이 수반되�
             "5. Zettelkasten/02.Literature",
             "5. Zettelkasten/03.Permanent"
         ];
-        
+
         for (const dir of zettelDirs) {
             await this.utils.ensureFolder(dir);
         }
-        
+
         return createdCount;
     }
 }

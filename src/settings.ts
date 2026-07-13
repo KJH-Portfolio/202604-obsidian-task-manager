@@ -67,7 +67,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
 
         // 1. 경로 설정 섹션
         new Setting(containerEl).setName("1. 경로 설정").setHeading();
-        
+
         new Setting(containerEl)
             .setName("프로젝트 폴더 경로")
             .setDesc("프로젝트 계획서 노트들이 보관될 폴더 경로를 지정하세요.")
@@ -267,7 +267,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
 
         // 4. 커스텀 템플릿 에디터 섹션
         new Setting(containerEl).setName("4. 커스텀 노트 템플릿 본문 정의").setHeading();
-        
+
         new Setting(containerEl)
             .setName("커스텀 데일리 스케줄 템플릿")
             .setDesc("데일리 스케줄 노트 생성 시 활용될 커스텀 본문 양식을 입력하세요 (비워두면 기본 내장 양식 사용).")
@@ -328,10 +328,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         // --- 📢 공지 및 업데이트 정보 (토글 컨텐츠) ---
         const noticeEl = containerEl.createDiv();
         noticeEl.hide(); // 초기 상태는 숨김
-        
+
         new Setting(noticeEl).setName("✨ 최근 업데이트").setHeading();
         new Setting(noticeEl).setDesc("- 현재 지속적으로 기능 개선 및 개발이 진행 중인 단계입니다.");
-        
+
         new Setting(noticeEl).setName("💬 개발자 코멘트").setHeading();
         new Setting(noticeEl).setDesc("이 플러그인은 현재 개발 중인 단계입니다. 추후 필요 시 영어 버전(English Version)을 추가할 계획을 가지고 있습니다.");
 
@@ -364,7 +364,7 @@ export class TemplatePathModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-        
+
         contentEl.createEl("h2", { text: "템플릿 노트 생성 위치 지정" });
         contentEl.createEl("p", { text: "기본 템플릿 노트(데일리 스케줄, 프로젝트 계획서)를 생성할 폴더의 보관소(Vault) 기준 상대 경로를 입력하세요. (예: 3. Resource/01.Templates)\n폴더가 없는 경우 자동으로 생성됩니다." });
 
@@ -419,7 +419,7 @@ export class ConfirmModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         contentEl.empty();
-        
+
         contentEl.createEl("p", { text: this.message });
 
         new Setting(contentEl)

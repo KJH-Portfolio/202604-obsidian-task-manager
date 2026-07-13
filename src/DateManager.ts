@@ -57,7 +57,7 @@ export class DateManager {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         return dateMoment.format(DATE_FORMATS.ARCHIVE_YEAR);
     }
-    
+
     getQuarter(dateMoment: moment.Moment): string {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         return `Q${dateMoment.quarter()}`;
@@ -77,7 +77,7 @@ export class DateManager {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         return dateMoment.format(DATE_FORMATS.ARCHIVE_WEEK);
     }
-    
+
     getYearWeek(dateMoment: moment.Moment): string {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         return dateMoment.format("gggg");
