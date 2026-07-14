@@ -1,6 +1,7 @@
 import { SyncTask } from "./types";
 import { App, TFile, Notice } from "obsidian";
 import { PluginSettings } from "./settings";
+import { t } from "./i18n";
 import { TaskUtils, REGEX } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
@@ -52,7 +53,7 @@ export class Synchronizer {
                 sections = sections.slice(sections.length - MAX_LOG_ENTRIES);
             }
 
-            const finalContent = `# 자동동기화 리포트\n\n` + sections.join("\n");
+            const finalContent = `${t("header_auto_sync_report", this.settings.language)}\n\n` + sections.join("\n");
 
             if (existingFile && existingFile instanceof TFile) {
                 // BUG-17: vault.modify 직접 호출 시 modifiedFiles에 로그파일이 추가되는 문제 방지
@@ -71,7 +72,7 @@ export class Synchronizer {
         let originalContent = "";
         try {
             this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
-            new Notice("⏳ 스케줄 전체 동기화 시작...");
+            new Notice(t("sync_full_start", this.settings.language));
             // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
             originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
@@ -98,7 +99,7 @@ export class Synchronizer {
                 // 메인 스케줄의 # Project 대시보드 갱신
                 const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
-                content = this.utils.replaceSection(content, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
+                content = this.utils.replaceSection(content, "# Project", newSectionText || t("empty_project_dashboard", this.settings.language));
 
             }
 
@@ -110,16 +111,16 @@ export class Synchronizer {
                 await this.logSyncChange(dailyFile, "스케줄 노트 전체 동기화", originalContent, content);
             }
             await this.fileManager.saveIfChanged(dailyFile, originalContent, content);
-            new Notice("✅ 스케줄 전체 동기화 완료!");
+            new Notice(t("sync_full_complete", this.settings.language));
         } catch (e) {
             console.error("Task Manage Error:", e instanceof Error ? e.message : String(e));
             // 스케줄 파일 원본 복구 시도
             try {
                 await this.fileManager.pluginWrite(dailyFile, originalContent);
-                new Notice("🚨 동기화 실패: 원본 데이터를 복구했습니다.");
+                new Notice(t("sync_fail_restore", this.settings.language));
             } catch (rollbackErr) {
                 console.error("Rollback failed for daily file:", dailyFile.path, rollbackErr);
-                new Notice("🚨 동기화 실패 + 복구도 실패했습니다. 파일을 수동으로 확인해주세요.");
+                new Notice(t("sync_fail_critical", this.settings.language));
             }
         } finally {
             this.utils.hideLoadingOverlay();
@@ -135,7 +136,7 @@ export class Synchronizer {
         try {
             this.utils.showLoadingOverlay("⏳ 스케줄 반영 중...");
             const noteName = projectFile.basename;
-            new Notice("⏳ 스케줄 반영 및 대시보드 갱신 중...");
+            new Notice(t("sync_dashboard_start", this.settings.language));
             const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
 
@@ -172,7 +173,7 @@ export class Synchronizer {
                         }
                     }
                 } else if (inPlan && planStartLine !== -1) {
-                    if (l.startsWith("> **") && l.includes("진행도")) continue;
+                    if (l.startsWith("> **") && (l.includes("진행도") || l.includes("Progress"))) continue;
                     originalPlanLines.push(l);
                     const m = l.match(REGEX.TASK_LINE);
                     if (m) {
@@ -229,7 +230,7 @@ export class Synchronizer {
                 const statBar = this.utils.renderProgressBar(planTasksDone, planTasksTotal, noteName);
                 const newPlanBody = "> " + statBar + "\n" + newPlanLines.join("\n");
 
-                const updatedContent = this.utils.replaceSection(lines.join("\n"), "# 계획", newPlanBody);
+                const updatedContent = this.utils.replaceSection(lines.join("\n"), t("header_plan", this.settings.language), newPlanBody);
                 lines = updatedContent.split("\n");
             }
 
@@ -239,7 +240,7 @@ export class Synchronizer {
                 await this.logSyncChange(projectFile, "개별 프로젝트 ➔ 스케줄 반영 (프로젝트 노트 갱신)", originalActive, newActiveContent);
             }
             // BUG-01: pluginWrite로 교체하여 vault.on('modify')의 무한 재동기화 방지
-            await this.fileManager.pluginWrite(projectFile, newActiveContent);
+            await this.fileManager.saveIfChanged(projectFile, originalActive, newActiveContent);
 
             // 3. 메인 스케줄 파일 업데이트
             const schedulePath = this.settings.mainSchedulePath;
@@ -267,19 +268,19 @@ export class Synchronizer {
                 const projectResults = await this.utils.getAllFullProjectResults(todayObj, overrideData, false);
                 const newSectionText = this.utils.renderProjectDashboardSection(projectResults);
 
-                let sBody = this.utils.replaceSection(originalSchedule, "# Project", newSectionText || "> (진행 중인 프로젝트가 없습니다.)");
+                let sBody = this.utils.replaceSection(originalSchedule, "# Project", newSectionText || t("empty_project_dashboard", this.settings.language));
                 if (originalSchedule !== sBody) {
                     await this.logSyncChange(scheduleFile, `개별 프로젝트 ➔ 스케줄 반영 (스케줄 대시보드 갱신 - ${noteName})`, originalSchedule, sBody);
                 }
                 // BUG-06: 타입 캐스팅 제거 (이미 instanceof TFile)
                 await this.fileManager.saveIfChanged(scheduleFile, originalSchedule, sBody);
                 if (newSectionText) {
-                    new Notice(`✅ [${noteName}] 스케줄 반영 완료!`);
+                    new Notice(t("sync_project_complete", this.settings.language, { noteName }));
                 } else {
-                    new Notice(`✅ [${noteName}] 프로젝트가 비워져 스케줄에 반영되었습니다.`);
+                    new Notice(t("notice_project_emptied", this.settings.language, { noteName: noteName }));
                 }
             } else {
-                new Notice("🚨 메인 스케줄 파일을 찾을 수 없습니다.");
+                new Notice(t("sync_no_main", this.settings.language));
             }
         } catch (e) {
             console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));
@@ -305,9 +306,9 @@ export class Synchronizer {
             }
             // 롤백 성공/실패 여부를 사용자에게 명확히 알림
             if (projectRolledBack && (!originalSchedule || scheduleRolledBack)) {
-                new Notice("🚨 반영 실패: 원본 데이터를 복구했습니다.");
+                new Notice(t("sync_update_fail_restore", this.settings.language));
             } else {
-                new Notice("🚨 반영 실패 + 복구도 실패했습니다. 파일을 수동으로 확인해주세요.");
+                new Notice(t("sync_update_fail_critical", this.settings.language));
             }
         } finally {
             this.utils.hideLoadingOverlay();

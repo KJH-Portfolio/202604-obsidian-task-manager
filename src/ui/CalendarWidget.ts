@@ -3,7 +3,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- DOM 요소 동적 할당을 위해 허용 */
 import { App, MarkdownView } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
-import { RangeSetBuilder } from "@codemirror/state";
+import { RangeSetBuilder, StateEffect } from "@codemirror/state";
+import { t } from "../i18n";
 
 // ─────────────────────────────────────────────────────────────
 // 1. 달력 팝업
@@ -13,7 +14,8 @@ export function buildCalendarPopup(
     posLeft: number,
     posTop: number,
     onSelect: (date: string | null) => void,
-    doc: Document = activeDocument
+    doc: Document = activeDocument,
+    lang: string = "en"
 ) {
     // @ts-ignore
     const today = window.moment();
@@ -65,8 +67,8 @@ export function buildCalendarPopup(
         const startDate = primaryDate.clone().startOf('week');
 
         const primaryMonthNum = primaryDate.month();
-        const monthLabel = `${primaryDate.format('M월')}`;
-        const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
+        const monthLabel = lang === 'ko' ? `${primaryDate.format('M월')}` : `${primaryDate.format('MMM')}`;
+        const DAYS = [t("cal_sun", lang), t("cal_mon", lang), t("cal_tue", lang), t("cal_wed", lang), t("cal_thu", lang), t("cal_fri", lang), t("cal_sat", lang)];
 
         // Header
         const header = doc.createElement("div");
@@ -152,7 +154,7 @@ export function buildCalendarPopup(
 
         const btnDelete = doc.createElement("button");
         btnDelete.className = "myworld-cal-foot-btn";
-        btnDelete.textContent = "삭제";
+        btnDelete.textContent = t("cal_delete", lang);
         btnDelete.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
             onSelect(null);
@@ -161,7 +163,7 @@ export function buildCalendarPopup(
 
         const btnToday = doc.createElement("button");
         btnToday.className = "myworld-cal-foot-btn myworld-cal-today-btn";
-        btnToday.textContent = "오늘";
+        btnToday.textContent = t("cal_today", lang);
         btnToday.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
             onSelect(todayStr);
@@ -201,16 +203,31 @@ function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean
     return { isMatch: false, dateStr: "", lineNo: 0, exactFrom: 0, exactTo: 0 };
 }
 
-export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string } }) => ViewPlugin.fromClass(class {
+const RebuildDecorations = StateEffect.define<null>();
+
+export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string } }) => ViewPlugin.fromClass(class {
     decorations: DecorationSet;
+    timer: number | null = null;
 
     constructor(view: EditorView) {
         this.decorations = this.buildDeco(view);
     }
 
     update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged || update.selectionSet) {
+        if (update.docChanged) {
+            this.decorations = this.decorations.map(update.changes);
+        }
+        
+        const isTyping = update.transactions.some(tr => tr.isUserEvent("input") || tr.isUserEvent("delete"));
+        const forceRebuild = update.transactions.some(tr => tr.effects.some(e => e.is(RebuildDecorations)));
+        
+        if (forceRebuild || (!isTyping && !update.view.composing && update.viewportChanged)) {
             this.decorations = this.buildDeco(update.view);
+        } else if (update.docChanged || update.selectionSet || update.focusChanged) {
+            if (this.timer) window.clearTimeout(this.timer);
+            this.timer = window.setTimeout(() => {
+                update.view.dispatch({ effects: RebuildDecorations.of(null) });
+            }, 300);
         }
     }
 
@@ -261,6 +278,7 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
     decorations: v => v.decorations,
     eventHandlers: {
         mousedown: (e: MouseEvent, view: EditorView) => {
+            const lang = getPlugin().settings.language || "en";
             const target = e.target as HTMLElement;
 
             // 날짜 클릭 처리
@@ -290,7 +308,7 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
                         } catch (err) {
                             console.error("[Bug M] view dispatch 실패:", err);
                         }
-                    }, doc);
+                    }, doc, lang);
                     return true;
                 }
             }
@@ -303,7 +321,8 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
 // ─────────────────────────────────────────────────────────────
 class TodayEmojiWidget extends WidgetType {
     constructor(
-        public getView: () => EditorView
+        public getView: () => EditorView,
+        public lang: string
     ) {
         super();
     }
@@ -322,7 +341,7 @@ class TodayEmojiWidget extends WidgetType {
         const span = doc.createElement("span");
         span.className = "myworld-today-btn";
         span.textContent = "📅";
-        span.title = "날짜 지정";
+        span.title = t("cal_tooltip", this.lang);
         span.contentEditable = "false";
 
         span.addEventListener("mousedown", (e) => {
@@ -348,10 +367,11 @@ class TodayEmojiWidget extends WidgetType {
     }
 }
 
-export function buildTodayButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string } }) {
+export function buildTodayButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string } }) {
     return ViewPlugin.fromClass(class {
         decorations: DecorationSet;
         currentView: EditorView;
+        timer: number | null = null;
 
         constructor(view: EditorView) {
             this.currentView = view;
@@ -360,12 +380,25 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
 
         update(update: ViewUpdate) {
             this.currentView = update.view;
-            if (update.docChanged || update.viewportChanged || update.focusChanged || update.geometryChanged) {
+            if (update.docChanged) {
+                this.decorations = this.decorations.map(update.changes);
+            }
+            
+            const isTyping = update.transactions.some(tr => tr.isUserEvent("input") || tr.isUserEvent("delete"));
+            const forceRebuild = update.transactions.some(tr => tr.effects.some(e => e.is(RebuildDecorations)));
+            
+            if (forceRebuild || (!isTyping && !update.view.composing && (update.viewportChanged || update.geometryChanged))) {
                 this.decorations = this.buildDecorations(update.view);
+            } else if (update.docChanged || update.focusChanged || update.selectionSet) {
+                if (this.timer) window.clearTimeout(this.timer);
+                this.timer = window.setTimeout(() => {
+                    this.currentView.dispatch({ effects: RebuildDecorations.of(null) });
+                }, 300);
             }
         }
 
         buildDecorations(view: EditorView) {
+            const lang = getPlugin().settings.language || "en";
             const builder = new RangeSetBuilder<Decoration>();
             const leaf = app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(view.dom));
             const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
@@ -378,10 +411,25 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
 
             const getView = () => this.currentView;
 
+            // 아이디어 2번: 현재 커서가 위치한 줄(활성 줄) 찾기
+            const activeLines = new Set<number>();
+            for (const range of view.state.selection.ranges) {
+                activeLines.add(view.state.doc.lineAt(range.head).number);
+                if (!range.empty) {
+                    activeLines.add(view.state.doc.lineAt(range.anchor).number);
+                }
+            }
+
             for (const { from, to } of view.visibleRanges) {
                 let pos = from;
                 while (pos <= to) {
                     const line = view.state.doc.lineAt(pos);
+                    // 현재 활성화된 줄이면 위젯을 렌더링하지 않음 (IME 충돌 및 타자 방해 차단)
+                    if (activeLines.has(line.number)) {
+                        pos = line.to + 1;
+                        continue;
+                    }
+                    
                     const text = line.text;
                     const isTask = /^(?:\s*>\s*)*\s*[-*+]\s+\[.\]/.test(text);
                     const isCompleted = /^(?:\s*>\s*)*\s*[-*+]\s+\[[xX-]\]/.test(text);
@@ -405,7 +453,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                             builder.add(
                                 line.to, line.to,
                                 Decoration.widget({
-                                    widget: new TodayEmojiWidget(getView),
+                                    widget: new TodayEmojiWidget(getView, lang),
                                     side: 1
                                 })
                             );

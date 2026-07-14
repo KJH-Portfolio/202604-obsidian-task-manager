@@ -49,7 +49,7 @@ export class FileManager {
                 }
             }
         }
-
+        
         // 백그라운드 탭에 있거나 아예 열려있지 않은 나머지 파일들은 무조건 빠르고 가벼운 디스크 읽기(vault.read)
         return await this.app.vault.read(file);
     }
@@ -102,13 +102,6 @@ export class FileManager {
             if (changes.length > 0) {
                 editor.transaction({ changes });
             }
-
-            // BUG FIX: editor.transaction()은 vault.modify 이벤트를 발생시키지 않는다.
-            // 따라서 pluginWritingFiles에 해시가 남아있으면, 이후 사용자 편집 시 vault.modify가
-            // 발생했을 때 비동기 해시비교를 거치게 되어 탭 전환 타이밍에 따라 modifiedFiles에
-            // 파일이 추가되기 전에 active-leaf-change가 먼저 발생하는 경쟁 조건(Race Condition)이 생긴다.
-            // editor.transaction 경로에서는 vault.modify가 없으므로 여기서 즉시 정리한다.
-            this.pluginWritingFiles.delete(file.path);
         } else {
             // 에디터에 열려있지 않거나 읽기 모드라면 조용히 백그라운드 실제 파일 수정
             await this.app.vault.modify(file, newContent);
@@ -152,36 +145,16 @@ export class FileManager {
             newEnd--;
         }
 
-        // 줄 수가 같을 경우: 변경된 각 줄을 독립적으로 교체 (스크롤 및 한글 IME 조합 보존)
+        // 줄 수가 같을 경우: 변경된 각 줄을 독립적으로 교체 (스크롤 영향 최소화)
         if (origLines.length === newLines.length) {
             const changes: { from: { line: number; ch: number }; to: { line: number; ch: number }; text: string }[] = [];
             for (let i = startIdx; i <= origEnd; i++) {
-                const oLine = origLines[i];
-                const nLine = newLines[i];
-                if (oLine !== nLine) {
-                    if (nLine.startsWith(oLine)) {
-                        // 텍스트가 뒤에 추가된 경우 (예: ^id 가 맨 뒤에 붙음)
-                        // 한글 IME 조합(Composing)을 끊지 않기 위해 맨 끝에 삽입(insert)만 수행
-                        changes.push({
-                            from: { line: i, ch: oLine.length },
-                            to: { line: i, ch: oLine.length },
-                            text: nLine.substring(oLine.length)
-                        });
-                    } else if (oLine.startsWith(nLine)) {
-                        // 텍스트가 뒤에서 삭제된 경우
-                        changes.push({
-                            from: { line: i, ch: nLine.length },
-                            to: { line: i, ch: oLine.length },
-                            text: ""
-                        });
-                    } else {
-                        // 그 외의 경우 줄 전체 교체
-                        changes.push({
-                            from: { line: i, ch: 0 },
-                            to: { line: i, ch: oLine.length },
-                            text: nLine
-                        });
-                    }
+                if (origLines[i] !== newLines[i]) {
+                    changes.push({
+                        from: { line: i, ch: 0 },
+                        to: { line: i, ch: origLines[i].length },
+                        text: newLines[i]
+                    });
                 }
             }
             return changes;

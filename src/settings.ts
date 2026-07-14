@@ -1,13 +1,16 @@
 import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import MyWorldTaskManagerPlugin from "./main";
 import { FolderSuggest, FileSuggest } from "./suggest";
+import { t } from "./i18n";
 
 export interface PluginSettings {
+    language: "en" | "ko";
     projectDirectory: string;
     mainSchedulePath: string;
     archiveDirectory: string;
     fleetingMemoPath: string;
     templatesDirectory: string;
+    statsDirectory: string;
     syncLogPath: string;
     midnightOffsetHour: number;
     syncOnStartup: boolean;
@@ -18,12 +21,14 @@ export interface PluginSettings {
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
+    language: "en",
     projectDirectory: "1. Project",
-    mainSchedulePath: "1. Project/-Main/스케줄 관리.md",
+    mainSchedulePath: "1. Project/-Main/Schedule Management.md",
     archiveDirectory: "4. Archive/98.Schedule",
-    fleetingMemoPath: "5. Zettelkasten/01.Fleeting/임시 메모.md",
+    fleetingMemoPath: "5. Zettelkasten/01.Fleeting/Fleeting Memo.md",
     templatesDirectory: "3. Resource/01.Templates",
-    syncLogPath: "0. Inbox/자동화_노트.md",
+    statsDirectory: "4. Archive/99.Stats",
+    syncLogPath: "0. Inbox/Automation_Note.md",
     midnightOffsetHour: 4,
     syncOnStartup: false,
     customTemplates: {
@@ -53,11 +58,52 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        new Setting(containerEl).setName("일반 설정").setHeading();
+        new Setting(containerEl).setName(t("settings_header_general", this.plugin.settings.language)).setHeading();
 
         new Setting(containerEl)
-            .setName("부팅 시 동기화 확인 팝업")
-            .setDesc("옵시디언을 켤 때 '스케줄을 동기화하시겠습니까?' 확인 팝업을 표시합니다. 팝업에서 동의하면 동기화를 실행하고, 취소하면 건너뜁니다. (git pull 등 다른 플러그인과의 충돌을 방지하는 안전한 방식입니다.)")
+            .setName(t("settings_language_name", this.plugin.settings.language))
+            .setDesc(t("settings_language_desc", this.plugin.settings.language))
+            .addDropdown(dropdown => {
+                dropdown.addOption("en", "English");
+                dropdown.addOption("ko", "한국어");
+                dropdown.setValue(this.plugin.settings.language);
+                dropdown.onChange(async (value: "en" | "ko") => {
+                    const oldLang = this.plugin.settings.language;
+                    this.plugin.settings.language = value;
+                    
+                    if (oldLang !== value) {
+                        // Check if current values match the old language defaults, if so update them
+                        if (this.plugin.settings.mainSchedulePath === t("default_main_schedule_path", oldLang)) {
+                            this.plugin.settings.mainSchedulePath = t("default_main_schedule_path", value);
+                        }
+                        if (this.plugin.settings.projectDirectory === t("default_project_directory", oldLang)) {
+                            this.plugin.settings.projectDirectory = t("default_project_directory", value);
+                        }
+                        if (this.plugin.settings.archiveDirectory === t("default_archive_folder", oldLang)) {
+                            this.plugin.settings.archiveDirectory = t("default_archive_folder", value);
+                        }
+                        if (this.plugin.settings.fleetingMemoPath === t("default_fleeting_memo_path", oldLang)) {
+                            this.plugin.settings.fleetingMemoPath = t("default_fleeting_memo_path", value);
+                        }
+                        if (this.plugin.settings.templatesDirectory === t("default_templates_folder", oldLang)) {
+                            this.plugin.settings.templatesDirectory = t("default_templates_folder", value);
+                        }
+                        if (this.plugin.settings.syncLogPath === t("default_sync_log_path", oldLang)) {
+                            this.plugin.settings.syncLogPath = t("default_sync_log_path", value);
+                        }
+                        if (this.plugin.settings.statsDirectory === t("default_stats_directory", oldLang)) {
+                            this.plugin.settings.statsDirectory = t("default_stats_directory", value);
+                        }
+                    }
+
+                    await this.plugin.saveSettings();
+                    this.refresh();
+                });
+            });
+
+        new Setting(containerEl)
+            .setName(t("settings_sync_startup_name", this.plugin.settings.language))
+            .setDesc(t("settings_sync_startup_desc", this.plugin.settings.language))
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.syncOnStartup)
                 .onChange(async (value) => {
@@ -66,13 +112,13 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 }));
 
         // 1. 경로 설정 섹션
-        new Setting(containerEl).setName("1. 경로 설정").setHeading();
+        new Setting(containerEl).setName(t("settings_header_paths", this.plugin.settings.language)).setHeading();
 
         new Setting(containerEl)
-            .setName("프로젝트 폴더 경로")
-            .setDesc("프로젝트 계획서 노트들이 보관될 폴더 경로를 지정하세요.")
+            .setName(t("settings_projects_folder_name", this.plugin.settings.language))
+            .setDesc(t("settings_projects_folder_desc", this.plugin.settings.language))
             .addText(text => {
-                text.setPlaceholder("1. Project")
+                text.setPlaceholder(t("default_project_directory", this.plugin.settings.language))
                     .setValue(this.plugin.settings.projectDirectory)
                     .onChange(async (value) => {
                         this.plugin.settings.projectDirectory = value.trim();
@@ -82,10 +128,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName("메인 스케줄 노트 경로")
-            .setDesc("루틴과 통합 대시보드가 들어간 일일 스케줄 파일 경로를 지정하세요.")
+            .setName(t("settings_main_schedule_name", this.plugin.settings.language))
+            .setDesc(t("settings_main_schedule_desc", this.plugin.settings.language))
             .addText(text => {
-                text.setPlaceholder("1. Project/-Main/스케줄 관리.md")
+                text.setPlaceholder(t("default_main_schedule_path", this.plugin.settings.language))
                     .setValue(this.plugin.settings.mainSchedulePath)
                     .onChange(async (value) => {
                         this.plugin.settings.mainSchedulePath = value.trim();
@@ -95,10 +141,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName("아카이브 루트 폴더 경로")
-            .setDesc("주간/월간 통계 및 일지 노트가 자동 생성되고 누적될 아카이브 폴더 경로를 지정하세요.")
+            .setName(t("settings_archive_folder_name", this.plugin.settings.language))
+            .setDesc(t("settings_archive_folder_desc", this.plugin.settings.language))
             .addText(text => {
-                text.setPlaceholder("4. Archive/98.Schedule")
+                text.setPlaceholder(t("default_archive_folder", this.plugin.settings.language))
                     .setValue(this.plugin.settings.archiveDirectory)
                     .onChange(async (value) => {
                         this.plugin.settings.archiveDirectory = value.trim();
@@ -108,10 +154,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName("임시 메모 파일 경로")
-            .setDesc("메인 스케줄의 📋 버튼 클릭 시 생성되고 열릴 임시 메모 마크다운 파일 경로를 지정하세요.")
+            .setName(t("settings_fleeting_memo_name", this.plugin.settings.language))
+            .setDesc(t("settings_fleeting_memo_desc", this.plugin.settings.language))
             .addText(text => {
-                text.setPlaceholder("5. Zettelkasten/01.Fleeting/임시 메모.md")
+                text.setPlaceholder(t("default_fleeting_memo_path", this.plugin.settings.language))
                     .setValue(this.plugin.settings.fleetingMemoPath)
                     .onChange(async (value) => {
                         this.plugin.settings.fleetingMemoPath = value.trim();
@@ -121,11 +167,12 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName("템플릿 폴더 경로")
-            .setDesc("플러그인용 기본 템플릿 노트(데일리 스케줄, 프로젝트 계획서)가 보존될 폴더 경로를 지정하세요.")
+            .setName(t("settings_templates_folder_name", this.plugin.settings.language))
+            .setDesc(t("settings_templates_folder_desc", this.plugin.settings.language))
             .addText(text => {
-                text.setPlaceholder("3. Resource/01.Templates")
-                    .setValue(this.plugin.settings.templatesDirectory || "3. Resource/01.Templates")
+                const defaultDir = t("default_templates_folder", this.plugin.settings.language);
+                text.setPlaceholder(defaultDir)
+                    .setValue(this.plugin.settings.templatesDirectory || defaultDir)
                     .onChange(async (value) => {
                         this.plugin.settings.templatesDirectory = value.trim();
                         await this.plugin.saveSettings();
@@ -134,11 +181,12 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName("동기화 로그 파일 경로")
-            .setDesc("동기화 실행 시 변경 이력이 기록될 마크다운 파일 경로를 지정하세요. (BUG-H: 하드코딩 제거)")
+            .setName(t("settings_sync_log_name", this.plugin.settings.language))
+            .setDesc(t("settings_sync_log_desc", this.plugin.settings.language))
             .addText(text => {
-                text.setPlaceholder("0. Inbox/자동화_노트.md")
-                    .setValue(this.plugin.settings.syncLogPath || "0. Inbox/자동화_노트.md")
+                const defaultSyncLog = t("default_sync_log_path", this.plugin.settings.language);
+                text.setPlaceholder(defaultSyncLog)
+                    .setValue(this.plugin.settings.syncLogPath || defaultSyncLog)
                     .onChange(async (value) => {
                         this.plugin.settings.syncLogPath = value.trim();
                         await this.plugin.saveSettings();
@@ -147,8 +195,8 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         new Setting(containerEl)
-            .setName("자정 보정 기준 시간")
-            .setDesc("새벽 몇 시 이전까지의 마감 실행을 전날 날짜의 기록으로 취급할지 지정합니다. (0~12시)")
+            .setName(t("settings_midnight_offset_name", this.plugin.settings.language))
+            .setDesc(t("settings_midnight_offset_desc", this.plugin.settings.language))
             .addText(text => {
                 text.setPlaceholder("4")
                     .setValue((this.plugin.settings.midnightOffsetHour ?? 4).toString())
@@ -168,153 +216,153 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
             });
 
         // 2. 지식 관리 시스템 구축 헬퍼 섹션
-        new Setting(containerEl).setName("2. 지식 관리 시스템 구축 헬퍼 (PARA & 제텔카스텐)").setHeading();
+        new Setting(containerEl).setName(t("settings_header_helper_para", this.plugin.settings.language)).setHeading();
 
         new Setting(containerEl)
-            .setName("PARA 구조 생성")
-            .setDesc("보관소 루트에 PARA 지식 관리 시스템(0. Inbox, 1. Project, 2. Area, 3. Resource, 4. Archive, 10.File) 구조와 폴더별 설명서를 자동 생성합니다.")
+            .setName(t("settings_para_create_name", this.plugin.settings.language))
+            .setDesc(t("settings_para_create_desc", this.plugin.settings.language))
             .addButton(btn => btn
-                .setButtonText("PARA 구조 생성")
+                .setButtonText(t("settings_para_create_btn", this.plugin.settings.language))
                 .setCta()
                 .onClick(async () => {
-                    new ConfirmModal(this.app, "정말 PARA 지식 관리 폴더 구조를 보관소 최상단에 일괄 생성하시겠습니까?\n(이미 존재하는 폴더는 안전하게 건너뜁니다.)", async () => {
+                    new ConfirmModal(this.app, t("confirm_para_create", this.plugin.settings.language).replace(/\\n/g, "\n"), this.plugin.settings.language, async () => {
                         try {
                             const count = await this.plugin.templateHelper.setupParaStructure();
                             if (count > 0) {
-                                new Notice(`✅ PARA 시스템 폴더/설명서 ${count}개가 신규 생성되었습니다!`);
+                                new Notice(t("notice_para_created", this.plugin.settings.language, { count: count }));
                             } else {
-                                new Notice("✅ 이미 모든 PARA 구조가 존재하여 파일 생성을 건너뛰었습니다.");
+                                new Notice(t("notice_para_exists", this.plugin.settings.language));
                             }
                         } catch (err) {
                             console.error(err);
-                            new Notice("🚨 PARA 시스템 구조 생성 중 오류가 발생했습니다.");
+                            new Notice(t("notice_para_error", this.plugin.settings.language));
                         }
                     }).open();
                 }));
 
         new Setting(containerEl)
-            .setName("제텔카스텐 구조 생성")
-            .setDesc("보관소 루트에 제텔카스텐 지식 관리 시스템(5. Zettelkasten 및 하위 Fleeting, Literature, Permanent 폴더) 구조와 폴더별 설명서를 자동 생성합니다.")
+            .setName(t("settings_zettel_create_name", this.plugin.settings.language))
+            .setDesc(t("settings_zettel_create_desc", this.plugin.settings.language))
             .addButton(btn => btn
-                .setButtonText("제텔카스텐 구조 생성")
+                .setButtonText(t("settings_zettel_create_btn", this.plugin.settings.language))
                 .setCta()
                 .onClick(async () => {
-                    new ConfirmModal(this.app, "정말 제텔카스텐 지식 관리 폴더 구조를 보관소 최상단에 일괄 생성하시겠습니까?\n(이미 존재하는 폴더는 안전하게 건너뜁니다.)", async () => {
+                    new ConfirmModal(this.app, t("confirm_zettel_create", this.plugin.settings.language).replace(/\\n/g, "\n"), this.plugin.settings.language, async () => {
                         try {
                             const count = await this.plugin.templateHelper.setupZettelkastenStructure();
                             if (count > 0) {
-                                new Notice(`✅ 제텔카스텐 폴더/설명서 ${count}개가 신규 생성되었습니다!`);
+                                new Notice(t("notice_zettel_created", this.plugin.settings.language, { count: count }));
                             } else {
-                                new Notice("✅ 이미 모든 제텔카스텐 구조가 존재하여 파일 생성을 건너뛰었습니다.");
+                                new Notice(t("notice_zettel_exists", this.plugin.settings.language));
                             }
                         } catch (err) {
                             console.error(err);
-                            new Notice("🚨 제텔카스텐 구조 생성 중 오류가 발생했습니다.");
+                            new Notice(t("notice_zettel_error", this.plugin.settings.language));
                         }
                     }).open();
                 }));
 
         // 3. 기본 환경 및 파일 생성 헬퍼 섹션
-        new Setting(containerEl).setName("3. 기본 환경 및 파일 생성 헬퍼").setHeading();
+        new Setting(containerEl).setName(t("settings_header_helper_file", this.plugin.settings.language)).setHeading();
 
         new Setting(containerEl)
-            .setName("기본 템플릿 노트 생성")
-            .setDesc("원하는 보관소 내 폴더 경로를 입력받아 플러그인용 기본 노트 양식 2종(데일리 스케줄/프로젝트 계획서)을 자동으로 생성합니다.")
+            .setName(t("settings_template_create_name", this.plugin.settings.language))
+            .setDesc(t("settings_template_create_desc", this.plugin.settings.language))
             .addButton(btn => btn
-                .setButtonText("템플릿 생성 실행")
+                .setButtonText(t("settings_template_create_btn", this.plugin.settings.language))
                 .setCta()
                 .onClick(() => {
                     const defaultDir = this.plugin.settings.templatesDirectory || "3. Resource/01.Templates";
-                    new TemplatePathModal(this.app, defaultDir, async (resultPath) => {
+                    new TemplatePathModal(this.app, defaultDir, this.plugin.settings.language, async (resultPath) => {
                         try {
                             await this.plugin.templateHelper.createDefaultTemplatesFolderAndFiles(resultPath);
                             this.plugin.settings.templatesDirectory = resultPath;
                             await this.plugin.saveSettings();
                             this.refresh();
-                            new Notice(`✅ ${resultPath} 하위에 기본 템플릿 파일들이 생성되었습니다!`);
+                            new Notice(t("notice_template_created", this.plugin.settings.language, { resultPath: resultPath }));
                         } catch (err) {
                             console.error(err);
-                            new Notice("🚨 템플릿 파일 생성 중 오류가 발생했습니다.");
+                            new Notice(t("notice_template_error", this.plugin.settings.language));
                         }
                     }).open();
                 }));
 
         new Setting(containerEl)
-            .setName("스케줄 관리 노트 생성")
-            .setDesc("설정된 '메인 스케줄 노트 경로'에 오늘 날짜 기반의 루틴 스케줄 노트를 즉시 자동 생성합니다.")
+            .setName(t("settings_schedule_create_name", this.plugin.settings.language))
+            .setDesc(t("settings_schedule_create_desc", this.plugin.settings.language))
             .addButton(btn => btn
-                .setButtonText("스케줄 생성 실행")
+                .setButtonText(t("settings_schedule_create_btn", this.plugin.settings.language))
                 .setCta()
                 .onClick(async () => {
                     const file = await this.plugin.createTodayScheduleFile();
                     if (file) {
-                        new Notice("✅ 스케줄 관리 노트가 생성되었습니다!");
+                        // Notice is handled internally
                     }
                 }));
 
         new Setting(containerEl)
-            .setName("샘플 프로젝트 노트 생성")
-            .setDesc("설정된 '프로젝트 폴더 경로' 하위에 기본 '샘플 프로젝트.md' 관리 문서를 즉시 자동 생성합니다.")
+            .setName(t("settings_sample_create_name", this.plugin.settings.language))
+            .setDesc(t("settings_sample_create_desc", this.plugin.settings.language))
             .addButton(btn => btn
-                .setButtonText("샘플 생성 실행")
+                .setButtonText(t("settings_sample_create_btn", this.plugin.settings.language))
                 .setCta()
                 .onClick(async () => {
-                    const file = await this.plugin.createNewProjectFile("샘플 프로젝트");
+                    const file = await this.plugin.createNewProjectFile(t("default_sample_project_name", this.plugin.settings.language));
                     if (file) {
-                        new Notice("✅ 샘플 프로젝트 노트가 생성되었습니다!");
+                        // Notice is handled internally
                     }
                 }));
 
         // 4. 커스텀 템플릿 에디터 섹션
-        new Setting(containerEl).setName("4. 커스텀 노트 템플릿 본문 정의").setHeading();
+        new Setting(containerEl).setName(t("settings_header_custom_templates", this.plugin.settings.language)).setHeading();
 
         new Setting(containerEl)
-            .setName("커스텀 데일리 스케줄 템플릿")
-            .setDesc("데일리 스케줄 노트 생성 시 활용될 커스텀 본문 양식을 입력하세요 (비워두면 기본 내장 양식 사용).")
+            .setName(t("settings_custom_daily_name", this.plugin.settings.language))
+            .setDesc(t("settings_custom_daily_desc", this.plugin.settings.language))
             .addTextArea(text => text
                 .setValue(this.plugin.settings.customTemplates.dailySchedule)
-                .setPlaceholder("{{date}}, {{time}}, {{currentDay}} 등의 플레이스홀더를 사용할 수 있습니다.")
+                .setPlaceholder(t("settings_custom_daily_placeholder", this.plugin.settings.language))
                 .onChange(async (value) => {
                     this.plugin.settings.customTemplates.dailySchedule = value;
                     await this.plugin.saveSettings();
                 }));
 
         new Setting(containerEl)
-            .setName("커스텀 프로젝트 노트 템플릿")
-            .setDesc("신규 프로젝트 노트 생성 시 활용될 커스텀 본문 양식을 입력하세요 (비워두면 기본 내장 양식 사용).")
+            .setName(t("settings_custom_project_name", this.plugin.settings.language))
+            .setDesc(t("settings_custom_project_desc", this.plugin.settings.language))
             .addTextArea(text => text
                 .setValue(this.plugin.settings.customTemplates.projectNote)
-                .setPlaceholder("{{projectName}} 등의 플레이스홀더를 사용할 수 있습니다.")
+                .setPlaceholder(t("settings_custom_project_placeholder", this.plugin.settings.language))
                 .onChange(async (value) => {
                     this.plugin.settings.customTemplates.projectNote = value;
                     await this.plugin.saveSettings();
                 }));
 
         // 5. 설정 초기화 섹션
-        new Setting(containerEl).setName("5. 설정 초기화").setHeading();
+        new Setting(containerEl).setName(t("settings_header_danger_zone", this.plugin.settings.language)).setHeading();
         new Setting(containerEl)
-            .setName("설정값 초기화")
-            .setDesc("플러그인의 모든 설정을 기본값으로 되돌립니다. (주의: 기존 설정 정보가 소실되며, 되돌릴 수 없습니다.)")
+            .setName(t("settings_reset_name", this.plugin.settings.language))
+            .setDesc(t("settings_reset_desc", this.plugin.settings.language))
             .addButton(btn => {
-                btn.setButtonText("초기화 실행");
+                btn.setButtonText(t("settings_reset_btn", this.plugin.settings.language));
                 btn.buttonEl.addClass("mod-warning");
                 btn.onClick(async () => {
-                        new ConfirmModal(this.app, "정말로 모든 설정값을 초기 상태로 되돌리시겠습니까?", async () => {
+                        new ConfirmModal(this.app, t("confirm_reset", this.plugin.settings.language), this.plugin.settings.language, async () => {
                             this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);
                             await this.plugin.saveSettings();
                             this.refresh();
-                            new Notice("✅ 모든 설정값이 초기화되었습니다!");
+                            new Notice(t("notice_reset_complete", this.plugin.settings.language));
                         }).open();
                 });
             });
 
         // 6. 지원 및 피드백 섹션
-        new Setting(containerEl).setName("6. 지원 및 피드백").setHeading();
+        new Setting(containerEl).setName(t("settings_header_support", this.plugin.settings.language)).setHeading();
         new Setting(containerEl)
-            .setName("버그 제보 및 기능 제안")
-            .setDesc("플러그인 사용 중 문제가 발생했거나 새로운 기능이 필요하다면 GitHub 이슈를 통해 알려주세요.")
+            .setName(t("settings_support_name", this.plugin.settings.language))
+            .setDesc(t("settings_support_desc", this.plugin.settings.language))
             .addButton(btn => {
-                btn.setButtonText("GitHub 이슈로 이동");
+                btn.setButtonText(t("settings_support_btn", this.plugin.settings.language));
                 btn.onClick(() => {
                     window.open("https://github.com/KJH-Portfolio/202604-obsidian-task-manager/issues");
                 });
@@ -322,29 +370,29 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
 
         let isNoticeVisible = false;
         const toggleBtnSetting = new Setting(containerEl)
-            .setName("최근 업데이트 및 개발자 코멘트")
-            .setDesc("플러그인의 최신 변경 사항 및 개발자의 메시지를 확인합니다.");
+            .setName(t("settings_notice_toggle_name", this.plugin.settings.language))
+            .setDesc(t("settings_notice_toggle_desc", this.plugin.settings.language));
 
         // --- 📢 공지 및 업데이트 정보 (토글 컨텐츠) ---
         const noticeEl = containerEl.createDiv();
         noticeEl.hide(); // 초기 상태는 숨김
 
-        new Setting(noticeEl).setName("✨ 최근 업데이트").setHeading();
-        new Setting(noticeEl).setDesc("- 현재 지속적으로 기능 개선 및 개발이 진행 중인 단계입니다.");
+        new Setting(noticeEl).setName(t("settings_notice_update_title", this.plugin.settings.language)).setHeading();
+        new Setting(noticeEl).setDesc(t("settings_notice_update_content", this.plugin.settings.language));
 
-        new Setting(noticeEl).setName("💬 개발자 코멘트").setHeading();
-        new Setting(noticeEl).setDesc("이 플러그인은 현재 개발 중인 단계입니다. 추후 필요 시 영어 버전(English Version)을 추가할 계획을 가지고 있습니다.");
+        new Setting(noticeEl).setName(t("settings_notice_dev_title", this.plugin.settings.language)).setHeading();
+        new Setting(noticeEl).setDesc(t("settings_notice_dev_content", this.plugin.settings.language));
 
         toggleBtnSetting.addButton(btn => {
-            btn.setButtonText("내용 보기");
+            btn.setButtonText(t("btn_show_content", this.plugin.settings.language));
             btn.onClick(() => {
                 isNoticeVisible = !isNoticeVisible;
                 if (isNoticeVisible) {
                     noticeEl.show();
-                    btn.setButtonText("내용 숨기기");
+                    btn.setButtonText(t("btn_hide_content", this.plugin.settings.language));
                 } else {
                     noticeEl.hide();
-                    btn.setButtonText("내용 보기");
+                    btn.setButtonText(t("btn_show_content", this.plugin.settings.language));
                 }
             });
         });
@@ -352,11 +400,13 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
 }
 
 export class TemplatePathModal extends Modal {
+    language: string;
     resultPath: string;
     onSubmit: (path: string) => Promise<void>;
 
-    constructor(app: App, defaultPath: string, onSubmit: (path: string) => Promise<void>) {
+    constructor(app: App, defaultPath: string, language: string, onSubmit: (path: string) => Promise<void>) {
         super(app);
+        this.language = language;
         this.resultPath = defaultPath;
         this.onSubmit = onSubmit;
     }
@@ -365,13 +415,13 @@ export class TemplatePathModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        contentEl.createEl("h2", { text: "템플릿 노트 생성 위치 지정" });
-        contentEl.createEl("p", { text: "기본 템플릿 노트(데일리 스케줄, 프로젝트 계획서)를 생성할 폴더의 보관소(Vault) 기준 상대 경로를 입력하세요. (예: 3. Resource/01.Templates)\n폴더가 없는 경우 자동으로 생성됩니다." });
+        contentEl.createEl("h2", { text: t("modal_template_path_title", this.language) });
+        contentEl.createEl("p", { text: t("modal_template_path_desc", this.language).replace(/\\n/g, "\n") });
 
         new Setting(contentEl)
-            .setName("생성 폴더 경로")
+            .setName(t("modal_template_path_label", this.language))
             .addText(text => {
-                text.setPlaceholder("3. Resource/01.Templates")
+                text.setPlaceholder(t("default_templates_folder", this.language))
                     .setValue(this.resultPath)
                     .onChange(value => {
                         this.resultPath = value.trim();
@@ -381,11 +431,11 @@ export class TemplatePathModal extends Modal {
 
         new Setting(contentEl)
             .addButton(btn => btn
-                .setButtonText("생성하기")
+                .setButtonText(t("btn_create", this.language))
                 .setCta()
                 .onClick(async () => {
                     if (!this.resultPath) {
-                        new Notice("🚨 생성할 폴더 경로를 입력해 주세요.");
+                        new Notice(t("notice_empty_path", this.language));
                         return;
                     }
                     this.close();
@@ -393,7 +443,7 @@ export class TemplatePathModal extends Modal {
                 })
             )
             .addButton(btn => btn
-                .setButtonText("취소")
+                .setButtonText(t("btn_cancel", this.language))
                 .onClick(() => {
                     this.close();
                 })
@@ -407,11 +457,13 @@ export class TemplatePathModal extends Modal {
 }
 
 export class ConfirmModal extends Modal {
+    language: string;
     message: string;
     onConfirm: () => Promise<void>;
 
-    constructor(app: App, message: string, onConfirm: () => Promise<void>) {
+    constructor(app: App, message: string, language: string, onConfirm: () => Promise<void>) {
         super(app);
+        this.language = language;
         this.message = message;
         this.onConfirm = onConfirm;
     }
@@ -424,7 +476,7 @@ export class ConfirmModal extends Modal {
 
         new Setting(contentEl)
             .addButton(btn => btn
-                .setButtonText("확인")
+                .setButtonText(t("btn_confirm", this.language))
                 .setCta()
                 .onClick(async () => {
                     this.close();
@@ -432,7 +484,7 @@ export class ConfirmModal extends Modal {
                 })
             )
             .addButton(btn => btn
-                .setButtonText("취소")
+                .setButtonText(t("btn_cancel", this.language))
                 .onClick(() => {
                     this.close();
                 })
@@ -447,10 +499,12 @@ export class ConfirmModal extends Modal {
 
 // 부팅 시 동기화 확인 팝업
 export class StartupSyncModal extends Modal {
+    language: string;
     onSync: () => Promise<void>;
 
-    constructor(app: App, onSync: () => Promise<void>) {
+    constructor(app: App, language: string, onSync: () => Promise<void>) {
         super(app);
+        this.language = language;
         this.onSync = onSync;
     }
 
@@ -462,11 +516,11 @@ export class StartupSyncModal extends Modal {
         // 아이콘 + 타이틀
         const header = contentEl.createDiv({ cls: "myworld-startup-header" });
         header.createEl("div", { text: "🔄", cls: "myworld-startup-icon" });
-        header.createEl("h2", { text: "스케줄 동기화", cls: "myworld-startup-title" });
+        header.createEl("h2", { text: t("modal_startup_title", this.language), cls: "myworld-startup-title" });
 
         // 안내 메시지
         const desc = contentEl.createDiv({ cls: "myworld-startup-desc" });
-        desc.createEl("p", { text: "프로젝트 노트와 메인 스케줄 간의 할 일을 동기화합니다." });
+        desc.createEl("p", { text: t("modal_startup_desc", this.language) });
 
         // 오늘 날짜 표시
         const today = window.moment().format("YYYY년 MM월 DD일 (ddd)");
@@ -475,21 +529,21 @@ export class StartupSyncModal extends Modal {
 
         // 안내 문구
         const notice = contentEl.createDiv({ cls: "myworld-startup-notice" });
-        notice.createEl("span", { text: "💡 Git Pull 등이 완료된 후 동기화를 실행하면 충돌을 방지할 수 있습니다." });
+        notice.createEl("span", { text: t("modal_startup_notice", this.language) });
 
         // 버튼 영역
         const btnArea = contentEl.createDiv({ cls: "myworld-startup-btn-area" });
 
-        const skipBtn = btnArea.createEl("button", { text: "건너뛰기", cls: "myworld-startup-btn-skip" });
+        const skipBtn = btnArea.createEl("button", { text: t("btn_skip", this.language), cls: "myworld-startup-btn-skip" });
         skipBtn.addEventListener("click", () => {
             this.close();
         });
 
-        const syncBtn = btnArea.createEl("button", { text: "🔄 지금 동기화", cls: "myworld-startup-btn-sync" });
+        const syncBtn = btnArea.createEl("button", { text: t("btn_sync_now", this.language), cls: "myworld-startup-btn-sync" });
         syncBtn.addEventListener("click", () => {
             void (async () => {
                 syncBtn.disabled = true;
-                syncBtn.textContent = "동기화 중...";
+                syncBtn.textContent = t("btn_syncing", this.language);
                 this.close();
                 await this.onSync();
             })();

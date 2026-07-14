@@ -10,6 +10,7 @@ import { moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 import { PluginSettings } from "./settings";
+import { t } from "./i18n";
 
 export const REGEX = {
     EXTRACT_ID: /^(.*?)(?:\s*\^([a-zA-Z0-9]+))?$/,
@@ -19,10 +20,10 @@ export const REGEX = {
     STATUS_MATCH: /^[\s]*[-*+]\s+\[(.)\]/,
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
     TOP_HEADING_START: /^#\s+/,
-    EXEC_HEADER: /^#\s+실행$/,
-    WORK_SUMMARY_HEADER: /^#\s+계획$/,
+    EXEC_HEADER: /^#\s+(실행|Execution)$/i,
+    WORK_SUMMARY_HEADER: /^#\s+(계획|Plan|Work Summary|Plan Overview)$/i,
     NOTE_LINK: /^##\s+(.+)$/,
-    PROJECT_TODO_SECTION: /(?:^|\n)##\s+프로젝트(?:\n|$)(?:[\s\S]*?)(?=\n#{1,6}\s|$)/g,
+
     INDENT: /^\s*/
 };
 
@@ -140,7 +141,14 @@ export class TaskUtils {
 
     getSectionRange(fileOrContent: TFile | string, sectionName: string, level = 1, fallbackLines: string[] | null = null): { start: number, end: number } | { startLine: number, endLine: number } | null {
         if (typeof fileOrContent === "string") {
-            const escapedSectionName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            let escapedSectionName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Bilingual header support
+            if (sectionName === "# 통계" || sectionName === "# Stats") escapedSectionName = "# (통계|Stats)";
+            else if (sectionName === "# 체크리스트" || sectionName === "# Checklist") escapedSectionName = "# (체크리스트|Checklist)";
+            else if (sectionName === "# 계획" || sectionName === "# Plan") escapedSectionName = "# (계획|Plan)";
+            else if (sectionName === "# 실행" || sectionName === "# Execution") escapedSectionName = "# (실행|Execution)";
+
             const safeRegex = new RegExp(`(^|\\n)${escapedSectionName}[ \\t]*(?=\\n|$)`);
             const sMatch = safeRegex.exec(fileOrContent);
             if (!sMatch) return null;
@@ -281,7 +289,8 @@ export class TaskUtils {
     }
 
     renderProgressBar(completed: number, total: number, noteName?: string): string {
-        const titleLink = noteName ? `[[${noteName}|진행도]]` : "진행도";
+        const progressStr = t("progress_label", this.settings.language);
+        const titleLink = noteName ? `[[${noteName}|${progressStr}]]` : progressStr;
         const safeTotal = Math.max(total, 1);
         const pct = Math.round((completed / safeTotal) * 100);
         return `**${titleLink}**: ${pct}% (${completed}/${total})`;
@@ -602,9 +611,10 @@ export class TaskUtils {
         return { sq, cs, tableHeaders };
     }
 
-    renderStatsDashboard(sq: Record<string, number>, cs: Record<string, Record<string, number>>, title = "체크리스트 통계", type = "info"): string {
+    renderStatsDashboard(sq: Record<string, number>, cs: Record<string, Record<string, number>>, title = "", type = "info"): string {
+        title = title || t("stats_title", this.settings.language);
         const tSq = Object.values(sq).reduce((a, b) => a + b, 0);
-        if (tSq === 0) return `> [!warning] ${title}: 표시할 데이터가 없습니다.\n`;
+        if (tSq === 0) return `> [!warning] ${title}: ${t("no_data", this.settings.language)}\n`;
 
         const EC: Record<string, string> = { "🟦": "#3b82f6", "🟩": "#10b981", "🟨": "#f59e0b", "🟥": "#ef4444" };
 
@@ -748,7 +758,7 @@ export class TaskUtils {
             return { line: t, ind: (t.match(REGEX.INDENT) || [""])[0].length, isDone, isTask };
         });
 
-        let cType = "quote", pStr = (total > 0) ? `(${Math.round((done / total) * 100)}%)` : `(정보없음)`;
+        let cType = "quote", pStr = (total > 0) ? `(${Math.round((done / total) * 100)}%)` : t("no_info", this.settings.language);
         let sTitle = `💭 **[[${noteName}]]** ${pStr}`;
         if (taskInfos.filter(ti => ti.isTask).length === 0 && total === 0) return "";
         else if (!hasIncomp && taskInfos.filter(ti => ti.isTask).length > 0) { cType = "quote"; sTitle = `🏁 **[[${noteName}]]** ${pStr}`; }
@@ -800,7 +810,7 @@ export class TaskUtils {
         if (!projects || projects.length === 0) return "";
 
         let html = `<div style="padding: 16px; background: var(--background-secondary); border-radius: 12px; border: 1px solid var(--background-modifier-border); margin: 10px 0 25px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">\n`;
-        html += `    <div style="font-weight: 800; font-size: 1.1em; margin-bottom: 15px; color: var(--text-accent); display: flex; align-items: center; gap: 8px;">🚀 전체 프로젝트 요약</div>\n`;
+        html += `    <div style="font-weight: 800; font-size: 1.1em; margin-bottom: 15px; color: var(--text-accent); display: flex; align-items: center; gap: 8px;">${t("overall_project_summary", this.settings.language)}</div>\n`;
 
         projects.forEach((p, idx) => {
             let pct = p.planTasksTotal > 0 ? Math.round((p.planTasksDone / p.planTasksTotal) * 100) : 0;
@@ -850,15 +860,15 @@ export class TaskUtils {
 
     generateSegmentedDashboards(tableHeader: string, dataRows: string[]): string {
         const seg1Lines = this.filterTableByDayRange(dataRows, 1, 10);
-        const dash1 = "## 1구간 (1일~10일)\n" + (seg1Lines.length > 0 ? this.generateStatsDashboard(tableHeader + "\n" + seg1Lines.join("\n"), "1구간 (1일~10일) 통계", "info") : "> [!info] 1구간 (1일~10일): 데이터 없음\n");
+        const dash1 = `## ${t("segment_1", this.settings.language)}\n` + (seg1Lines.length > 0 ? this.generateStatsDashboard(tableHeader + "\n" + seg1Lines.join("\n"), t("segment_1", this.settings.language), "info") : t("msg_no_data", this.settings.language, { num: 1 }) + "\n");
 
         const seg2Lines = this.filterTableByDayRange(dataRows, 11, 20);
-        const dash2 = "## 2구간 (11일~20일)\n" + (seg2Lines.length > 0 ? this.generateStatsDashboard(tableHeader + "\n" + seg2Lines.join("\n"), "2구간 (11일~20일) 통계", "info") : "> [!info] 2구간 (11일~20일): 데이터 없음\n");
+        const dash2 = `## ${t("segment_2", this.settings.language)}\n` + (seg2Lines.length > 0 ? this.generateStatsDashboard(tableHeader + "\n" + seg2Lines.join("\n"), t("segment_2", this.settings.language), "info") : t("msg_no_data", this.settings.language, { num: 2 }) + "\n");
 
         const seg3Lines = this.filterTableByDayRange(dataRows, 21, 31);
-        const dash3 = "## 3구간 (21일~말일)\n" + (seg3Lines.length > 0 ? this.generateStatsDashboard(tableHeader + "\n" + seg3Lines.join("\n"), "3구간 (21일~말일) 통계", "info") : "> [!info] 3구간 (21일~말일): 데이터 없음\n");
+        const dash3 = `## ${t("segment_3", this.settings.language)}\n` + (seg3Lines.length > 0 ? this.generateStatsDashboard(tableHeader + "\n" + seg3Lines.join("\n"), t("segment_3", this.settings.language), "info") : t("msg_no_data", this.settings.language, { num: 3 }) + "\n");
 
-        const dashTotal = "## 이달의 전체 종합 통계\n" + this.generateStatsDashboard(tableHeader + "\n" + dataRows.join("\n"), "이달의 전체 종합 통계", "info");
+        const dashTotal = `## ${t("monthly_total", this.settings.language)}\n` + this.generateStatsDashboard(tableHeader + "\n" + dataRows.join("\n"), t("monthly_total", this.settings.language), "info");
 
         return `${dash1}\n\n${dash2}\n\n${dash3}\n\n${dashTotal}`;
     }
@@ -886,9 +896,9 @@ export class TaskUtils {
         for (let i = 0; i < lines.length; i++) {
             let l = lines[i];
             if (/^>\s*\[!routine\]/i.test(l)) { inRoutine = true; routineType = "callout"; }
-            else if (/^#+\s*루틴/i.test(l)) { inRoutine = true; routineType = "header"; }
+            else if (/^#+\s*(루틴|Routine)/i.test(l)) { inRoutine = true; routineType = "header"; }
             else if (inRoutine) {
-                if (routineType === "header" && l.startsWith('#') && !/^#+\s*루틴/i.test(l)) inRoutine = false;
+                if (routineType === "header" && l.startsWith('#') && !/^#+\s*(루틴|Routine)/i.test(l)) inRoutine = false;
                 else if (routineType === "callout" && !l.startsWith('>') && l.trim() !== '') inRoutine = false;
             }
 
@@ -909,7 +919,7 @@ export class TaskUtils {
     }
 
     getChecklistTable(content: string): string {
-        const chkRange = this.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
+        const chkRange = this.getSectionRange(content, t("header_checklist", this.settings.language)) as { start: number, end: number };
         if (!chkRange) return "";
 
         const tableLines = [];
@@ -922,7 +932,7 @@ export class TaskUtils {
     }
 
     formatChecklistTable(content: string): string {
-        const chkRange = this.getSectionRange(content, "# 체크리스트") as { start: number, end: number };
+        const chkRange = this.getSectionRange(content, t("header_checklist", this.settings.language)) as { start: number, end: number };
         if (!chkRange) return content;
 
         const chkSection = content.substring(chkRange.start, chkRange.end);
@@ -1049,13 +1059,16 @@ export class TaskUtils {
 
         const projectResults = await Promise.all(projectFiles.map(async (file) => {
             try {
-                if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return null;
+                if (!(this.hasSection(file, "실행", 1) || this.hasSection(file, "Execution", 1)) &&
+                    !(this.hasSection(file, "계획", 1) || this.hasSection(file, "Plan", 1))) {
+                    return null;
+                }
 
                 const pNoteName = file.basename;
 
                 // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
                 const mtime = file.stat.mtime;
-                const todayStr = moment(todayObj).format("YYYY-MM-DD");
+                const todayStr = (window as any).moment(todayObj).format("YYYY-MM-DD");
 
                 // 에디터에 열려있으면 미저장 내용이 있을 수 있으므로 캐시 무조건 무시 (Bypass)
                 const isOpenInEditor = openFilePaths.has(file.path);
@@ -1229,7 +1242,7 @@ export class TaskUtils {
 
         if (wFile && wFile instanceof TFile) {
             wContent = await this.fileManager.getActiveViewOrFileText(wFile);
-            const chkRange = this.getSectionRange(wContent, "# 체크리스트") as { start: number, end: number };
+            const chkRange = this.getSectionRange(wContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
             if (chkRange) {
                 const chkSection = wContent.substring(chkRange.start, chkRange.end);
                 const lines = chkSection.split('\n');
@@ -1280,9 +1293,9 @@ export class TaskUtils {
 
         if (wFile && wFile instanceof TFile) {
             if (dailyRecord) {
-                const recRange = this.getSectionRange(wContent, "# 기록") as { start: number, end: number };
-                const chkSectionRange = this.getSectionRange(wContent, "# 체크리스트") as { start: number, end: number };
-                const statsSectionRange = this.getSectionRange(wContent, "# 통계") as { start: number, end: number };
+                const recRange = this.getSectionRange(wContent, t("header_record", this.settings.language)) as { start: number, end: number };
+                const chkSectionRange = this.getSectionRange(wContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
+                const statsSectionRange = this.getSectionRange(wContent, t("header_stats", this.settings.language)) as { start: number, end: number };
                 let insertPos = wContent.length;
                 if (chkSectionRange) insertPos = Math.min(insertPos, chkSectionRange.start);
                 if (statsSectionRange) insertPos = Math.min(insertPos, statsSectionRange.start);
@@ -1307,33 +1320,23 @@ export class TaskUtils {
                 }
             }
 
-            const newChkRange = this.getSectionRange(wContent, "# 체크리스트") as { start: number, end: number };
-            const chkSectionText = `# 체크리스트\n\n${weeklyTableStr}\n\n`;
-            if (newChkRange) {
-                wContent = wContent.substring(0, newChkRange.start) + chkSectionText + wContent.substring(newChkRange.end);
-            } else {
-                const statsRange = this.getSectionRange(wContent, "# 통계") as { start: number, end: number };
-                if (statsRange) {
-                    wContent = wContent.substring(0, statsRange.start) + chkSectionText + wContent.substring(statsRange.start);
-                } else {
-                    wContent = wContent.trimEnd() + `\n\n` + chkSectionText;
-                }
-            }
+            const newChkRange = this.getSectionRange(wContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
+            const chkSectionText = `${t("header_checklist", this.settings.language)}
 
-            const finalStatsRange = this.getSectionRange(wContent, "# 통계") as { start: number, end: number };
-            if (weeklyStatsDashboard) {
-                if (finalStatsRange) {
-                    wContent = wContent.substring(0, finalStatsRange.start) + `# 통계\n${weeklyStatsDashboard}\n` + wContent.substring(finalStatsRange.end);
-                } else {
-                    wContent = wContent.trimEnd() + `\n\n# 통계\n${weeklyStatsDashboard}\n`;
-                }
-            }
+${weeklyTableStr}
 
-            // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
-            await this.fileManager.pluginWrite(wFile, wContent.trim() + "\n");
-        } else {
-            const chkSectionText = `# 체크리스트\n\n${weeklyTableStr}\n\n`;
-            const initialContent = `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${weeklyInfo.fileName.replace('.md','')}\n\n# 기록\n\n${dailyRecord ? dailyRecord + '\n\n' : ''}${chkSectionText}# 통계\n${weeklyStatsDashboard}\n`;
+`;
+            const initialContent = `---
+작성일: "2000-01-01T00:00"
+수정일: "2000-01-01T00:00"
+---
+# ${weeklyInfo.fileName.replace('.md','')}
+
+${t("header_record", this.settings.language)}
+
+${dailyRecord ? dailyRecord + '\n\n' : ''}${chkSectionText}${t("header_stats", this.settings.language)}
+${weeklyStatsDashboard}
+`;
             await app.vault.create(weeklyInfo.path, initialContent);
         }
     }
@@ -1350,16 +1353,28 @@ export class TaskUtils {
             // Bug G: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
             let mContent = await this.fileManager.getActiveViewOrFileText(mFile);
             originalContent = mContent;
-            const statsRange = this.getSectionRange(mContent, "# 통계") as { start: number, end: number };
+            const statsRange = this.getSectionRange(mContent, t("header_stats", this.settings.language)) as { start: number, end: number };
             if (statsRange) {
-                mContent = mContent.substring(0, statsRange.start) + `# 통계\n${dashboardStr}\n` + mContent.substring(statsRange.end);
+                mContent = mContent.substring(0, statsRange.start) + `${t("header_stats", this.settings.language)}\n${dashboardStr}\n` + mContent.substring(statsRange.end);
             } else {
-                mContent += `\n\n# 통계\n${dashboardStr}\n`;
+                mContent += `\n\n${t("header_stats", this.settings.language)}\n${dashboardStr}\n`;
             }
             // BUG-09: pluginWrite로 교체하여 vault.on('modify')의 재동기화 트리거 방지
-            await this.fileManager.pluginWrite(mFile, mContent.trim() + "\n");
+            try {
+                await this.fileManager.pluginWrite(mFile, mContent.trim() + "\n");
+            } catch (err) {
+                console.error("[TaskUtils] Failed to write monthly stats file:", err);
+            }
         } else {
-            await app.vault.create(monthlyInfo.path, `---\n작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"\n---\n# ${mTitle} 월간 기록\n\n# 기록\n\n# 통계\n${dashboardStr}\n`);
+            await app.vault.create(monthlyInfo.path, `---
+작성일: "2000-01-01T00:00"
+수정일: "2000-01-01T00:00"
+---
+# ${mTitle}
+
+${t("header_record", this.settings.language)}
+
+${t("header_stats", this.settings.language)}\n${dashboardStr}\n`);
         }
         return originalContent;
     }
@@ -1371,7 +1386,8 @@ export class TaskUtils {
         // Bug C: 에러 발생 시 전체 롤백을 위해 대상 파일 사전 백업
         const backups = new Map<string, string>();
         for (const file of allFiles) {
-            if (this.hasSection(file, "실행", 1) || this.hasSection(file, "계획", 1)) {
+            if ((this.hasSection(file, "실행", 1) || this.hasSection(file, "Execution", 1)) ||
+                (this.hasSection(file, "계획", 1) || this.hasSection(file, "Plan", 1))) {
                 backups.set(file.path, await this.fileManager.getActiveViewOrFileText(file));
             }
         }
@@ -1379,7 +1395,10 @@ export class TaskUtils {
 
         await Promise.all(allFiles.map(async (file) => {
             try {
-                if (!this.hasSection(file, "실행", 1) && !this.hasSection(file, "계획", 1)) return;
+                if (!(this.hasSection(file, "실행", 1) || this.hasSection(file, "Execution", 1)) &&
+                    !(this.hasSection(file, "계획", 1) || this.hasSection(file, "Plan", 1))) {
+                    return;
+                }
 
                 const noteName = file.basename;
                 const dailyData = dailyMap[noteName] || { byId: {}, byText: {}, orderedTasks: [] };
@@ -1603,7 +1622,13 @@ export class TaskUtils {
                 }
 
                 // BUG-10: pluginWrite로 교체하여 프로젝트 파일 저장이 modifiedFiles에 쌓이는 것을 방지
-                if (mod) await this.fileManager.pluginWrite(file, finalSLines.join("\n"));
+                if (mod) {
+                    try {
+                        await this.fileManager.pluginWrite(file, finalSLines.join("\n"));
+                    } catch (err) {
+                        console.error("[TaskUtils] Failed to write project progress file:", err);
+                    }
+                }
 
                 let execTasks: string[] = [], planTasksTotal = 0, planTasksDone = 0;
                 let pInEx = false, pInPl = false;
@@ -1623,6 +1648,7 @@ export class TaskUtils {
 
             } catch (e) {
                 console.error(`Sync error on [${file.path}]:`, e);
+                try { require("fs").appendFileSync("d:/Desktop/test/error.txt", (e instanceof Error ? e.stack : String(e)) + "\n"); } catch(ex){}
                 syncErrors.push({ file, error: e });
             }
         }));

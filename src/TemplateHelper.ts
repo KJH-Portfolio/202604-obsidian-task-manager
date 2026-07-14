@@ -3,6 +3,7 @@ import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
+import { t } from "./i18n";
 
 export class TemplateHelper {
     app: App;
@@ -32,14 +33,20 @@ export class TemplateHelper {
     async createDefaultTemplatesFolderAndFiles(templatesDir: string): Promise<void> {
         await this.utils.ensureFolder(templatesDir);
 
-        const dailyPath = `${templatesDir}/데일리 스케줄 템플릿.md`;
-        const projectPath = `${templatesDir}/프로젝트 계획서 템플릿.md`;
+        const dailyPath_ko = `${templatesDir}/01.데일리 스케줄 템플릿.md`;
+        const projectPath_ko = `${templatesDir}/02.프로젝트 계획서 템플릿.md`;
+        const dailyPath_en = `${templatesDir}/01.Daily Schedule Template.md`;
+        const projectPath_en = `${templatesDir}/02.Project Plan Template.md`;
 
-        const defaultDailyText = `---
-작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
-수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
-cssclasses:
-  - inline-routine
+        let checklistTable = "";
+        for (let i = 1; i <= 31; i++) {
+            checklistTable += `|  ${i.toString().padEnd(2, ' ')}  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
+`;
+        }
+
+        const defaultDailyText_ko = `---
+작성일: "2000-01-01T00:00"
+수정일: "2000-01-01T00:00"
 ---
 -
 <div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; justify-content: center;">
@@ -93,76 +100,147 @@ cssclasses:
 | {{currentDay}}  |      |      |      |      |      |      |      |
 # Todo
 #### 할 일
-- [ ] 오늘 마감인 작업 📅 {{date}}
+- [ ] 이곳은 오늘 해야 할 일들이 모이는 곳입니다. 우측의 달력(📅)을 눌러 마감일을 오늘로 지정해보세요! 📅 {{date}}
+- [ ] 다른 프로젝트 노트에서 작성한 태스크를 이곳으로 복사해오면, 상태와 진행률이 실시간으로 동기화됩니다. ^dummy1
+- [x] 완료된 작업은 매일 밤 '일간 마감(🌤️)' 버튼을 누르면 깔끔하게 정리됩니다.
 # Project
-> 🚀 전체 프로젝트 요약 대시보드 및 콜아웃 목록이 여기에 실시간으로 갱신됩니다.
+> ${t("overall_project_summary_desc", this.settings.language)}
 
 # 체크리스트
 
 | 날짜  | Step | Block | 멘탈  | 식단  | 운동  | 취침  | 디톡스 |
 | :-: | :--: | :---: | :-: | :-: | :-: | :-: | :-: |
-|  1  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  2  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  3  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  4  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  5  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  6  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  7  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  8  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-|  9  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 10  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 11  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 12  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 13  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 14  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 15  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 16  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 17  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 18  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 19  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 20  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 21  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 22  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 23  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 24  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 25  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 26  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 27  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 28  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 29  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 30  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-| 31  |  -   |   -   |  -  |  -  |  -  |  -  |  -  |
-
+${checklistTable}
 # 통계
 > 📈 루틴 집계 및 아카이브 통계가 10일 구간별로 렌더링됩니다.
-`;
+`
 
-        const defaultProjectText = `---
-작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
-수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+        const defaultDailyText_en = `---
+Created: "2000-01-01T00:00"
+Modified: "2000-01-01T00:00"
+---
+-
+<div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; justify-content: center;">
+  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:quick-capture" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #00cec9;">✏️</div>
+  </a>
+  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:daily-task-reset" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #ff7675;">🌤️</div>
+  </a>
+  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:monthly-stats-archive" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #fdcb6e;">🗂️</div>
+  </a>
+  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:open-memo" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #74b9ff;">📋</div>
+  </a>
+</div>
+# Routine
+>Step : Follow the plan. Sleep at 1:30.
+
+> [!routine]
+> Affirmation : Well begun is half done.
+> ## ==Step==
+> - [ ] Write
+> - [ ] Execute
+> ## ==Block==
+> - [ ] 1
+> - [ ] 2
+> - [ ] 3
+> - [ ] 4
+> - [ ] 5
+> - [ ] 6
+> ## ==Mental==
+> - [ ] Read affirmation
+> - [ ] 10 min meditation
+> ## ==Diet==
+> - [ ] Breakfast
+> - [ ] Lunch
+> - [ ] Dinner
+> ## ==Exercise==
+> - [ ] Squat 60, Pushup 20
+> ## ==Sleep==
+> - [ ] Quiet time from 11
+> ## ==Detox==
+> - [ ] 1 time
+> - [ ] 3 times
+> - [ ] 5 times+
+---
+
+| Date  | Step | Block | Mental  | Diet  | Exercise  | Sleep  | Detox |
+| :-: | :--: | :---: | :-: | :-: | :-: | :-: | :-: |
+| {{currentDay}}  |      |      |      |      |      |      |      |
+# Todo
+#### Todo
+- [ ] This is where your daily tasks are gathered. Click the calendar (📅) to set today's deadline! 📅 {{date}}
+- [ ] If you copy tasks from other project notes here, their status and progress will sync in real-time. ^dummy1
+- [x] Completed tasks will be neatly archived when you click the 'Daily Reset (🌤️)' button at night.
+# Project
+> 🚀 The overall project summary dashboard and callout list are updated here in real-time.
+
+# Checklist
+
+| Date  | Step | Block | Mental  | Diet  | Exercise  | Sleep  | Detox |
+| :-: | :--: | :---: | :-: | :-: | :-: | :-: | :-: |
+${checklistTable}
+# Stats
+> 📈 Routine aggregation and archive statistics are rendered per 10-day intervals.
+`
+
+        const defaultProjectText_ko = `---
+작성일: "2000-01-01T00:00"
+수정일: "2000-01-01T00:00"
 ---
 # 실행
--
+- [ ] 갑자기 떠오른 즉각적인 임시 작업이나 아이디어를 이곳에 자유롭게 기록하세요. 📅
+- [ ] 혹은 하단의 '계획(Plan)' 구역에서 복사한 핵심 중요 태스크를 이곳에 배치하면 해당 작업 또한 메인 스케줄에 즉시 연동됩니다. 📅
+
 # 개요
 - 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
-- 목표 :
+- 목표 : 프로젝트가 달성하고자 하는 궁극적인 목표를 한 줄로 선명하게 작성하세요.
+
 # 계획
-> **진행도**: **🚨 작성 필요!**
--
+> **${t("progress_label", this.settings.language)}**: **${t("progress_need_write", this.settings.language)}**
+- [ ] 프로젝트의 구체적인 실행 계획을 할 일(Task) 단위로 쪼개어 이곳에 작성하세요. 📅 2026-07-14 ^step1
+- [ ] 작성된 태스크를 데일리 노트의 \`#### 할 일\` 영역으로 복사해서 가져가면 스케줄에 연동됩니다. ^step2
+- [ ] 태스크 끝에 생성되는 고유 ID(\`^step3\`)를 통해 흩어진 태스크들의 진행률이 이 프로젝트 노트로 실시간 통합됩니다. ^step3
+
 # 세부 사항
-`;
+이곳에는 프로젝트의 세부적인 메모, 회의록, 참고 자료 링크 등을 자유롭게 서술하세요.
+`
 
-        if (!this.app.vault.getAbstractFileByPath(dailyPath)) {
-            await this.app.vault.create(dailyPath, defaultDailyText);
-        }
-        if (!this.app.vault.getAbstractFileByPath(projectPath)) {
-            await this.app.vault.create(projectPath, defaultProjectText);
-        }
+        const defaultProjectText_en = `---
+Created: "2000-01-01T00:00"
+Modified: "2000-01-01T00:00"
+---
+# Execution
+- [ ] Freely jot down any sudden ideas or immediate, temporary tasks here. 📅
+- [ ] Or, paste critical tasks copied from the 'Plan' section below. These tasks will also instantly sync to your main schedule. 📅
 
-        const dailyGuidePath = `${templatesDir}/스케줄_노트_작성_가이드.md`;
-        const projectGuidePath = `${templatesDir}/프로젝트_노트_작성_가이드.md`;
+# Overview
+- Deadline : 📅 2099-12-31 ~ 📅 2099-12-31
+- Goal : Write a clear, one-line objective that this project ultimately aims to achieve.
 
-        const dailyGuideText = `# 📝 데일리 스케줄 노트 작성 가이드
+# Plan
+> **Progress**: **🚨 Needs writing!**
+- [ ] Break down your specific execution plans into actionable tasks here. 📅 2026-07-14 ^step1
+- [ ] Copy these tasks into the \`#### Todo\` section of your daily schedule to sync them. ^step2
+- [ ] The unique ID (\`^step3\`) at the end of each task ensures that progress from scattered tasks is integrated back here in real-time. ^step3
+
+# Details
+Freely document detailed notes, meeting minutes, reference links, and other project-related information here.
+`
+
+        if (!this.app.vault.getAbstractFileByPath(dailyPath_ko)) await this.app.vault.create(dailyPath_ko, defaultDailyText_ko);
+        if (!this.app.vault.getAbstractFileByPath(projectPath_ko)) await this.app.vault.create(projectPath_ko, defaultProjectText_ko);
+        if (!this.app.vault.getAbstractFileByPath(dailyPath_en)) await this.app.vault.create(dailyPath_en, defaultDailyText_en);
+        if (!this.app.vault.getAbstractFileByPath(projectPath_en)) await this.app.vault.create(projectPath_en, defaultProjectText_en);
+
+        const dailyGuidePath_ko = `${templatesDir}/98.스케줄_노트_작성_가이드.md`;
+        const projectGuidePath_ko = `${templatesDir}/99.프로젝트_노트_작성_가이드.md`;
+        const dailyGuidePath_en = `${templatesDir}/98.Daily_Schedule_Note_Guide.md`;
+        const projectGuidePath_en = `${templatesDir}/99.Project_Note_Guide.md`;
+
+        const dailyGuideText_ko = `# 📝 데일리 스케줄 노트 작성 가이드
 
 이 문서는 데일리 스케줄 노트에서 **'어떤 버튼이 무슨 역할을 하는지'**, 그리고 **'내가 마음대로 수정해도 되는 영역과 건드리면 안 되는 영역'**이 어디인지 알려주는 가이드입니다.
 
@@ -185,10 +263,8 @@ cssclasses:
 
 \`\`\`markdown
 ---
-작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
-수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
-cssclasses:
-  - inline-routine
+작성일: "2000-01-01T00:00"
+수정일: "2000-01-01T00:00"
 ---
 ==- 오늘 하루도 파이팅! (자유롭게 메모하는 공간)==
 
@@ -220,7 +296,7 @@ cssclasses:
 ==- [ ] 장보기 📅 2026-06-06==
 
 # Project
-> 🚀 전체 프로젝트 요약 대시보드 및 콜아웃 목록이 여기에 실시간으로 갱신됩니다.
+> ${t("overall_project_summary_desc", this.settings.language)}
 > (절대로 건드리지 마세요! 플러그인이 통째로 덮어씌우는 영역입니다.)
 
 # 체크리스트
@@ -237,9 +313,84 @@ cssclasses:
 - \`# Todo\`, \`#### 할 일\`
 - \`# Project\`
 - \`# 체크리스트\`, \`# 통계\`
-`;
+`
 
-        const projectGuideText = `# 🚀 프로젝트 노트 작성 가이드
+        const dailyGuideText_en = `# 📝 Daily Schedule Note Guide
+
+This document is a guide that explains **'what each button does'**, and **'which areas you can freely modify vs which areas you shouldn't touch'** in the daily schedule note.
+
+---
+
+## 🔘 Top Control Buttons (Magic Buttons)
+There are automation buttons at the top of the schedule note that handle complex Obsidian actions with a single click.
+
+- ⚡️ **(Task Manage)**: Click when you need to sort the latest status while writing a daily note, or when you want to pull tasks from projects into the daily note. (The \`# Todo\` area will be automatically sorted by deadline.)
+- 🌤️ **(Daily Reset)**: Click at the end of the day to prepare the schedule for the next day. It clears the routine checkboxes and transfers today's routine statistics to the monthly table.
+- 🗂️ **(Monthly Archive)**: Click at the end of the month to extract the routine achievement rate statistics for this month and save them neatly in the archive folder.
+- ✏️ **(Quick Capture)**: Click when you want to quickly push a task under \`#### Todo\` in the schedule anytime, anywhere.
+- 📋 **(Open Memo)**: Click when you want to quickly memo an idea that comes to mind.
+
+---
+
+## 🎨 Modification Guide (Example Screen)
+
+Below is an example of a schedule note. Avoid the areas where the plugin overwrites data, and **freely modify and check only the highlighted areas (==highlight==)**.
+
+\`\`\`markdown
+---
+Created: "2000-01-01T00:00"
+Modified: "2000-01-01T00:00"
+---
+==- Have a great day today! (Space for free memo)==
+
+<div style="display: flex; ... Button Area (Do not touch) ... </div>
+
+# Routine
+>Step : ==Follow the plan. Sleep at 1:30.==
+
+> [!routine]
+> Affirmation : ==Well begun is half done.==
+> ## ==Step==
+> - [x] ==Write== (Feel free to click the routine checkboxes)
+> - [ ] ==Execute==
+
+---
+| ==Date==  | ==Step== | ==Block== | ... (Routine temporary storage table - Do not touch the contents) ...
+---
+
+> 💡 **Q. What if I want to customize the routine categories like 'Step', 'Diet', 'Exercise' in the 1st row (header) of the table?**
+> A. To change the category names, you must **modify the 1st row (header) of both tables identically** within the current schedule note!
+> 1. The 1st row of the **temporary storage table (mini table)** right below the Routine area.
+> 2. The 1st row of the **\`# Checklist\` (monthly accumulation table)** at the bottom of the schedule note.
+>
+> The item names in these two places must be identical so that when you click the 'Daily Reset (🌤️)' button every night, today's routine data will safely accumulate in the monthly table without breaking.
+
+# Todo
+#### Todo
+==- [ ] Transfer money at the bank 📅 2026-06-05== (Write your daily general tasks here)
+==- [ ] Grocery shopping 📅 2026-06-06==
+
+# Project
+> 🚀 The overall project summary dashboard and callout list are updated here in real-time.
+> (DO NOT touch! This is the area entirely overwritten by the plugin.)
+
+# Checklist
+| Date | Step | Block | ... (Monthly accumulation table - Do not touch) ...
+
+# Stats
+> 📈 Routine aggregation and archive statistics are rendered per 10-day intervals.
+> (Do not touch)
+\`\`\`
+
+### 🚨 Summary: Keywords (Headers) you must NEVER delete
+The titles below are 'milestones' the plugin uses to find data. Deleting or modifying these words will break the plugin!
+- \`# Routine\`
+- \`# Todo\`, \`#### Todo\`
+- \`# Project\`
+- \`# Checklist\`, \`# Stats\`
+`
+
+        const projectGuideText_ko = `# 🚀 프로젝트 노트 작성 가이드
 
 이 문서는 개별 프로젝트 노트를 작성할 때, **어떤 버튼을 눌러야 메인 스케줄과 연동되는지**, 그리고 **문서의 어느 위치에 계획과 세부 내용을 작성해야 하는지** 알려주는 가이드입니다.
 
@@ -258,8 +409,8 @@ cssclasses:
 
 \`\`\`markdown
 ---
-작성일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
-수정일: "<% tp.date.now("YYYY-MM-DD[T]HH:mm") %>"
+작성일: "2000-01-01T00:00"
+수정일: "2000-01-01T00:00"
 ---
 # 실행
 ==- [ ] 메인 페이지 디자인 시안 완성하기==
@@ -270,7 +421,7 @@ cssclasses:
 - 목표 : ==플러그인 V1.0 스토어 정식 배포==
 
 # 계획
-> **진행도**: **🚨 작성 필요!** (이 부분은 플러그인이 프로그레스 바 🟩🟩⬜⬜ 로 자동 교체해 줍니다. 지우지 마세요!)
+> **${t("progress_label", this.settings.language)}**: **${t("progress_need_write", this.settings.language)}** (This part is automatically replaced with a progress bar 🟩🟩⬜⬜ by the plugin. Do not delete it!)
 ==- [x] 아이디어 구상== (앞으로 해야 할 전체 로드맵 할 일들을 적어두세요)
 ==- [ ] 개발 세팅==
 
@@ -285,15 +436,62 @@ cssclasses:
 - \`# 개요\`
 - \`# 계획\`
 - \`# 세부 사항\`
-`;
+`
 
-        if (!this.app.vault.getAbstractFileByPath(dailyGuidePath)) {
-            await this.app.vault.create(dailyGuidePath, dailyGuideText);
-        }
-        if (!this.app.vault.getAbstractFileByPath(projectGuidePath)) {
-            await this.app.vault.create(projectGuidePath, projectGuideText);
-        }
+        const projectGuideText_en = `# 🚀 Project Note Guide
+
+This document is a guide that explains **which buttons to press to link with the main schedule** when writing individual project notes, and **where in the document you should write your plans and details**.
+
+---
+
+## 🔘 Top Control Buttons (Magic Buttons)
+
+- 📤 **(Push to Schedule)**: After writing a task or completing one in the project note, pressing this button **overwrites the changed progress and task list in real-time to the dashboard (\`# Project\` area) of the main daily schedule note.**
+  - Tip: Just think that you must press this button once if you add or check a task in the project document.
+
+---
+
+## 🎨 Modification Guide (Example Screen)
+
+Project notes offer high freedom, but there are rules you must follow for the plugin to track tasks. **Please check the areas colored with highlighter (==highlight==).**
+
+\`\`\`markdown
+---
+Created: "2000-01-01T00:00"
+Modified: "2000-01-01T00:00"
+---
+# Execution
+==- [ ] Complete main page design draft==
+==- [x] Submit proposal==
+
+# Plan Overview
+- Deadline : ==📅 2026-07-01 ~ 📅 2026-07-20==
+- Goal : ==Official plugin V1.0 store release==
+
+# Work Summary
+> **Progress**: **🚨 Needs writing!** (This part is automatically replaced with a progress bar 🟩🟩⬜⬜ by the plugin. Do not delete!)
+==- [x] Idea conception== (Write down all roadmap tasks you need to do in the future)
+==- [ ] Development setup==
+
+# Details
+==From here down is an entirely free area.==
+==Feel free to write all content related to the project such as meeting minutes, idea sketches, code snippets, etc.!==
+\`\`\`
+
+### 🚨 Summary: Keywords (Headers) you must NEVER delete
+The titles below are 'milestones' the plugin uses to calculate progress and move data.
+- \`# Execution\`
+- \`# Plan Overview\`
+- \`# Work Summary\`
+- \`# Details\`
+`
+
+        if (!this.app.vault.getAbstractFileByPath(dailyGuidePath_ko)) await this.app.vault.create(dailyGuidePath_ko, dailyGuideText_ko);
+        if (!this.app.vault.getAbstractFileByPath(projectGuidePath_ko)) await this.app.vault.create(projectGuidePath_ko, projectGuideText_ko);
+        if (!this.app.vault.getAbstractFileByPath(dailyGuidePath_en)) await this.app.vault.create(dailyGuidePath_en, dailyGuideText_en);
+        if (!this.app.vault.getAbstractFileByPath(projectGuidePath_en)) await this.app.vault.create(projectGuidePath_en, projectGuideText_en);
     }
+
 
     async setupParaStructure(): Promise<number> {
         let createdCount = 0;
@@ -303,8 +501,74 @@ cssclasses:
             await this.utils.ensureFolder(dir);
         }
 
-        const guidePath = "0. Inbox/00.지식관리_시스템_통합_가이드.md";
-        const guideContent = `# 🧠 제2의 두뇌: 통합 지식 관리 시스템 가이드
+        const guidePath_ko = "0. Inbox/00.지식관리_시스템_통합_가이드.md";
+        const guidePath_en = "0. Inbox/00.Knowledge_Management_System_Guide.md";
+
+        const guideContent_en = `# 🧠 Second Brain: Integrated Knowledge Management System Guide
+
+This Obsidian environment is set up to systematically manage fragmented tasks and knowledge.
+Our knowledge management ecosystem operates in 3 main stages: **[Collection (Inbox)] ➡️ [Classification & Action (PARA)] ➡️ [Permanent Knowledge (Zettelkasten)]**.
+
+---
+
+## 📥 Stage 1: Collection (0. Inbox)
+The \`0. Inbox\` folder where you are viewing this document is **the waiting area (station) where all raw thoughts and memos pass through first**.
+- **💡 Usage Principles**
+  - **Quick Collection**: Collect any memos or web clippings that come to mind here regardless of format.
+  - **Periodic Emptying**: Review the notes in this folder once a day or once a week, move them to appropriate folders (Project, Area, Resource, Zettelkasten, etc.), and keep this folder empty.
+
+---
+
+## 🏗️ Stage 2: Classification & Action (PARA System)
+Among the filtered information from the Inbox, items that involve **'a certain purpose or action'** are classified into 4 categories according to Tiago Forte's PARA framework.
+
+### 1️⃣ 1. Project
+- **Definition**: Short-term tasks with clear goals and **deadlines**.
+- **💡 Usage Principles**
+  - **Short-term Focus**: Manage projects with specific completion schedules by making them independent nodes.
+  - **Linked Management**: Actively track deadlines by linking task lists and D-Day markers.
+  - **Archive Transfer**: When a project is completed or suspended, immediately move it to the \`4. Archive\` folder.
+
+### 2️⃣ 2. Area
+- **Definition**: Areas with no deadlines, but which require **continuous maintenance and management of standards** in life or work.
+- **💡 Usage Principles**
+  - **Continuity**: Handles areas without a clear end point, such as health management, financial planning, personal study routines, and relationships.
+  - **Check Management**: Write notes to set baselines to periodically check and prevent life balance and routines from collapsing.
+
+### 3️⃣ 3. Resource
+- **Definition**: Interests or external knowledge databases that are not immediately needed for current tasks, but **may be useful in the future**.
+- **💡 Usage Principles**
+  - **Reference Materials**: Collect book summaries, lecture notes, development code snippets, template forms, etc.
+  - **Knowledge Exploration**: Use as a knowledge search warehouse when researching or developing specific topics later.
+
+### 4️⃣ 4. Archive
+- **Definition**: A historical repository preserving items from the above three folders that are **no longer active or have been completed**.
+- **💡 Usage Principles**
+  - **Organization Targets**: Store completed projects, discarded plans, and area resources that are no longer of interest.
+  - **Preservation Value**: Isolate elements that are a waste to delete but distract your attention right now to reduce cognitive overload.
+
+> **📎 10. File (Attachment Only)**
+> Setting the 'Default location for new attachments' to this folder in Obsidian settings prevents images/PDFs from cluttering the document list.
+
+---
+
+## 🧠 Stage 3: Permanent Knowledge (Zettelkasten)
+Beyond simple 'tasks' or 'others' knowledge (Resource)', the \`5. Zettelkasten\` folder is the hub that weaves fragmented knowledge together to build **your own unique ideas and knowledge network**.
+
+### 📝 01. Fleeting
+- **💡 Principle**: Write freely without formality, and periodically (within 1-2 days) review to expand into permanent notes or delete unnecessary thoughts.
+
+### 📖 02. Literature
+- **💡 Principle**: Summarize external ideas from books, videos, papers, etc. according to the author's context, and be sure to fill in the referenced source (bibliographic information).
+
+### 💎 03. Permanent
+- **💡 Principle**: Based on others' knowledge (literature) or your own intuition (fleeting), include **only one core idea completely reconstructed in your own words (one idea per note)**. These permanent notes connect to each other like a spider web through Links, forming a true 'Second Brain'.
+
+---
+> 🚀 **Based on these guidelines, now start building your own knowledge ecosystem in earnest!**
+`;
+
+        const guideContent_ko = `# 🧠 제2의 두뇌: 통합 지식 관리 시스템 가이드
 
 이 옵시디언 환경은 파편화된 할 일과 지식들을 체계적으로 관리하기 위해 세팅되었습니다.
 우리의 지식 관리 생태계는 크게 **[수집(Inbox)] ➡️ [분류 및 행동(PARA)] ➡️ [영구 지식화(Zettelkasten)]** 의 3단계 흐름으로 굴러갑니다.
@@ -368,8 +632,12 @@ Inbox에서 걸러진 정보 중 **'어떤 목적이나 행동'**이 수반되�
 > 🚀 **이 가이드라인을 바탕으로, 이제 본격적으로 나만의 지식 생태계를 구축해 보세요!**
 `;
 
-        if (!this.app.vault.getAbstractFileByPath(guidePath)) {
-            await this.app.vault.create(guidePath, guideContent);
+        if (!this.app.vault.getAbstractFileByPath(guidePath_ko)) {
+            await this.app.vault.create(guidePath_ko, guideContent_ko);
+            createdCount++;
+        }
+        if (!this.app.vault.getAbstractFileByPath(guidePath_en)) {
+            await this.app.vault.create(guidePath_en, guideContent_en);
             createdCount++;
         }
 

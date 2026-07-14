@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { App, Modal, TFile, Notice } from "obsidian";
 import { PluginSettings } from "./settings";
+import { t } from "./i18n";
 import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
@@ -116,7 +117,7 @@ export class ResetManager {
 
     async runDailyReset(dailyFile: TFile): Promise<void> {
         try {
-            new Notice("⏳ 일간 마감 준비 중...");
+            new Notice(t("reset_prep_daily", this.settings.language));
 
             // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
             const originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
@@ -136,7 +137,7 @@ export class ResetManager {
                 const originalProjectsCache: Map<TFile, string> = new Map();
                 try {
                     this.utils.showLoadingOverlay("⏳ 일간 마감 처리 중...");
-                    new Notice("⏳ 일간 마감 및 리셋 시작...");
+                    new Notice(t("reset_start_daily", this.settings.language));
                     // BUG-G: 외부 스코프의 content(dailyMeta 파싱용)와 섀도잉 방지
                     let resetContent = this.utils.preprocessContent(originalContent);
 
@@ -165,7 +166,7 @@ export class ResetManager {
                         const todayDateNum = now.date();
                         const dateStr = currentDateStr || todayDateNum.toString();
 
-                        const chkRange = this.utils.getSectionRange(resetContent, "# 체크리스트") as { start: number, end: number };
+                        const chkRange = this.utils.getSectionRange(resetContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
                         if (chkRange) {
                             let beforeChk = resetContent.substring(0, chkRange.start);
                             let chkSection = resetContent.substring(chkRange.start, chkRange.end);
@@ -268,9 +269,9 @@ export class ResetManager {
                     for (let i = 0; i < allL.length; i++) {
                         let l = allL[i];
                         if (/^>\s*\[!routine\]/i.test(l)) { inRoutine = true; routineType = "callout"; }
-                        else if (/^#+\s*루틴/i.test(l)) { inRoutine = true; routineType = "header"; }
+                        else if (/^#+\s*(루틴|Routine)/i.test(l)) { inRoutine = true; routineType = "header"; }
                         else if (inRoutine) {
-                            if (routineType === "header" && l.startsWith('#') && !/^#+\s*루틴/i.test(l)) inRoutine = false;
+                            if (routineType === "header" && l.startsWith('#') && !/^#+\s*(루틴|Routine)/i.test(l)) inRoutine = false;
                             else if (routineType === "callout" && !l.startsWith('>') && l.trim() !== '') inRoutine = false;
                         }
                         if (inRoutine && /^((?:>\s*)*\s*[-*+]\s+)\[[^ ]\]/.test(l)) {
@@ -283,7 +284,7 @@ export class ResetManager {
                     }
 
                     let mainContent = finalL.join('\n');
-                    const dailyStatsHeader = "# 통계";
+                    const dailyStatsHeader = t("header_stats", this.settings.language);
                     let tailContent = "";
                     const fullStatsRange = this.utils.getSectionRange(mainContent, dailyStatsHeader) as { start: number, end: number };
                     if (fullStatsRange) {
@@ -314,7 +315,7 @@ export class ResetManager {
                     // --- [Step 6] 주간/월간 아카이브 문서에 통계 및 일지 적재 ---
                     // 1. 주간 아카이브 처리
                     if (tableStr || dailyRecord) {
-                        new Notice(`📂 주간 아카이브 갱신 중...`);
+                        new Notice(t("notice_archive_updating", this.settings.language));
                         const tableLines = tableStr ? tableStr.split('\n').filter(l => l.trim().startsWith("|")) : [];
                         const tableHeader = tableLines[0] || "| 날짜 | Step | Block | 멘탈 | 식단 | 운동 | 취침 | 디톡스 |";
 
@@ -352,7 +353,7 @@ export class ResetManager {
                     // 최종 파일 저장
                     const newContent = mainContent + statsSection + tailContent;
                     await this.fileManager.saveIfChanged(dailyFile, originalContent, newContent);
-                    new Notice("✅ 새로운 하루 준비 완료!");
+                    new Notice(t("reset_complete", this.settings.language));
                 } catch (innerErr) {
                     console.error("Daily Reset Execution Error:", innerErr);
 
@@ -372,14 +373,14 @@ export class ResetManager {
                         }
                     }
 
-                    new Notice("🚨 리셋 실패: 모든 연관 파일을 복구했습니다.");
+                    new Notice(t("reset_fail_restore", this.settings.language));
                 } finally {
                     this.utils.hideLoadingOverlay();
                 }
             }).open();
         } catch (e) {
             console.error("Daily Task Reset Initialization Error:", e);
-            new Notice("🚨 리셋 초기화 실패: 에러가 발생했습니다.");
+            new Notice(t("reset_fail_error", this.settings.language));
         }
     }
 
@@ -388,7 +389,7 @@ export class ResetManager {
         let originalContent = "";
         try {
             this.utils.showLoadingOverlay("⏳ 월간 통계 아카이빙 중...");
-            new Notice("⏳ 월간 통계 수동 아카이빙 시작...");
+            new Notice(t("reset_archive_start", this.settings.language));
 
             // 에디터의 실시간 내용을 우선 읽어옴 (읽기 모드 포함 안전 처리)
             originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
@@ -398,13 +399,13 @@ export class ResetManager {
 
             const tableStr = this.utils.getChecklistTable(content);
             if (!tableStr) {
-                new Notice("⚠️ 아카이빙할 체크리스트 표를 찾을 수 없습니다.");
+                new Notice(t("reset_archive_no_table", this.settings.language));
                 return;
             }
 
             const tLines = tableStr.trim().split("\n").filter(l => l.includes("|"));
             if (tLines.length < 2) {
-                new Notice("⚠️ 체크리스트 표에 데이터가 부족합니다.");
+                new Notice(t("reset_archive_no_data", this.settings.language));
                 return;
             }
 
@@ -419,7 +420,7 @@ export class ResetManager {
                 await this.utils.updateMonthlyArchiveStats(this.app, now, archiveStatsDashboard);
 
                 // 스케줄 노트의 # 통계 섹션도 업데이트
-                const dailyStatsHeader = "# 통계";
+                const dailyStatsHeader = t("header_stats", this.settings.language);
                 let mainContent = content;
                 const fullStatsRange = this.utils.getSectionRange(mainContent, dailyStatsHeader) as { start: number, end: number };
 
@@ -439,9 +440,9 @@ export class ResetManager {
                 updatedContent = this.utils.formatChecklistTable(updatedContent);
 
                 await this.fileManager.saveIfChanged(dailyFile, originalContent, updatedContent);
-                new Notice("✅ 월간 통계 수동 아카이빙 및 대시보드 갱신 완료!");
+                new Notice(t("reset_archive_complete", this.settings.language));
             } else {
-                new Notice("⚠️ 생성된 통계 대시보드가 없습니다.");
+                new Notice(t("reset_archive_no_dashboard", this.settings.language));
             }
         } catch (e) {
             console.error("Manual Archive Error:", e);
@@ -451,13 +452,13 @@ export class ResetManager {
                 // saveIfChanged 호출 전이므로 originalContent와 다를 경우에만 복구
                 if (currentContent !== originalContent) {
                     await this.fileManager.pluginWrite(dailyFile, originalContent);
-                    new Notice("🚨 아카이빙 실패: 원본 데이터를 복구했습니다.");
+                    new Notice(t("reset_archive_fail_restore", this.settings.language));
                 } else {
-                    new Notice("🚨 아카이빙 중 에러가 발생했습니다.");
+                    new Notice(t("reset_archive_fail_error", this.settings.language));
                 }
             } catch (rollbackErr) {
                 console.error("Rollback failed for daily file:", dailyFile.path, rollbackErr);
-                new Notice("🚨 아카이빙 실패 + 복구도 실패했습니다. 파일을 수동으로 확인해주세요.");
+                new Notice(t("reset_archive_fail_critical", this.settings.language));
             }
         } finally {
             this.utils.hideLoadingOverlay();

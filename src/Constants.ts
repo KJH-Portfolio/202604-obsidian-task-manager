@@ -7,12 +7,12 @@ export const REGEX = {
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
     HEADING_START: /^#+\s+/,
     TOP_HEADING_START: /^#\s+/,
-    EXEC_HEADER: /^#\s+실행$/,
-    WORK_SUMMARY_HEADER: /^#\s+계획$/,
+    EXEC_HEADER: /^#\s+(실행|Execution)$/m,
+    WORK_SUMMARY_HEADER: /^#\s+(계획|Plan)$/m,
     NOTE_LINK: /^##\s+(.+)$/,
     SUMMARY_MATCH: /^[\s]*[-*+]\s+\[([xX ])\]/,
     MARKER_REPLACE_2: /(\[[^\]]\])\s*/,
-    PROJECT_TODO_SECTION: /(?:^|\n)##\s+프로젝트(?:\n|$)(?:[\s\S]*?)(?=\n#{1,6}\s|$)/g,
+
     TODO_HEADER: /(?:^|\n)#\s+Todo(?=\n|$)/i,
     INDENT: /^\s*/
 };
@@ -36,7 +36,7 @@ export const EMOJI_MAP: Record<string, string> = {
 
 export const HEADERS = {
     TODO: "# Todo",
-    PROJECT: "## 프로젝트",
+
     STATS: "# 통계",
     PROJECT_MAIN: "# Project",
     CHECKLIST: "# 체크리스트"
