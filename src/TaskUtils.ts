@@ -1068,7 +1068,7 @@ export class TaskUtils {
 
                 // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
                 const mtime = file.stat.mtime;
-                const todayStr = (window as any).moment(todayObj).format("YYYY-MM-DD");
+                const todayStr = window.moment(todayObj).format("YYYY-MM-DD");
 
                 // 에디터에 열려있으면 미저장 내용이 있을 수 있으므로 캐시 무조건 무시 (Bypass)
                 const isOpenInEditor = openFilePaths.has(file.path);
@@ -1320,7 +1320,7 @@ export class TaskUtils {
                 }
             }
 
-            const newChkRange = this.getSectionRange(wContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
+
             const chkSectionText = `${t("header_checklist", this.settings.language)}
 
 ${weeklyTableStr}
@@ -1648,7 +1648,6 @@ ${t("header_stats", this.settings.language)}\n${dashboardStr}\n`);
 
             } catch (e) {
                 console.error(`Sync error on [${file.path}]:`, e);
-                try { require("fs").appendFileSync("d:/Desktop/test/error.txt", (e instanceof Error ? e.stack : String(e)) + "\n"); } catch(ex){}
                 syncErrors.push({ file, error: e });
             }
         }));
