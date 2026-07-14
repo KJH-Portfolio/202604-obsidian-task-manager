@@ -110,9 +110,9 @@ export const translations = {
     settings_notice_toggle_name: { en: "Recent Updates & Developer Comments", ko: "최근 업데이트 및 개발자 코멘트" },
     settings_notice_toggle_desc: { en: "Check the latest plugin changes and messages from the developer.", ko: "플러그인의 최신 변경 사항 및 개발자의 메시지를 확인합니다." },
     settings_notice_update_title: { en: "✨ Recent Updates", ko: "✨ 최근 업데이트" },
-    settings_notice_update_content: { en: "- The plugin is continuously being improved and developed.", ko: "- 현재 지속적으로 기능 개선 및 개발이 진행 중인 단계입니다." },
+    settings_notice_update_content: { en: "- The plugin is continuously being improved and developed.\n- Testing English version support in settings.", ko: "- 현재 지속적으로 기능 개선 및 개발이 진행 중인 단계입니다.\n- 현재 설정창 및 템플릿의 영어 버전(English Version) 지원을 테스트 중입니다." },
     settings_notice_dev_title: { en: "💬 Developer Comments", ko: "💬 개발자 코멘트" },
-    settings_notice_dev_content: { en: "This plugin is currently under development. English version support is planned for the future if needed.", ko: "이 플러그인은 현재 개발 중인 단계입니다. 추후 필요 시 영어 버전(English Version)을 추가할 계획을 가지고 있습니다." },
+    settings_notice_dev_content: { en: "Thank you for using MyWorld Task Manager! Feel free to leave feedback on GitHub.", ko: "MyWorld Task Manager를 사용해 주셔서 감사합니다! 버그나 피드백은 언제든 GitHub에 남겨주세요." },
     btn_show_content: { en: "Show Content", ko: "내용 보기" },
     btn_hide_content: { en: "Hide Content", ko: "내용 숨기기" },
 
@@ -275,6 +275,14 @@ export const translations = {
 
     no_data: { en: "No data to display.", ko: "표시할 데이터가 없습니다." },
     stats_title: { en: "Checklist Statistics", ko: "체크리스트 통계" },
+
+    // Essential Plugins
+    settings_header_plugins: { en: "Essential Plugins", ko: "필수 플러그인 안내" },
+    settings_plugins_name: { en: "Required Plugins List", ko: "필수 플러그인 목록 확인" },
+    settings_plugins_desc: { en: "View the list of plugins required for MyWorld Task Manager to work perfectly.", ko: "MyWorld Task Manager를 100% 활용하기 위해 함께 설치해야 하는 필수 플러그인 목록을 확인합니다." },
+    settings_plugins_btn: { en: "View Plugins", ko: "목록 보기" },
+    modal_plugins_title: { en: "Essential & Recommended Plugins", ko: "필수 및 권장 플러그인 안내" },
+    modal_plugins_desc: { en: "To fully utilize this plugin, please install and enable the following plugins in Obsidian:\n\n🚨 [Required] Advanced URI (by Vinzent03)\nWhy? The 'Magic Buttons' (Quick Capture, Daily Reset, Monthly Archive, etc.) in the daily schedule use `obsidian://advanced-uri` links. Without this plugin, clicking them will do nothing.\n\n🌟 [Highly Recommended] Periodic Notes\nWhy? Essential for seamlessly generating and managing your daily schedule notes every day.\n\n🌟 [Highly Recommended] Calendar (by Liam Cain)\nWhy? Highly recommended for quickly navigating between daily schedules using the right sidebar calendar.", ko: "이 플러그인을 100% 활용하기 위해 다음 플러그인들을 꼭 함께 설치해 주세요:\n\n🚨 [필수] Advanced URI (by Vinzent03)\n왜 필요한가요? 데일리 스케줄 상단의 '매직 버튼(빠른 캡처, 일간 마감 등)'은 명령 실행을 위해 이 플러그인에 의존합니다. 설치하지 않으면 버튼을 눌러도 반응하지 않습니다.\n\n🌟 [강력 권장] Periodic Notes\n왜 필요한가요? 매일 새로운 스케줄 노트를 쉽게 자동 생성하고 관리하려면 필수적입니다.\n\n🌟 [강력 권장] Calendar (by Liam Cain)\n왜 필요한가요? 우측 사이드바에 달력을 띄워두고 특정 날짜의 스케줄로 빠르게 이동하기 위해 가장 찰떡궁합입니다." }
 };
 
 export function t(key: keyof typeof translations, language: string, params: Record<string, string | number> = {}): string {

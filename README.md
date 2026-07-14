@@ -8,7 +8,7 @@
 
 ## ✨ Key Features
 
-*   **⚡️ Bi-directional Synchronization**: Tasks created or completed in your daily schedule automatically sync back to their original project notes, and vice versa.
+*   **🔄 Bi-directional Auto-Synchronization**: Tasks created or completed in your daily schedule automatically sync back to their original project notes in the background as you type or save.
 *   **📅 Smart Priority Sorting**: Utilizing custom markdown checkbox markers (`[0]`, `[1]`, `[!]`, etc.), tasks are automatically calculated for D-Day and sorted by urgency.
 *   **🌤️ Daily Routine Automation**: Reset your daily checklists with a single click. Completed routines are archived into a master statistics table, and tasks are rolled over smoothly.
 *   **🗂️ 1-Click System Setup**: Automatically generates a complete PARA (Project, Area, Resource, Archive) and Zettelkasten folder structure, along with default templates.
@@ -21,6 +21,11 @@
 ## 🚀 Initial Setup Guide (One-time)
 
 If you have installed the plugin for the first time, please set up the framework in the following order:
+
+### Step 0. Install Required Plugins
+To use the "Magic Buttons" (Quick Capture, Daily Reset, Monthly Archive, etc.) generated in the templates, you **MUST** install the following plugin:
+*   **[Required] Advanced URI (by Vinzent03)**: This plugin allows markdown links (`obsidian://advanced-uri?commandid=...`) to trigger internal plugin commands. Without it, the magic buttons will not work.
+*   **[Highly Recommended] Periodic Notes & Calendar**: For seamless daily schedule creation and navigation.
 
 ### Step 1. Enable the Plugin
 1. Go to Obsidian Settings > `Community plugins` tab and ensure **MyWorld Task Manager** is enabled.
@@ -45,25 +50,25 @@ Navigate to the **[3. Basic Environment and File Creation Helper]** section:
 
 Use the icon buttons at the top of the Schedule Management note and within Project notes to drive your daily workflow.
 
-### ⚡️ Sync Button (Lightning Icon)
-*   **Location**: Top of the Daily Schedule note.
-*   **Action**: Reads project links under `# Project`, perfectly syncs task states (edits, completions) bi-directionally, recalculates D-Days, and sorts everything by priority.
+### 🔄 Real-time Auto-Sync & Manual Refresh
+*   **Background Sync**: All task states (edits, completions) and D-Day calculations are automatically synced bi-directionally in the background whenever you modify a file.
+*   **Manual Refresh (Hotkey)**: You do not need to press any sync buttons anymore! However, if you ever want to force an immediate refresh of the current view, you can assign a hotkey to the `Refresh Active View Sync` command in Obsidian's hotkey settings.
 
 ### ✏️ Quick Task Capture (Pencil Icon)
 *   **Location**: Top of the Daily Schedule note.
 *   **Action**: Opens a quick-entry modal. Type a task, press enter, and it's instantly injected under `# Todo`, automatically sorted and synced.
 
-### 🌤️ Daily Reset & Wrap-up (Cloud Icon)
+### 🌤️ Daily Reset & Wrap-up (Sun & Cloud Icon)
 *   **Location**: Top of the Daily Schedule note.
 *   **Action**: Prompts for a daily review, extracts checked routines from the top table into the master `# Checklist` statistics table, unchecks routines for tomorrow, and cleans up completed tasks.
+
+### 🗂️ Monthly Archive (Folder Icon)
+*   **Location**: Top of the Daily Schedule note.
+*   **Action**: Manually aggregates the current month's routine achievement statistics and archives them neatly into your Archive folder.
 
 ### 📋 Fleeting Memo (Clipboard Icon)
 *   **Location**: Top of the Daily Schedule note.
 *   **Action**: Instantly opens a blank note (`임시 메모.md`) to capture long, sudden ideas.
-
-### 📤 Push Schedule (Export Icon)
-*   **Location**: Top of **each individual Project note**.
-*   **Action**: After editing plans within a specific project note, click this to push updates directly to the main schedule without needing to switch tabs.
 
 ---
 
@@ -73,7 +78,7 @@ To maintain perfect synchronization, the plugin relies on specific document stru
 
 ### ⛔ [Strictly Prohibited] Do not edit these signposts
 Modifying these will break the synchronization logic:
-1. **Major Headers**: `# Todo`, `#### 할 일`, `#### 프로젝트`, `# Project`, `# 루틴`, `# 체크리스트`, `# 통계`, `# 계획`, `# 실행`.
+1. **Major Headers**: `# Todo`, `#### 할 일`, `# Project`, `# 루틴`, `# 체크리스트`, `# 통계`, `# 계획`, `# 실행`.
 2. **Block IDs (`^xxxxxx`)**: The unique 6-character identifiers at the end of synced tasks.
 3. **Table Skeleton Symbols (`|`)**: Deleting pipe symbols breaks the routine and statistics tables.
 

@@ -368,6 +368,18 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 });
             });
 
+        // 7. 필수 플러그인 안내 섹션
+        new Setting(containerEl).setName(t("settings_header_plugins", this.plugin.settings.language)).setHeading();
+        new Setting(containerEl)
+            .setName(t("settings_plugins_name", this.plugin.settings.language))
+            .setDesc(t("settings_plugins_desc", this.plugin.settings.language))
+            .addButton(btn => {
+                btn.setButtonText(t("settings_plugins_btn", this.plugin.settings.language));
+                btn.onClick(() => {
+                    new EssentialPluginsModal(this.app, this.plugin.settings.language).open();
+                });
+            });
+
         let isNoticeVisible = false;
         const toggleBtnSetting = new Setting(containerEl)
             .setName(t("settings_notice_toggle_name", this.plugin.settings.language))
@@ -396,6 +408,47 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 }
             });
         });
+    }
+}
+
+export class EssentialPluginsModal extends Modal {
+    language: string;
+
+    constructor(app: App, language: string) {
+        super(app);
+        this.language = language;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        
+        contentEl.createEl("h2", { text: t("modal_plugins_title", this.language) });
+        
+        const descDiv = contentEl.createDiv();
+        const descText = t("modal_plugins_desc", this.language);
+        
+        // Split by newlines to render properly
+        descText.split("\n").forEach(line => {
+            if (line.trim() === "") {
+                descDiv.createEl("br");
+            } else {
+                descDiv.createEl("p", { text: line, cls: "myworld-plugin-desc-line" });
+            }
+        });
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText("Close")
+                .onClick(() => {
+                    this.close();
+                })
+            );
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
     }
 }
 

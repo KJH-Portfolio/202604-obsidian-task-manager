@@ -246,13 +246,16 @@ Freely document detailed notes, meeting minutes, reference links, and other proj
 
 ---
 
+## 🔄 실시간 자동 동기화 & 수동 새로고침
+- 스케줄 노트나 프로젝트 노트에서 할 일(태스크)을 수정하는 즉시, **백그라운드에서 실시간으로 모든 데이터가 양방향 자동 동기화**됩니다! 더 이상 일일이 동기화 버튼을 찾아서 누를 필요가 없습니다.
+- **수동 새로고침(단축키)**: 만약 일시적인 렌더링 지연 등으로 인해 현재 화면을 강제로 최신화하고 싶다면, 옵시디언의 '단축키 설정'에서 \`Refresh Active View Sync\` 명령에 원하는 단축키(예: F5 등)를 지정하여 언제든지 즉시 새로고침 할 수 있습니다.
+
 ## 🔘 상단 컨트롤 버튼 (매직 버튼)
 스케줄 노트 상단에는 옵시디언의 복잡한 동작을 클릭 한 번으로 처리해 주는 자동화 버튼들이 있습니다.
 
-- ⚡️ **(수시 동기화 / Task Manage)**: 데일리 노트를 작성하다가 최신 상태로 정렬이 필요하거나, 프로젝트의 할 일을 데일리로 끌어오고 싶을 때 누릅니다. (\`# Todo\` 영역이 마감일 순으로 자동 정렬됩니다.)
+- ✏️ **(빠른 캡처 / Quick Capture)**: 언제 어디서든 빠르게 할 일을 스케줄의 \`#### 할 일\` 밑으로 밀어넣고 싶을 때 누릅니다.
 - 🌤️ **(일간 마감 / Daily Reset)**: 하루가 끝나고 다음 날 스케줄을 준비할 때 누릅니다. 루틴의 체크박스를 싹 비워주고, 오늘 달성한 루틴 통계를 월간 표로 이관해 줍니다.
 - 🗂️ **(월간 아카이브 / Monthly Archive)**: 한 달이 끝나고 이번 달 루틴 달성률 통계를 추출하여 아카이브 폴더로 예쁘게 저장할 때 누릅니다.
-- ✏️ **(빠른 캡처 / Quick Capture)**: 언제 어디서든 빠르게 할 일을 스케줄의 \`#### 할 일\` 밑으로 밀어넣고 싶을 때 누릅니다.
 - 📋 **(빠른 메모 / Open Memo)**: 생각나는 아이디어를 빠르게 메모하고 싶을 때 누릅니다.
 
 ---
@@ -321,13 +324,16 @@ This document is a guide that explains **'what each button does'**, and **'which
 
 ---
 
+## 🔄 Real-time Auto-Sync & Manual Refresh
+- The moment you modify a task in the schedule note or project note, **all data is bi-directionally auto-synced in real-time in the background!** You no longer need to find and click a sync button.
+- **Manual Refresh (Hotkey)**: If you ever want to forcefully update the current screen due to a temporary rendering delay, you can assign a hotkey (e.g., F5) to the \`Refresh Active View Sync\` command in Obsidian's 'Hotkeys' settings to refresh instantly at any time.
+
 ## 🔘 Top Control Buttons (Magic Buttons)
 There are automation buttons at the top of the schedule note that handle complex Obsidian actions with a single click.
 
-- ⚡️ **(Task Manage)**: Click when you need to sort the latest status while writing a daily note, or when you want to pull tasks from projects into the daily note. (The \`# Todo\` area will be automatically sorted by deadline.)
+- ✏️ **(Quick Capture)**: Click when you want to quickly push a task under \`#### Todo\` in the schedule anytime, anywhere.
 - 🌤️ **(Daily Reset)**: Click at the end of the day to prepare the schedule for the next day. It clears the routine checkboxes and transfers today's routine statistics to the monthly table.
 - 🗂️ **(Monthly Archive)**: Click at the end of the month to extract the routine achievement rate statistics for this month and save them neatly in the archive folder.
-- ✏️ **(Quick Capture)**: Click when you want to quickly push a task under \`#### Todo\` in the schedule anytime, anywhere.
 - 📋 **(Open Memo)**: Click when you want to quickly memo an idea that comes to mind.
 
 ---
@@ -392,14 +398,14 @@ The titles below are 'milestones' the plugin uses to find data. Deleting or modi
 
         const projectGuideText_ko = `# 🚀 프로젝트 노트 작성 가이드
 
-이 문서는 개별 프로젝트 노트를 작성할 때, **어떤 버튼을 눌러야 메인 스케줄과 연동되는지**, 그리고 **문서의 어느 위치에 계획과 세부 내용을 작성해야 하는지** 알려주는 가이드입니다.
+이 문서는 개별 프로젝트 노트를 작성할 때, **어떤 방식으로 메인 스케줄과 연동되는지**, 그리고 **문서의 어느 위치에 계획과 세부 내용을 작성해야 하는지** 알려주는 가이드입니다.
 
 ---
 
-## 🔘 상단 컨트롤 버튼 (매직 버튼)
+## 🔄 실시간 자동 동기화 & 수동 새로고침
 
-- 📤 **(스케줄로 동기화 / Push to Schedule)**: 프로젝트 노트에서 할 일을 적거나 완료 처리한 뒤, 이 버튼을 누르면 **변경된 진행 상황과 할 일 목록이 메인 데일리 스케줄 노트의 대시보드(\`# Project\` 영역)로 실시간 덮어씌워집니다.**
-  - 팁: 프로젝트 문서에서 뭔가 할 일을 추가하거나 체크했다면 무조건 이 버튼을 한 번 눌러준다고 생각하시면 됩니다.
+- 📡 **(자동 동기화)**: 프로젝트 노트에서 할 일을 적거나 완료 처리하는 즉시, **변경된 진행 상황과 할 일 목록이 메인 데일리 스케줄 노트의 대시보드(\`# Project\` 영역)로 실시간 자동 덮어씌워집니다.** (버튼을 누를 필요가 없습니다!)
+- 🔄 **(수동 새로고침 단축키)**: 만약 일시적인 오류로 화면을 강제로 최신화하고 싶다면, 옵시디언 단축키 설정에서 \`Refresh Active View Sync\` 명령에 단축키(예: F5)를 지정하여 언제든지 즉시 새로고침 할 수 있습니다.
 
 ---
 
@@ -440,14 +446,14 @@ The titles below are 'milestones' the plugin uses to find data. Deleting or modi
 
         const projectGuideText_en = `# 🚀 Project Note Guide
 
-This document is a guide that explains **which buttons to press to link with the main schedule** when writing individual project notes, and **where in the document you should write your plans and details**.
+This document is a guide that explains **how your edits automatically link with the main schedule** when writing individual project notes, and **where in the document you should write your plans and details**.
 
 ---
 
-## 🔘 Top Control Buttons (Magic Buttons)
+## 🔄 Real-time Auto-Sync & Manual Refresh
 
-- 📤 **(Push to Schedule)**: After writing a task or completing one in the project note, pressing this button **overwrites the changed progress and task list in real-time to the dashboard (\`# Project\` area) of the main daily schedule note.**
-  - Tip: Just think that you must press this button once if you add or check a task in the project document.
+- 📡 **(Auto-Sync)**: The moment you write or complete a task in the project note, **the changed progress and task list are automatically overwritten in real-time to the dashboard (\`# Project\` area) of the main daily schedule note.** (No need to press any buttons!)
+- 🔄 **(Manual Refresh Hotkey)**: If you want to forcefully update the screen due to a temporary error, you can assign a hotkey (e.g., F5) to the \`Refresh Active View Sync\` command in Obsidian's hotkeys settings to refresh instantly.
 
 ---
 
