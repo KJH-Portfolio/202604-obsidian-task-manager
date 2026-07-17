@@ -340,6 +340,19 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             window.setTimeout(() => {
                 (target as HTMLInputElement).checked = desiredChecked;
             }, 1);
+
+            // BUG-FIX: active-leaf-change 의존 제거
+            // view.dispatch()는 CM6 메모리 상태만 변경하고 파일 저장은 비동기로 발생하므로,
+            // 탭 전환 없이 같은 파일에 머물거나 팝아웃 창에서 클릭하는 경우 동기화가
+            // 영원히 트리거되지 않는 버그를 방지하기 위해 클릭 직후 강제 동기화한다.
+            // getActiveViewOrFileText()가 editor.getValue()(메모리)를 사용하므로
+            // CM6 디스크 저장 완료 여부와 무관하게 최신 내용을 읽을 수 있다.
+            window.setTimeout(() => {
+                if (targetFile) {
+                    this.modifiedFiles.add(targetFile.path);
+                    void this.triggerAutoSyncForFile(targetFile, true);
+                }
+            }, 50);
         };
 
         // mousedown 등은 텍스트 포커싱을 위해 살려두고, 오직 click 이벤트만 최우선(capture)으로 차단합니다.
@@ -356,6 +369,20 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // (window-open 내부에 중첩 등록하면 창이 N번 열릴 때 리스너가 N개 쌓임)
         this.registerEvent(this.app.workspace.on("window-close", (closedWin) => {
             closedWin.win.removeEventListener("click", checkboxCaptureHandler, { capture: true });
+
+            // BUG-FIX: 팝아웃(팝아웃) 창이 닫힐 때, 해당 창에서 수정된 파일을 동기화한다.
+            // getActiveFile()은 메인 창 기준이므로 팝아웃 파일은 active-leaf-change로
+            // 동기화가 트리거되지 않는 버그를 방지한다.
+            const leaves = this.app.workspace.getLeavesOfType("markdown");
+            for (const leaf of leaves) {
+                const view = leaf.view as MarkdownView;
+                if (view?.containerEl?.ownerDocument === closedWin.doc) {
+                    const f = view.file;
+                    if (f && this.modifiedFiles.has(f.path)) {
+                        void this.triggerAutoSyncForFile(f);
+                    }
+                }
+            }
         }));
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -429,6 +456,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         }
                         if (modified) {
                             await this.fileManager.pluginWrite(targetFile, lines.join("\n"));
+                            // BUG-FIX: pluginWrite()는 pluginWritingFiles에 해시를 등록하여
+                            // vault.on('modify')에서 modifiedFiles에 추가되지 않도록 필터링됨.
+                            // 이로 인해 탭 전환 없이는 동기화가 트리거되지 않으므로,
+                            // 파일 수정 직후 force=true로 즉시 동기화를 호출한다.
+                            void this.triggerAutoSyncForFile(targetFile, true);
                         }
                     });
                 });
