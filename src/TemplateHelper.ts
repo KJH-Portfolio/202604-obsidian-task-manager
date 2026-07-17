@@ -112,12 +112,12 @@ for (let p of pages) {
         let badge = "";
         let color = "";
         if (diff !== Infinity) {
-            if (diff < 0) { badge = "[지각] "; color = "#8c0028"; }
-            else if (diff === 0) { badge = "[D-0] "; color = "#e93147"; }
-            else if (diff === 1) { badge = "[D-1] "; color = "#ffd200"; }
-            else if (diff === 2) { badge = "[D-2] "; color = "#44cf6e"; }
-            else if (diff === 3) { badge = "[D-3] "; color = "#086ddd"; }
-            else { badge = \`[D-\${diff}] \`; color = "#969696"; }
+            if (diff < 0) { badge = "[!] "; color = "#8c0028"; }
+            else if (diff === 0) { badge = "[D] "; color = "#e93147"; }
+            else if (diff === 1) { badge = "[D] "; color = "#ffd200"; }
+            else if (diff === 2) { badge = "[D] "; color = "#44cf6e"; }
+            else if (diff === 3) { badge = "[D] "; color = "#086ddd"; }
+            else { badge = "[D] "; color = "#969696"; }
         } else if (inheritedBadge) {
             badge = inheritedBadge.badge;
             color = inheritedBadge.color;
