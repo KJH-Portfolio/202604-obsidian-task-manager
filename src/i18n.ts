@@ -61,9 +61,9 @@ export const translations = {
     // ----------------------------------------------------
     // Default Environment & File Creation Helper
     // ----------------------------------------------------
-    settings_template_create_name: { en: "Create Default Template Notes", ko: "기본 템플릿 노트 생성" },
-    settings_template_create_desc: { en: "Automatically creates 2 default note templates (Daily Schedule/Project Plan) after receiving the desired vault folder path.", ko: "원하는 보관소 내 폴더 경로를 입력받아 플러그인용 기본 노트 양식 2종(데일리 스케줄/프로젝트 계획서)을 자동으로 생성합니다." },
-    settings_template_create_btn: { en: "Run Template Creation", ko: "템플릿 생성 실행" },
+    settings_template_create_name: { en: "Create Project Plan Template", ko: "프로젝트 계획서 템플릿 생성" },
+    settings_template_create_desc: { en: "Automatically creates a default Project Plan template note after receiving the desired vault folder path.", ko: "원하는 보관소 내 폴더 경로를 입력받아 플러그인용 프로젝트 계획서 기본 양식을 자동으로 생성합니다." },
+    settings_template_create_btn: { en: "Create Project Plan Template", ko: "프로젝트 계획서 템플릿 생성" },
     notice_template_created: { en: "✅ Default template files created under {resultPath}!", ko: "✅ {resultPath} 하위에 기본 템플릿 파일들이 생성되었습니다!" },
     notice_template_error: { en: "🚨 An error occurred while creating templates.", ko: "🚨 템플릿 파일 생성 중 오류가 발생했습니다." },
 

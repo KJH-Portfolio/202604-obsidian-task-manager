@@ -1,5 +1,15 @@
 # MyWorld Task Manager
 
+> [!WARNING] 🚨 Major Update Notice (Action Required) 🚨
+> For a better user experience and performance, the template generation and schedule rendering system has been **massively refactored to use dynamic rendering via Dataview**!
+> 
+> We have completely eliminated the inconvenient path hardcoding and template entanglement issues to prioritize user convenience.
+> 
+> **⚠️ Note:** Because of this, there might be conflicts with the hardcoded contents of your older schedule notes. 
+> Please copy and paste any important contents from your existing schedule notes to a safe place. Then, click the **'Create Daily Schedule'** button in the plugin to generate a brand-new format schedule note, and paste your contents back.
+> 
+> We will continue to improve the plugin with your convenience as our top priority. Thank you!
+
 > **A Powerful Obsidian Plugin for Centralized Task & Schedule Management**
 >
 > Centralize fragmented tasks, automate daily routines, and synchronize your schedule seamlessly with your project notes using a robust bi-directional sync engine. Eliminate complex Templater scripts and establish a smart PARA & Zettelkasten knowledge management system with a single click.

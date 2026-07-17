@@ -1109,8 +1109,18 @@ ${checklistTable}
                 defaultAffirmation: "시작이 반 이다."
             };
 
-            const content = this.templateHelper.replacePlaceholder(templateText, replacements);
+            let content = this.templateHelper.replacePlaceholder(templateText, replacements);
+            content = content.replace(/dv\.view\(['"]1\.\s*Project\/01\.List\/스케줄렌더링['"]\)/g, `dv.view("${folderPath}/scRender")`);
+            content = content.replace(/dv\.view\(['"]\$\{this\.settings\.templatesDirectory\}\/02\.scRender['"]\)/g, `dv.view("${folderPath}/scRender")`);
+            content = content.replace(/dv\.view\(['"]\$\{folderPath\}\/scRender['"]\)/g, `dv.view("${folderPath}/scRender")`);
+
             const newFile = await this.app.vault.create(schedulePath, content);
+
+            const scRenderPath = `${folderPath}/scRender.js`;
+            if (!this.app.vault.getAbstractFileByPath(scRenderPath)) {
+                await this.app.vault.create(scRenderPath, this.templateHelper.scRenderJsContent);
+            }
+
             new Notice(t("notice_schedule_created", this.settings.language));
             return newFile;
         } catch (err) {
