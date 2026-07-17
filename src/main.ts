@@ -487,10 +487,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const before = text.slice(0, match.index);
                         const after = text.slice(match.index + match[0].length);
 
-                        const frag = doc.createDocumentFragment();
+                        const frag = createFragment();
                         if (before) frag.appendChild(doc.createTextNode(before));
 
-                                                const dateSpan = doc.createElement("span");
+                                                const dateSpan = createSpan();
                         dateSpan.className = "myworld-date-clickable";
                         dateSpan.textContent = "\uD83D\uDCC5 " + dateStr;
 
@@ -590,7 +590,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     }
 
                     if (shouldShow) {
-                                                const btn = doc.createElement("span");
+                                                const btn = createSpan();
                         btn.className = "myworld-today-btn";
                         btn.textContent = "📅";
                         btn.title = "날짜 지정";

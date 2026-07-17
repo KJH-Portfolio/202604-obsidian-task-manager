@@ -335,8 +335,6 @@ class TodayEmojiWidget extends WidgetType {
     }
 
     toDOM() {
-        const view = this.getView();
-        const doc = view?.dom.ownerDocument || activeDocument;
         const span = createSpan();
         span.className = "myworld-today-btn";
         span.textContent = "📅";
