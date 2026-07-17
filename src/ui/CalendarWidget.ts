@@ -240,7 +240,8 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
         // 캘린더 클릭 기능 스코프 제한 (스케줄 노트 또는 프로젝트 폴더 내부만)
         const plugin = getPlugin();
         const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
-        if (!isSchedule) return builder.finish();
+        const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
+        if (!isSchedule && !isProject) return builder.finish();
 
         const processedLines = new Set<number>();
         const marks: { start: number; end: number; isOverdue: boolean }[] = [];
