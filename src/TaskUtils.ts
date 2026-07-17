@@ -84,8 +84,8 @@ export class TaskUtils {
     showLoadingOverlay(message: string) {
         if (this.overlayEl) return;
         this.overlayEl = activeDocument.body.createDiv({ cls: "myworld-loading-overlay" });
-        const spinner = this.overlayEl.createDiv({ cls: "myworld-spinner" });
-        const msgEl = this.overlayEl.createDiv({ text: message });
+        this.overlayEl.createDiv({ cls: "myworld-spinner" });
+        this.overlayEl.createDiv({ text: message });
 
         this.boundWindow = activeDocument.defaultView || window;
         this.boundWindow.addEventListener("keydown", this.keydownHandler, { capture: true });
