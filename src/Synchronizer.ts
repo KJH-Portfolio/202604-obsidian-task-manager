@@ -67,12 +67,12 @@ export class Synchronizer {
     }
 
     // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
-    async syncDailyTasks(dailyFile: TFile): Promise<void> {
+    async syncDailyTasks(dailyFile: TFile, silent = false): Promise<void> {
         // catch 블록에서 롤백에 사용하기 위해 try 바깥에 선언
         let originalContent = "";
         try {
-            this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
-            new Notice(t("sync_full_start", this.settings.language));
+            if (!silent) this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
+            if (!silent) new Notice(t("sync_full_start", this.settings.language));
             // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
             originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
             let content = this.utils.preprocessContent(originalContent);
@@ -111,7 +111,7 @@ export class Synchronizer {
                 await this.logSyncChange(dailyFile, "스케줄 노트 전체 동기화", originalContent, content);
             }
             await this.fileManager.saveIfChanged(dailyFile, originalContent, content);
-            new Notice(t("sync_full_complete", this.settings.language));
+            if (!silent) new Notice(t("sync_full_complete", this.settings.language));
         } catch (e) {
             console.error("Task Manage Error:", e instanceof Error ? e.message : String(e));
             // 스케줄 파일 원본 복구 시도
@@ -123,20 +123,20 @@ export class Synchronizer {
                 new Notice(t("sync_fail_critical", this.settings.language));
             }
         } finally {
-            this.utils.hideLoadingOverlay();
+            if (!silent) this.utils.hideLoadingOverlay();
         }
     }
 
     // 2. 개별 프로젝트 노트 관점 동기화 (기존 102번 스크립트 역할)
-    async pushProjectToSchedule(projectFile: TFile): Promise<void> {
+    async pushProjectToSchedule(projectFile: TFile, silent = false): Promise<void> {
         // BUG-19: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
         const originalActive = await this.fileManager.getActiveViewOrFileText(projectFile);
         let originalSchedule = "";
 
         try {
-            this.utils.showLoadingOverlay("⏳ 스케줄 반영 중...");
+            if (!silent) this.utils.showLoadingOverlay("⏳ 스케줄 반영 중...");
             const noteName = projectFile.basename;
-            new Notice(t("sync_dashboard_start", this.settings.language));
+            if (!silent) new Notice(t("sync_dashboard_start", this.settings.language));
             const now = this.dateManager.getAdjustedNow();
             const todayObj = now.clone().startOf('day').toDate();
 
@@ -275,12 +275,12 @@ export class Synchronizer {
                 // BUG-06: 타입 캐스팅 제거 (이미 instanceof TFile)
                 await this.fileManager.saveIfChanged(scheduleFile, originalSchedule, sBody);
                 if (newSectionText) {
-                    new Notice(t("sync_project_complete", this.settings.language, { noteName }));
+                    if (!silent) new Notice(t("sync_project_complete", this.settings.language, { noteName }));
                 } else {
-                    new Notice(t("notice_project_emptied", this.settings.language, { noteName: noteName }));
+                    if (!silent) new Notice(t("notice_project_emptied", this.settings.language, { noteName: noteName }));
                 }
             } else {
-                new Notice(t("sync_no_main", this.settings.language));
+                if (!silent) new Notice(t("sync_no_main", this.settings.language));
             }
         } catch (e) {
             console.error("Push Project Schedule Error:", e instanceof Error ? e.message : String(e));
@@ -311,7 +311,7 @@ export class Synchronizer {
                 new Notice(t("sync_update_fail_critical", this.settings.language));
             }
         } finally {
-            this.utils.hideLoadingOverlay();
+            if (!silent) this.utils.hideLoadingOverlay();
         }
     }
 }

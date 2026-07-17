@@ -206,7 +206,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
     private syncLock: Set<string> = new Set<string>();
 
-    private async triggerAutoSyncForFile(fileToSync: TFile, force: boolean = false) {
+    private async triggerAutoSyncForFile(fileToSync: TFile, force = false, silent = false) {
         if (!force && !this.modifiedFiles.has(fileToSync.path)) return;
 
         const path = fileToSync.path;
@@ -219,9 +219,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         try {
             if (path === this.settings.mainSchedulePath) {
-                await this.synchronizer.syncDailyTasks(fileToSync);
+                await this.synchronizer.syncDailyTasks(fileToSync, silent);
             } else if (path.startsWith(this.settings.projectDirectory)) {
-                await this.synchronizer.pushProjectToSchedule(fileToSync);
+                await this.synchronizer.pushProjectToSchedule(fileToSync, silent);
             }
         } catch (e) {
             console.error("Auto-sync error:", e);
@@ -350,7 +350,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             window.setTimeout(() => {
                 if (targetFile) {
                     this.modifiedFiles.add(targetFile.path);
-                    void this.triggerAutoSyncForFile(targetFile, true);
+                    void this.triggerAutoSyncForFile(targetFile, true, true); // silent=true: 로딩창/노티스 숨김
                 }
             }, 50);
         };
@@ -460,7 +460,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             // vault.on('modify')에서 modifiedFiles에 추가되지 않도록 필터링됨.
                             // 이로 인해 탭 전환 없이는 동기화가 트리거되지 않으므로,
                             // 파일 수정 직후 force=true로 즉시 동기화를 호출한다.
-                            void this.triggerAutoSyncForFile(targetFile, true);
+                            void this.triggerAutoSyncForFile(targetFile, true, true); // silent=true: 로딩창/노티스 숨김
                         }
                     });
                 });

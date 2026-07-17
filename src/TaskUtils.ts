@@ -1452,7 +1452,13 @@ ${t("header_stats", this.settings.language)}\n${dashboardStr}\n`);
                                 if (data.status && data.status !== ' ') newStat = data.status;
 
                                 else if (data.checked) newStat = 'x';
-                                else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat;
+                                else {
+                                    // BUG-FIX: data.status === ' ' (스케줄에서 명시적 해제)
+                                    // 기존 코드: currentStat이 'x'이면 프로젝트 파일의 [x]를 유지했으나,
+                                    // 이것이 스케줄에서 체크 해제해도 프로젝트에 반영되지 않는 버그의 원인.
+                                    // → 스케줄의 명시적 해제 상태(' ')를 신뢰하여 프로젝트에 반영한다.
+                                    newStat = ' ';
+                                }
                             } else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat;
 
                             if (newStat.toLowerCase() === 'x' || newStat === '-') {
