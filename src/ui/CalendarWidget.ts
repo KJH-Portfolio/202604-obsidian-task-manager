@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/prefer-create-el */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access -- window.moment 및 DOM 조작을 위해 허용 */
 /* eslint-disable @typescript-eslint/no-unsafe-call -- window.moment 연산을 위해 허용 */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- DOM 요소 동적 할당을 위해 허용 */
@@ -36,7 +35,7 @@ export function buildCalendarPopup(
     // 기존 팝업 제거
     doc.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
 
-    const popup = doc.createElement("div");
+    const popup = createDiv();
     popup.className = "myworld-cal-popup";
     popup.setCssStyles({
         position: "fixed",
@@ -72,10 +71,10 @@ export function buildCalendarPopup(
         const DAYS = [t("cal_sun", lang), t("cal_mon", lang), t("cal_tue", lang), t("cal_wed", lang), t("cal_thu", lang), t("cal_fri", lang), t("cal_sat", lang)];
 
         // Header
-        const header = doc.createElement("div");
+        const header = createDiv();
         header.className = "myworld-cal-header";
 
-        const btnPrev = doc.createElement("button");
+        const btnPrev = createEl("button");
         btnPrev.className = "myworld-cal-nav";
         btnPrev.textContent = "‹";
         btnPrev.addEventListener("mousedown", (e) => {
@@ -84,11 +83,11 @@ export function buildCalendarPopup(
             render();
         });
 
-        const spanMonth = doc.createElement("span");
+        const spanMonth = createSpan();
         spanMonth.className = "myworld-cal-month";
         spanMonth.textContent = monthLabel;
 
-        const btnNext = doc.createElement("button");
+        const btnNext = createEl("button");
         btnNext.className = "myworld-cal-nav";
         btnNext.textContent = "›";
         btnNext.addEventListener("mousedown", (e) => {
@@ -103,17 +102,17 @@ export function buildCalendarPopup(
         popup.appendChild(header);
 
         // Day of week row
-        const dowRow = doc.createElement("div");
+        const dowRow = createDiv();
         dowRow.className = "myworld-cal-dow";
         DAYS.forEach(d => {
-            const cell = doc.createElement("div");
+            const cell = createDiv();
             cell.textContent = d;
             dowRow.appendChild(cell);
         });
         popup.appendChild(dowRow);
 
         // Grid
-        const grid = doc.createElement("div");
+        const grid = createDiv();
         grid.className = "myworld-cal-grid";
 
         for (let i = 0; i < 35; i++) {
@@ -121,7 +120,7 @@ export function buildCalendarPopup(
             const currentCellDate = startDate.clone().add(i, 'days');
             const ds = currentCellDate.format("YYYY-MM-DD");
             
-            const cell = doc.createElement("div");
+            const cell = createDiv();
             cell.className = "myworld-cal-day";
             
             if (ds < todayStr) {
@@ -150,10 +149,10 @@ export function buildCalendarPopup(
         popup.appendChild(grid);
 
         // Footer
-        const footer = doc.createElement("div");
+        const footer = createDiv();
         footer.className = "myworld-cal-footer";
 
-        const btnDelete = doc.createElement("button");
+        const btnDelete = createEl("button");
         btnDelete.className = "myworld-cal-foot-btn";
         btnDelete.textContent = t("cal_delete", lang);
         btnDelete.addEventListener("mousedown", (e) => {
@@ -162,7 +161,7 @@ export function buildCalendarPopup(
             cleanupAndClose();
         });
 
-        const btnToday = doc.createElement("button");
+        const btnToday = createEl("button");
         btnToday.className = "myworld-cal-foot-btn myworld-cal-today-btn";
         btnToday.textContent = t("cal_today", lang);
         btnToday.addEventListener("mousedown", (e) => {
@@ -338,7 +337,7 @@ class TodayEmojiWidget extends WidgetType {
     toDOM() {
         const view = this.getView();
         const doc = view?.dom.ownerDocument || activeDocument;
-        const span = doc.createElement("span");
+        const span = createSpan();
         span.className = "myworld-today-btn";
         span.textContent = "📅";
         span.title = t("cal_tooltip", this.lang);

@@ -490,8 +490,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const frag = doc.createDocumentFragment();
                         if (before) frag.appendChild(doc.createTextNode(before));
 
-                        // eslint-disable-next-line obsidianmd/prefer-create-el
-                        const dateSpan = doc.createElement("span");
+                                                const dateSpan = doc.createElement("span");
                         dateSpan.className = "myworld-date-clickable";
                         dateSpan.textContent = "\uD83D\uDCC5 " + dateStr;
 
@@ -591,8 +590,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     }
 
                     if (shouldShow) {
-                        // eslint-disable-next-line obsidianmd/prefer-create-el
-                        const btn = doc.createElement("span");
+                                                const btn = doc.createElement("span");
                         btn.className = "myworld-today-btn";
                         btn.textContent = "📅";
                         btn.title = "날짜 지정";

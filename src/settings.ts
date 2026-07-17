@@ -506,7 +506,7 @@ export class StartupSyncModal extends Modal {
 
         // 아이콘 + 타이틀
         const header = contentEl.createDiv({ cls: "myworld-startup-header" });
-        header.createEl("div", { text: "🔄", cls: "myworld-startup-icon" });
+        header.createDiv({ text: "🔄", cls: "myworld-startup-icon" });
         header.createEl("h2", { text: t("modal_startup_title", this.language), cls: "myworld-startup-title" });
 
         // 안내 메시지

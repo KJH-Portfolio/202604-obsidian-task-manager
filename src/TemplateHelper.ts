@@ -236,7 +236,7 @@ if (projects.length > 0) {
                 }
             });
             // 시각적 피드백(마우스 호버 시 색상 변화, 커서 포인터) 및 체크박스 수직 정렬 보정
-            const style = document.createElement('style');
+            const style = createEl("style");
             style.innerHTML = \`
                 .task-list-item { cursor: pointer; transition: background-color 0.2s ease; border-radius: 4px; padding-right: 5px; }
                 .task-list-item:hover { background-color: var(--background-modifier-hover); }
