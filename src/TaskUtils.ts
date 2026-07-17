@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { DailyMeta } from "./types";
-import { App, TFile, TFolder, MarkdownView } from "obsidian";
+import { App, TFile, TFolder } from "obsidian";
 import { moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
@@ -83,18 +83,9 @@ export class TaskUtils {
 
     showLoadingOverlay(message: string) {
         if (this.overlayEl) return;
-        this.overlayEl = activeDocument.createElement("div");
-        this.overlayEl.classList.add("myworld-loading-overlay");
-
-        const spinner = activeDocument.createElement("div");
-        spinner.classList.add("myworld-spinner");
-
-        const msgEl = activeDocument.createElement("div");
-        msgEl.innerText = message;
-
-        this.overlayEl.appendChild(spinner);
-        this.overlayEl.appendChild(msgEl);
-        activeDocument.body.appendChild(this.overlayEl);
+        this.overlayEl = activeDocument.body.createDiv({ cls: "myworld-loading-overlay" });
+        const spinner = this.overlayEl.createDiv({ cls: "myworld-spinner" });
+        const msgEl = this.overlayEl.createDiv({ text: message });
 
         this.boundWindow = activeDocument.defaultView || window;
         this.boundWindow.addEventListener("keydown", this.keydownHandler, { capture: true });

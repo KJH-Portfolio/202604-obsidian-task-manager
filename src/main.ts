@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { Plugin, TFile, Notice, Modal, Setting, App, MarkdownView } from "obsidian";
+import { Plugin, TFile, Notice, Modal, App, MarkdownView } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { buildCalendarPopup, buildTodayButtonExtension, buildDateClickablePlugin } from "./ui/CalendarWidget";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab, StartupSyncModal } from "./settings";
@@ -45,7 +45,7 @@ class QuickCaptureModal extends Modal {
         const leftGroup = headerContainer.createDiv({ cls: "myworld-flex-baseline-gap10" });
         const title = leftGroup.createEl("h3", { text: t("modal_add_task_title", this.language) });
         title.addClass("myworld-margin-0");
-        leftGroup.createEl("span", { text: t("modal_add_task_desc", this.language), cls: "myworld-text-muted-md" });
+        leftGroup.createSpan({ text: t("modal_add_task_desc", this.language), cls: "myworld-text-muted-md" });
 
         // Right part: Date Picker & Tomorrow Button
         const rightGroup = headerContainer.createDiv({ cls: "myworld-flex-center-gap8" });
@@ -186,7 +186,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     }
 
     async onload() {
-        console.log("Loading MyWorld Task Manager...");
+        // console.log("Loading MyWorld Task Manager...");
 
         // 1. 설정 불러오기
         await this.loadSettings();
@@ -490,6 +490,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const frag = doc.createDocumentFragment();
                         if (before) frag.appendChild(doc.createTextNode(before));
 
+                        // eslint-disable-next-line obsidianmd/prefer-create-el
                         const dateSpan = doc.createElement("span");
                         dateSpan.className = "myworld-date-clickable";
                         dateSpan.textContent = "\uD83D\uDCC5 " + dateStr;
@@ -590,6 +591,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     }
 
                     if (shouldShow) {
+                        // eslint-disable-next-line obsidianmd/prefer-create-el
                         const btn = doc.createElement("span");
                         btn.className = "myworld-today-btn";
                         btn.textContent = "📅";
@@ -719,7 +721,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.app.workspace.onLayoutReady(() => {
             this.lastActiveFile = this.app.workspace.getActiveFile();
             if (!this.settings.syncOnStartup) {
-                console.log("Startup sync popup disabled in settings. Skipping.");
+                // console.log("Startup sync popup disabled in settings. Skipping.");
                 return;
             }
 
@@ -728,7 +730,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 // 자동 실행 대신 사용자 확인 팝업을 띄움
                 new StartupSyncModal(this.app, this.settings.language, async () => {
                     try {
-                        console.log("Running initial sync (user confirmed)...");
+                        // console.log("Running initial sync (user confirmed)...");
                         await this.synchronizer.syncDailyTasks(scheduleFile);
                     } catch (e) {
                         console.error("Initial sync error:", e);
@@ -915,7 +917,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     }
 
     onunload() {
-        console.log("Unloading MyWorld Task Manager...");
+        // console.log("Unloading MyWorld Task Manager...");
     }
 
 

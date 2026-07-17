@@ -46,6 +46,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         this.renderSettings();
     }
 
+    getSettingDefinitions() {
+        return [];
+    }
+
     display(): void {
         this.renderSettings();
     }
@@ -512,11 +516,11 @@ export class StartupSyncModal extends Modal {
         // 오늘 날짜 표시
         const today = window.moment().format("YYYY년 MM월 DD일 (ddd)");
         const dateEl = contentEl.createDiv({ cls: "myworld-startup-date" });
-        dateEl.createEl("span", { text: "📅 " + today });
+        dateEl.createSpan({ text: "📅 " + today });
 
         // 안내 문구
         const notice = contentEl.createDiv({ cls: "myworld-startup-notice" });
-        notice.createEl("span", { text: t("modal_startup_notice", this.language) });
+        notice.createSpan({ text: t("modal_startup_notice", this.language) });
 
         // 버튼 영역
         const btnArea = contentEl.createDiv({ cls: "myworld-startup-btn-area" });

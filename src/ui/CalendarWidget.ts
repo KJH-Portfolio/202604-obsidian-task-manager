@@ -1,3 +1,4 @@
+/* eslint-disable obsidianmd/prefer-create-el */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access -- window.moment 및 DOM 조작을 위해 허용 */
 /* eslint-disable @typescript-eslint/no-unsafe-call -- window.moment 연산을 위해 허용 */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- DOM 요소 동적 할당을 위해 허용 */

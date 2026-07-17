@@ -46,7 +46,7 @@ for (let p of pages) {
     let infoLists = p.file.lists.where(l => l.text.includes("기한 :"));
     if (infoLists.length > 0) {
         let text = infoLists[0].text;
-        let dates = text.match(/📅\s*(\d{4}-\d{2}-\d{2})/g);
+        let dates = text.match(/📅\\s*(\\d{4}-\\d{2}-\\d{2})/g);
         if (dates && dates.length >= 2) {
             let startStr = dates[0].replace('📅', '').trim();
             let endStr = dates[1].replace('📅', '').trim();
@@ -88,7 +88,7 @@ for (let p of pages) {
     
     sortedExecTasks.forEach(t => {
         const text = t.text;
-        const match = text.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+        const match = text.match(/📅\\s*(\\d{4}-\\d{2}-\\d{2})/);
         let diff = Infinity;
         
         let inheritedBadge = null;
@@ -530,7 +530,7 @@ Freely document detailed notes, meeting minutes, reference links, and other proj
 
 # Project
 > ${t("overall_project_summary_desc", this.settings.language)}
-> (절대로 건드리지 마세요! 플러그인이 통째로 덮어씌우는 영역입니다.)
+> (Dataview 스크립트를 통해 실시간 렌더링되는 영역입니다. 스크립트 코드(\`\`\`)는 건드리지 마세요!)
 
 # 체크리스트
 | 날짜  | Step | Block | ... (월간 누적 테이블 - 건드리지 마세요) ...
@@ -607,8 +607,8 @@ Modified: "2000-01-01T00:00"
 ==- [ ] Grocery shopping 📅 2026-06-06==
 
 # Project
-> 🚀 The overall project summary dashboard and callout list are updated here in real-time.
-> (DO NOT touch! This is the area entirely overwritten by the plugin.)
+> 🚀 The overall project summary dashboard and callout list are rendered here in real-time.
+> (This area is rendered via Dataview. Please do not modify the script code (\`\`\`) block!)
 
 # Checklist
 | Date | Step | Block | ... (Monthly accumulation table - Do not touch) ...
@@ -634,7 +634,7 @@ The titles below are 'milestones' the plugin uses to find data. Deleting or modi
 
 ## 🔄 실시간 자동 동기화 & 수동 새로고침
 
-- 📡 **(자동 동기화)**: 프로젝트 노트에서 할 일을 적거나 완료 처리하는 즉시, **변경된 진행 상황과 할 일 목록이 메인 데일리 스케줄 노트의 대시보드(\`# Project\` 영역)로 실시간 자동 덮어씌워집니다.** (버튼을 누를 필요가 없습니다!)
+- 📡 **(자동 렌더링)**: 프로젝트 노트에서 할 일을 적거나 완료 처리하면, **메인 데일리 스케줄 노트의 대시보드(\`# Project\` 영역)에 있는 Dataview가 실시간으로 이를 감지하여 최신 상태로 보여줍니다.** (버튼을 누를 필요가 없습니다!)
 - 🔄 **(수동 새로고침 단축키)**: 만약 일시적인 오류로 화면을 강제로 최신화하고 싶다면, 옵시디언 단축키 설정에서 \`Refresh Active View Sync\` 명령에 단축키(예: F5)를 지정하여 언제든지 즉시 새로고침 할 수 있습니다.
 
 ---
@@ -682,7 +682,7 @@ This document is a guide that explains **how your edits automatically link with 
 
 ## 🔄 Real-time Auto-Sync & Manual Refresh
 
-- 📡 **(Auto-Sync)**: The moment you write or complete a task in the project note, **the changed progress and task list are automatically overwritten in real-time to the dashboard (\`# Project\` area) of the main daily schedule note.** (No need to press any buttons!)
+- 📡 **(Auto-Render)**: The moment you write or complete a task in the project note, **the Dataview dashboard (\`# Project\` area) in the main daily schedule note detects and displays the latest status in real-time.** (No need to press any buttons!)
 - 🔄 **(Manual Refresh Hotkey)**: If you want to forcefully update the screen due to a temporary error, you can assign a hotkey (e.g., F5) to the \`Refresh Active View Sync\` command in Obsidian's hotkeys settings to refresh instantly.
 
 ---

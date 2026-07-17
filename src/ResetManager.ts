@@ -35,7 +35,7 @@ export class DailyResetModal extends Modal {
         const reviewHeader = reviewContainer.createDiv({ cls: "myworld-flex-baseline-gap10-mb10" });
         const reviewLabel = reviewHeader.createEl("h4", { text: "오늘의 회고" });
         reviewLabel.addClass("myworld-margin-0");
-        reviewHeader.createEl("span", { text: "오늘 하루의 생각이나 소회를 기입하세요.", cls: "myworld-text-muted-sm" });
+        reviewHeader.createSpan({ text: "오늘 하루의 생각이나 소회를 기입하세요.", cls: "myworld-text-muted-sm" });
 
         const reviewInputEl = reviewContainer.createEl("textarea", { attr: { placeholder: "여기에 오늘의 회고를 작성하세요..." } });
         reviewInputEl.value = this.review;
@@ -55,7 +55,7 @@ export class DailyResetModal extends Modal {
         const stepHeader = stepContainer.createDiv({ cls: "myworld-flex-baseline-gap10-mb10" });
         const stepLabel = stepHeader.createEl("h4", { text: "내일의 Step" });
         stepLabel.addClass("myworld-margin-0");
-        stepHeader.createEl("span", { text: "내일 실행할 핵심 디데이 목표를 기입하세요.", cls: "myworld-text-muted-sm" });
+        stepHeader.createSpan({ text: "내일 실행할 핵심 디데이 목표를 기입하세요.", cls: "myworld-text-muted-sm" });
 
         const stepInputEl = stepContainer.createEl("input", { type: "text", attr: { placeholder: "예: 계획 따라 움직이기 등..." } });
         stepInputEl.value = this.step;
