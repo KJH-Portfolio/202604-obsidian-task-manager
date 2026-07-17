@@ -35,6 +35,7 @@ If you have installed the plugin for the first time, please set up the framework
 ### Step 0. Install Required Plugins
 To use the "Magic Buttons" (Quick Capture, Daily Reset, Monthly Archive, etc.) generated in the templates, you **MUST** install the following plugin:
 *   **[Required] Advanced URI (by Vinzent03)**: This plugin allows markdown links (`obsidian://advanced-uri?commandid=...`) to trigger internal plugin commands. Without it, the magic buttons will not work.
+*   **[Required] Dataview (by blacksmithgu)**: Essential for dynamic rendering of your schedule and tasks. The plugin relies heavily on Dataview scripts to sync and display your project tasks in real-time.
 *   **[Highly Recommended] Periodic Notes & Calendar**: For seamless daily schedule creation and navigation.
 
 ### Step 1. Enable the Plugin
@@ -48,7 +49,7 @@ Navigate to the **[2. Knowledge Management System Setup Helper]** section in set
 
 ### Step 3. Create Default Templates
 Navigate to the **[3. Basic Environment and File Creation Helper]** section:
-*   **`[Create Default Template Notes]`**: Generates a daily schedule template and a project template. You will be prompted to specify the destination path (e.g., `3. Resource/01.Templates`).
+*   **`[Create Project Plan Template]`**: Generates the `01.Project Plan Template.md` and its guide note. You will be prompted to specify the destination path (e.g., `3. Resource/01.Templates`).
 *   **`[Create Schedule Management Note]`**: Creates the `스케줄 관리.md` (Schedule Management) file, which acts as your core control tower.
 
 > [!TIP] Check Default Setting Paths

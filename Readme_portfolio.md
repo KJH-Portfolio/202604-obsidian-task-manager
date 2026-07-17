@@ -98,7 +98,7 @@ flowchart TD
 
 **1) 지식 관리 시스템 자동 구축 (Setup Helper)**
 - 버튼 한 번 클릭으로 **PARA (Project, Area, Resource, Archive)** 구조와 **제텔카스텐(Zettelkasten)** 폴더 구조를 자동 생성합니다.
-- 데일리 스케줄 및 프로젝트를 관리할 기본 템플릿(Template) 파일들까지 완벽하게 세팅합니다.
+- 스케줄 동적 렌더링을 위한 스크립트와 프로젝트를 관리할 계획서 템플릿(Template) 파일까지 완벽하게 세팅합니다.
 <br>
 <div align="center">
   <img src="./source/1.노트 구조.png" width="49%" alt="노트 구조">
