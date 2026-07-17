@@ -8,7 +8,7 @@ export const REGEX = {
     HEADING_START: /^#+\s+/,
     TOP_HEADING_START: /^#\s+/,
     EXEC_HEADER: /^#\s+(실행|Execution)$/m,
-    WORK_SUMMARY_HEADER: /^#\s+(계획|Plan)$/m,
+
     NOTE_LINK: /^##\s+(.+)$/,
     SUMMARY_MATCH: /^[\s]*[-*+]\s+\[([xX ])\]/,
     MARKER_REPLACE_2: /(\[[^\]]\])\s*/,
@@ -38,7 +38,7 @@ export const HEADERS = {
     TODO: "# Todo",
 
     STATS: "# 통계",
-    PROJECT_MAIN: "# Project",
+
     CHECKLIST: "# 체크리스트"
 };
 

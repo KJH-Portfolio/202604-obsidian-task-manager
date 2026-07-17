@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { DailyData, DailyMeta, ProjectResult, ProjectOverrideData, TaskData } from "./types";
+import { DailyMeta } from "./types";
 import { App, TFile, TFolder, MarkdownView } from "obsidian";
 import { moment } from "obsidian";
 import { DateManager } from "./DateManager";
@@ -21,6 +21,7 @@ export const REGEX = {
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
     TOP_HEADING_START: /^#\s+/,
     EXEC_HEADER: /^#\s+(실행|Execution)$/i,
+    PLAN_HEADER: /^#\s+(계획|Plan)$/i,
     WORK_SUMMARY_HEADER: /^#\s+(계획|Plan|Work Summary|Plan Overview)$/i,
     NOTE_LINK: /^##\s+(.+)$/,
 
@@ -64,7 +65,7 @@ export class TaskUtils {
     settings: PluginSettings;
     dateManager: DateManager;
     fileManager: FileManager;
-    private projectResultCache = new Map<string, { mtime: number, result: ProjectResult | null, todayStr: string, isReset: boolean }>();
+
 
     constructor(app: App, settings: PluginSettings, dateManager: DateManager, fileManager: FileManager) {
         this.app = app;
@@ -288,13 +289,6 @@ export class TaskUtils {
         return content.substring(0, range.start) + headerName + "\n" + newBody.trimEnd() + "\n\n" + content.substring(range.end).trimStart();
     }
 
-    renderProgressBar(completed: number, total: number, noteName?: string): string {
-        const progressStr = t("progress_label", this.settings.language);
-        const titleLink = noteName ? `[[${noteName}|${progressStr}]]` : progressStr;
-        const safeTotal = Math.max(total, 1);
-        const pct = Math.round((completed / safeTotal) * 100);
-        return `**${titleLink}**: ${pct}% (${completed}/${total})`;
-    }
 
     getMarker(dateStr: string, today: Date): string {
         if (!dateStr) return "";
@@ -701,29 +695,6 @@ export class TaskUtils {
         }).join("\n");
     }
 
-    syncDailyMap(dailyMap: Record<string, DailyData>) {
-        for (const noteName in dailyMap) {
-            const data = dailyMap[noteName];
-            const textQueues: Record<string, TaskData[]> = {};
-            for (const key in (data as DailyData).byText) textQueues[key] = [...(data as DailyData).byText[key]];
-
-            const tasks = data.orderedTasks.map((ot) => {
-                if (ot.type === 'id') return data.byId[ot.key];
-                if (textQueues[ot.key] && textQueues[ot.key].length > 0) return textQueues[ot.key].shift();
-                return null;
-            });
-            for (let i = 0; i < tasks.length; i++) {
-                if (tasks[i] && tasks[i]!.checked) {
-                    const pInd = (tasks[i]!.indent || "").length;
-                    for (let j = i + 1; j < tasks.length; j++) {
-                        if (!tasks[j] || (tasks[j]!.indent || "").length <= pInd) break;
-                        tasks[j]!.checked = true;
-                        if (!tasks[j]!.status || tasks[j]!.status === ' ') tasks[j]!.status = tasks[i]!.status;
-                    }
-                }
-            }
-        }
-    }
 
     generateStatsDashboard(tableStr: string, title: string, type = "info"): string {
         if (!tableStr) return "";
@@ -739,45 +710,6 @@ export class TaskUtils {
         return this.renderStatsDashboard(sq, cs, title, type);
     }
 
-    renderProjectCallout(noteName: string, rawTasks: string[], done: number, total: number, todayObj: Date, isReset = false): string {
-        const filteredTasks = isReset ? this.filterResetTasks(rawTasks, true) : rawTasks;
-        const processedTasks = this.applyMarkersToLines(filteredTasks, todayObj);
-        let minDiff = Infinity, hasIncomp = false;
-
-        const taskInfos = processedTasks.map(t => {
-            const isTask = REGEX.MATCH_TASK.test(t);
-            const isDone = isTask && REGEX.MATCH_TASK_COMPLETED.test(t);
-            if (isTask && !isDone) hasIncomp = true;
-
-            const dM = t.match(REGEX.DATE_LABEL);
-            if (dM && isTask && !isDone) {
-                const pts = dM[0].replace('📅', '').trim().split('-');
-                const diff = Math.ceil((new Date(parseInt(pts[0]), parseInt(pts[1]) - 1, parseInt(pts[2])).getTime() - todayObj.getTime()) / (1000 * 60 * 60 * 24));
-                if (diff < minDiff) minDiff = diff;
-            }
-            return { line: t, ind: (t.match(REGEX.INDENT) || [""])[0].length, isDone, isTask };
-        });
-
-        let cType = "quote", pStr = (total > 0) ? `(${Math.round((done / total) * 100)}%)` : t("no_info", this.settings.language);
-        let sTitle = `💭 **[[${noteName}]]** ${pStr}`;
-        if (taskInfos.filter(ti => ti.isTask).length === 0 && total === 0) return "";
-        else if (!hasIncomp && taskInfos.filter(ti => ti.isTask).length > 0) { cType = "quote"; sTitle = `🏁 **[[${noteName}]]** ${pStr}`; }
-        else {
-            if (minDiff < 0) { cType = "danger"; sTitle = `🔥 **[[${noteName}]]** ${pStr}`; }
-            else if (minDiff === 0) { cType = "danger"; sTitle = `🚨 **[[${noteName}]]** ${pStr}`; }
-            else if (minDiff === 1) { cType = "attention"; sTitle = `⚠️ **[[${noteName}]]** ${pStr}`; }
-            else if (minDiff === 2) { cType = "check"; sTitle = `✅ **[[${noteName}]]** ${pStr}`; }
-            else if (minDiff === 3) { cType = "info"; sTitle = `ℹ️ **[[${noteName}]]** ${pStr}`; }
-        }
-
-        let body = "";
-        taskInfos.filter(ti => ti.isTask || /^##\s/.test(ti.line.trim())).forEach(ti => {
-            let safeLine = ti.line.replace(/\t/g, '    ');
-            body += `> ${safeLine}\n`;
-        });
-
-        return `> [!${cType}] ${sTitle}\n${body.trimEnd()}`;
-    }
 
     async ensureFolder(path: string): Promise<void> {
         if (!path) return;
@@ -794,57 +726,6 @@ export class TaskUtils {
         }
     }
 
-    sortFullProjectResults(items: ProjectResult[]): ProjectResult[] {
-        if (!items || !Array.isArray(items)) return [];
-        return items.sort((a, b) => {
-            if (a.sortPri !== b.sortPri) return a.sortPri - b.sortPri;
-            if (a.minDiff !== b.minDiff) return a.minDiff - b.minDiff;
-            let pctA = a.planTasksTotal > 0 ? a.planTasksDone / a.planTasksTotal : 0;
-            let pctB = b.planTasksTotal > 0 ? b.planTasksDone / b.planTasksTotal : 0;
-            if (pctA !== pctB) return pctB - pctA;
-            return a.noteName.localeCompare(b.noteName);
-        });
-    }
-
-    generateProjectDashboard(projects: ProjectResult[]): string {
-        if (!projects || projects.length === 0) return "";
-
-        let html = `<div style="padding: 16px; background: var(--background-secondary); border-radius: 12px; border: 1px solid var(--background-modifier-border); margin: 10px 0 25px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">\n`;
-        html += `    <div style="font-weight: 800; font-size: 1.1em; margin-bottom: 15px; color: var(--text-accent); display: flex; align-items: center; gap: 8px;">${t("overall_project_summary", this.settings.language)}</div>\n`;
-
-        projects.forEach((p, idx) => {
-            let pct = p.planTasksTotal > 0 ? Math.round((p.planTasksDone / p.planTasksTotal) * 100) : 0;
-            let isLast = idx === projects.length - 1;
-            let marginStyle = isLast ? "" : "margin-bottom: 20px;";
-
-            let color = "#969696";
-            let icon = "📝";
-            let titleName = p.noteName;
-
-            if (p.sortPri === 0) { color = "#8c0028"; icon = "🔥"; }
-            else if (p.sortPri === 1) { color = "#e93147"; icon = "🚨"; }
-            else if (p.sortPri === 2) { color = "#ffd200"; icon = "⚠️"; }
-            else if (p.sortPri === 3) { color = "#44cf6e"; icon = "✅"; }
-            else if (p.sortPri === 4) { color = "#086ddd"; icon = "ℹ️"; }
-            else if (p.sortPri === 100) { color = "#10b981"; icon = "🏁"; }
-            else if (pct === 0) { color = "#969696"; icon = "💭"; }
-
-            let grid = `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: linear-gradient(to right, transparent calc(50% - 1px), rgba(0,0,0,0.7) calc(50% - 1px), rgba(0,0,0,0.7) calc(50% + 1px), transparent calc(50% + 1px));"></div>`;
-
-            html += `    <div style="${marginStyle}">\n`;
-            html += `        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-weight: 600; font-size: 0.95em;">\n`;
-            html += `            <span>${icon} ${titleName}</span>\n`;
-            html += `            <span style="color: ${pct > 0 ? color : 'var(--text-muted)'};">${pct}% (${p.planTasksDone}/${p.planTasksTotal})</span>\n`;
-            html += `        </div>\n`;
-            html += `        <div style="position: relative; width: 100%; height: 10px; border-radius: 5px; background: var(--background-modifier-hover); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);">\n`;
-            html += `            <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, ${color}, ${color}dd); border-radius: 5px;"></div>\n`;
-            html += `            ${grid}\n`;
-            html += `        </div>\n`;
-            html += `    </div>\n`;
-        });
-        html += `</div>`;
-        return html;
-    }
 
     filterTableByDayRange(tableLines: string[], startDay: number, endDay: number): string[] {
         if (!tableLines || tableLines.length === 0) return [];
@@ -996,12 +877,7 @@ export class TaskUtils {
         return { step, review };
     }
 
-    renderProjectDashboardSection(projectResults: ProjectResult[]): string {
-        if (!projectResults || projectResults.length === 0) return "";
-        const dashboardHtml = this.generateProjectDashboard(projectResults);
-        const calloutsHtml = projectResults.map(i => i.calloutText).filter(t => t.trim() !== "").join("\n\n");
-        return dashboardHtml ? dashboardHtml + "\n\n" + calloutsHtml : calloutsHtml;
-    }
+
 
     getProjectFiles(): TFile[] {
         const dir = this.settings.projectDirectory;
@@ -1026,201 +902,7 @@ export class TaskUtils {
         return files;
     }
 
-    pruneTree(nodes: TaskNode[]): { nodes: TaskNode[], hasD0: boolean } {
-        let hasD0Any = false;
-        const pruned: TaskNode[] = [];
-        nodes.forEach(node => {
-            const sMatch = node.line.match(REGEX.STATUS_MATCH);
-            const statusChar = sMatch ? sMatch[1] : '';
-            const isD0Task = (statusChar === '0' || statusChar === '!');
-            const childResults = this.pruneTree(node.children);
 
-            if (isD0Task || childResults.hasD0) {
-                node.children = childResults.nodes;
-                pruned.push(node);
-                hasD0Any = true;
-            }
-        });
-        return { nodes: pruned, hasD0: hasD0Any };
-    }
-
-    async getAllFullProjectResults(todayObj: Date, overrideData: Record<string, ProjectOverrideData> = {}, isReset = false): Promise<ProjectResult[]> {
-        const projectFiles = this.getProjectFiles();
-
-        // 수정됨: 현재 마크다운 에디터 탭에 열려있는 파일 경로들을 미리 수집 (캐시 Bypass 용도)
-        const openFilePaths = new Set<string>();
-        const leaves = this.app.workspace.getLeavesOfType("markdown");
-        for (const leaf of leaves) {
-            const leafFile = (leaf.view as MarkdownView).file;
-            if (leafFile && leafFile.path) {
-                openFilePaths.add(leafFile.path);
-            }
-        }
-
-        const projectResults = await Promise.all(projectFiles.map(async (file) => {
-            try {
-                if (!(this.hasSection(file, "실행", 1) || this.hasSection(file, "Execution", 1)) &&
-                    !(this.hasSection(file, "계획", 1) || this.hasSection(file, "Plan", 1))) {
-                    return null;
-                }
-
-                const pNoteName = file.basename;
-
-                // --- 성능개선 1번: 파일 mtime 기반 캐싱 ---
-                const mtime = file.stat.mtime;
-                const todayStr = window.moment(todayObj).format("YYYY-MM-DD");
-
-                // 에디터에 열려있으면 미저장 내용이 있을 수 있으므로 캐시 무조건 무시 (Bypass)
-                const isOpenInEditor = openFilePaths.has(file.path);
-
-                if (!overrideData[pNoteName] && !isOpenInEditor && this.projectResultCache.has(file.path)) {
-                    const cache = this.projectResultCache.get(file.path)!;
-                    if (cache.mtime === mtime && cache.todayStr === todayStr && cache.isReset === isReset) {
-                        return cache.result;
-                    }
-                }
-
-                // --- 기한(Timeline) 필터링 ---
-                // Bug E: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
-                let pContent = await this.fileManager.getActiveViewOrFileText(file);
-                const timeline = this.parseProjectTimeline(pContent);
-
-                // 현재 날짜가 기한을 벗어난 프로젝트는 제외
-                if (timeline.startDate && todayStr < timeline.startDate) {
-                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
-                    return null;
-                }
-                if (timeline.endDate && todayStr > timeline.endDate) {
-                    if (!overrideData[pNoteName]) this.projectResultCache.set(file.path, { mtime, result: null, todayStr, isReset });
-                    return null;
-                }
-
-                let pExecTasks: string[] = [], pPlanTasksTotal = 0, pPlanTasksDone = 0;
-
-                if (overrideData[pNoteName]) {
-                    pExecTasks = overrideData[pNoteName].execTasks || [];
-                    pPlanTasksDone = overrideData[pNoteName].planTasksDone || 0;
-                    pPlanTasksTotal = overrideData[pNoteName].planTasksTotal || 0;
-                } else {
-                    let pLines = pContent.split("\n");
-                    let pInEx = false, pInPl = false;
-
-                    for (let l of pLines) {
-                        if (REGEX.TOP_HEADING_START.test(l)) {
-                            pInEx = REGEX.EXEC_HEADER.test(l.trim());
-                            pInPl = REGEX.WORK_SUMMARY_HEADER.test(l.trim());
-                        } else if (pInEx) {
-                            if (REGEX.MATCH_TASK.test(l) || /^##\s/.test(l.trim())) pExecTasks.push(l);
-                        } else if (pInPl && REGEX.MATCH_TASK.test(l)) {
-                            pPlanTasksTotal++;
-                            if (REGEX.MATCH_TASK_COMPLETED.test(l)) pPlanTasksDone++;
-                        }
-                    }
-                }
-
-                pExecTasks = pExecTasks.filter(t => {
-                    if (REGEX.MATCH_TASK.test(t)) {
-                        const match = t.match(REGEX.TASK_LINE);
-                        if (match) {
-                            const textWithId = match[3];
-                            if (/;;(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim())) return false;
-                        }
-                    }
-                    return true;
-                });
-
-                let pMinDiff = Infinity, pSortPri = 99;
-                const pProcessed = this.applyMarkersToLines(pExecTasks.filter(t => t), todayObj);
-                pProcessed.forEach(t => {
-                    if (REGEX.MATCH_TASK_COMPLETED.test(t)) return;
-                    const dM = t.match(REGEX.DATE_LABEL);
-                    if (dM) {
-                        const pts = dM[0].replace('📅','').trim().split('-');
-                        const diff = Math.ceil((new Date(parseInt(pts[0]), parseInt(pts[1])-1, parseInt(pts[2])).getTime() - todayObj.getTime()) / (1000*60*60*24));
-                        if (diff < pMinDiff) pMinDiff = diff;
-                    }
-                });
-
-                if (pPlanTasksTotal > 0 && pPlanTasksDone === pPlanTasksTotal && pExecTasks.length > 0) pSortPri = 100;
-                else if (pMinDiff < 0) pSortPri = 0;
-                else if (pMinDiff === 0) pSortPri = 1;
-                else if (pMinDiff === 1) pSortPri = 2;
-                else if (pMinDiff === 2) pSortPri = 3;
-                else if (pMinDiff === 3) pSortPri = 4;
-
-                const calloutText = this.renderProjectCallout(pNoteName, pExecTasks, pPlanTasksDone, pPlanTasksTotal, todayObj, isReset);
-
-                const finalResult = { sortPri: pSortPri, minDiff: pMinDiff, noteName: pNoteName, calloutText, planTasksDone: pPlanTasksDone, planTasksTotal: pPlanTasksTotal, execTasks: pExecTasks };
-
-                if (!overrideData[pNoteName]) {
-                    this.projectResultCache.set(file.path, { mtime, result: finalResult, todayStr, isReset });
-                }
-
-                return finalResult;
-            } catch (err) {
-                console.error(`Error in getAllFullProjectResults for ${file.path}:`, err);
-                return null;
-            }
-        }));
-
-        const validResults = projectResults.filter(r => r !== null && r !== undefined);
-        this.sortFullProjectResults(validResults);
-        return validResults;
-    }
-
-    // 1. [포팅] 데일리 노트 내의 프로젝트 맵 파싱
-    parseDailyProjectMap(content: string): Record<string, DailyData> | null {
-        const range = this.getSectionRange(content, "# Project") as { start: number, end: number };
-        if (!range) return null;
-
-        const pLines = content.substring(range.start, range.end).split("\n");
-        let currNote: string | null = null;
-        const dailyMap: Record<string, DailyData> = {};
-
-        for (let l of pLines) {
-            const calloutMatch = l.match(/^>\s*\[![a-zA-Z]+\]-?\s+.*?\*\*([^*]+)\*\*/);
-            const m = l.match(REGEX.NOTE_LINK);
-            if (calloutMatch || m) {
-                currNote = (calloutMatch ? calloutMatch[1] : m![1]).trim().replace(/\[\[|\]\]/g, '').split('|')[0];
-                if (!dailyMap[currNote]) {
-                    dailyMap[currNote] = { byId: {}, byText: {}, orderedTasks: [] };
-                }
-                continue;
-            }
-            if (currNote) {
-                const cleanLine = l.replace(/^(?:> ?)+/, '');
-                if (REGEX.MATCH_TASK.test(cleanLine)) {
-                    const tM = cleanLine.match(REGEX.TASK_LINE);
-                    if (tM) {
-                        let { text, id } = this.extractIdAndText(tM[3]);
-                        const isDeleted = /;;$/.test(text.trim());
-                        const cleanText = isDeleted ? text.replace(/;;$/, '').trim() : text;
-                        const taskData = {
-                            status: tM[2],
-                            checked: (tM[2].toLowerCase() === 'x' || tM[2] === '-'),
-                            text: cleanText,
-                            indent: tM[1],
-                            deleted: isDeleted
-                        };
-                        if (id) {
-
-                            dailyMap[currNote].byId[id] = taskData;
-                        } else {
-
-                            if (!dailyMap[currNote].byText[cleanText]) dailyMap[currNote].byText[cleanText] = [];
-
-                            dailyMap[currNote].byText[cleanText].push(taskData);
-                        }
-
-                        dailyMap[currNote].orderedTasks.push(id ? { type: 'id', key: id } : { type: 'text', key: cleanText });
-                    }
-                }
-            }
-        }
-        // BUG-14: syncDailyMap은 외부 호출부(Synchronizer, ResetManager)에서 이미 한 번 더 호출하므로
-        // 여기서 이중으로 실행하면 불필요한 재처리가 발생함 → 제거하여 외부에서만 호출
-        return dailyMap;
-    }
 
     // 2. [포팅] 주간 아카이브 요약 표 및 기록 갱신
     async updateWeeklyNoteStats(app: App, targetDate: moment.Moment, tableHeader: string, weekRows: string[], dailyRecord = ""): Promise<void> {
@@ -1377,301 +1059,6 @@ ${t("header_record", this.settings.language)}
 ${t("header_stats", this.settings.language)}\n${dashboardStr}\n`);
         }
         return originalContent;
-    }
-
-    // 4. [포팅] 일일 스케줄 변경사항을 개별 프로젝트 파일로 전파 동기화
-    async syncDailyToProjects(app: App, dailyMap: Record<string, DailyData>, allFiles: TFile[], collisionFiles: TFile[], isReset = false): Promise<Record<string, ProjectOverrideData>> {
-        const overrideData: Record<string, ProjectOverrideData> = {};
-
-        // Bug C: 에러 발생 시 전체 롤백을 위해 대상 파일 사전 백업
-        const backups = new Map<string, string>();
-        for (const file of allFiles) {
-            if ((this.hasSection(file, "실행", 1) || this.hasSection(file, "Execution", 1)) ||
-                (this.hasSection(file, "계획", 1) || this.hasSection(file, "Plan", 1))) {
-                backups.set(file.path, await this.fileManager.getActiveViewOrFileText(file));
-            }
-        }
-        const syncErrors: Array<{ file: TFile; error: unknown }> = [];
-
-        await Promise.all(allFiles.map(async (file) => {
-            try {
-                if (!(this.hasSection(file, "실행", 1) || this.hasSection(file, "Execution", 1)) &&
-                    !(this.hasSection(file, "계획", 1) || this.hasSection(file, "Plan", 1))) {
-                    return;
-                }
-
-                const noteName = file.basename;
-                const dailyData = dailyMap[noteName] || { byId: {}, byText: {}, orderedTasks: [] };
-
-                // Bug F: vault.read → getActiveViewOrFileText (에디터 미저장 내용 반영)
-                let sContent = await this.fileManager.getActiveViewOrFileText(file);
-                let sLines = sContent.split("\n"), mod = false, inExSec = false;
-                let finalSLines: string[] = [], skipIndent = -1, skipCheckIndent = -1, skipCheckStatus = " ";
-                let handledInFile = new Set<string>();
-                let execBuf: string[] = [];
-
-                for (let l of sLines) {
-                    if (REGEX.TOP_HEADING_START.test(l)) {
-                        inExSec = REGEX.EXEC_HEADER.test(l.trim());
-                        skipIndent = -1;
-                        skipCheckIndent = -1;
-                        finalSLines.push(l);
-                        continue;
-                    }
-                    let isBlank = l.trim() === "";
-                    let currentIndent = isBlank ? 999 : (l.match(REGEX.INDENT) || [""])[0].length;
-
-                    if (inExSec && skipIndent !== -1) {
-                        if (isBlank) { mod = true; continue; }
-                        if (currentIndent > skipIndent) { mod = true; continue; }
-                        else skipIndent = -1;
-                    }
-                    if (inExSec && skipCheckIndent !== -1) {
-                        if (currentIndent > skipCheckIndent) {
-                            if (REGEX.MATCH_TASK.test(l)) {
-                                const tM = l.match(REGEX.TASK_LINE);
-                                if (tM && tM[2] !== skipCheckStatus) {
-                                    l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${skipCheckStatus}]`);
-                                    mod = true;
-                                }
-                            }
-                        } else skipCheckIndent = -1;
-                    }
-                    if (inExSec && REGEX.MATCH_TASK.test(l)) {
-                        let tM = l.match(REGEX.TASK_LINE);
-                        if (tM) {
-                            let { text, id } = this.extractIdAndText(tM[3]);
-
-                            let data = (id && dailyData.byId[id]) ? dailyData.byId[id] : (dailyData.byText[text] && dailyData.byText[text].length > 0 ? dailyData.byText[text].shift() : null);
-                            if (data) handledInFile.add(id || text);
-                            let currentStat = tM[2], newStat = currentStat;
-                            if (data) {
-
-                                if (data.deleted) { skipIndent = currentIndent; mod = true; continue; }
-
-                                if (data.status && data.status !== ' ') newStat = data.status;
-
-                                else if (data.checked) newStat = 'x';
-                                else {
-                                    // BUG-FIX: data.status === ' ' (스케줄에서 명시적 해제)
-                                    // 기존 코드: currentStat이 'x'이면 프로젝트 파일의 [x]를 유지했으나,
-                                    // 이것이 스케줄에서 체크 해제해도 프로젝트에 반영되지 않는 버그의 원인.
-                                    // → 스케줄의 명시적 해제 상태(' ')를 신뢰하여 프로젝트에 반영한다.
-                                    newStat = ' ';
-                                }
-                            } else if (currentStat.toLowerCase() === 'x' || currentStat === '-') newStat = currentStat;
-
-                            if (newStat.toLowerCase() === 'x' || newStat === '-') {
-                                skipCheckIndent = currentIndent;
-                                skipCheckStatus = newStat;
-                            }
-                            if (data && (currentStat !== newStat || text !== data.text)) {
-
-                                l = `${tM[1]} [${newStat}] ${data.text}${id ? ` ^${id}` : ''}`;
-                                mod = true;
-                            } else if (currentStat !== newStat) {
-                                l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${newStat}]`);
-                                mod = true;
-                            }
-                        }
-                    }
-                    finalSLines.push(l);
-                }
-
-                let execCompletedMap = new Map<string, string>();
-                let tempInEx = false;
-                for (let l of finalSLines) {
-                    if (!l) continue;
-                    if (REGEX.TOP_HEADING_START.test(l)) { tempInEx = REGEX.EXEC_HEADER.test(l.trim()); continue; }
-                    if (tempInEx && REGEX.MATCH_TASK_COMPLETED.test(l)) {
-                        let match = l.match(REGEX.TASK_LINE);
-                        if (match) {
-                            let { text } = this.extractIdAndText(match[3]);
-                            execCompletedMap.set(text.trim(), match[2]);
-                        }
-                    }
-                }
-                if (execCompletedMap.size > 0) {
-                    let tempInPl = false, plSkipIdx = -1;
-                    for (let i = 0; i < finalSLines.length; i++) {
-                        let l = finalSLines[i];
-                        if (!l) continue;
-                        if (REGEX.TOP_HEADING_START.test(l)) { tempInPl = REGEX.WORK_SUMMARY_HEADER.test(l.trim()); plSkipIdx = -1; continue; }
-                        if (tempInPl) {
-                            let cInd = l.trim() === "" ? 999 : (l.match(REGEX.INDENT) || [""])[0].length;
-                            if (plSkipIdx !== -1) {
-                                if (cInd > plSkipIdx) {
-                                    if (REGEX.MATCH_TASK.test(l) && !REGEX.MATCH_TASK_COMPLETED.test(l)) {
-                                        finalSLines[i] = l.replace(/^(\s*[-*+]\s+)\[.\]/, "$1[x]");
-                                        mod = true;
-                                    }
-                                    continue;
-                                } else plSkipIdx = -1;
-                            }
-                            if (REGEX.MATCH_TASK.test(l)) {
-                                if (REGEX.MATCH_TASK_COMPLETED.test(l)) plSkipIdx = cInd;
-                                else {
-                                    let match = l.match(REGEX.TASK_LINE);
-                                    if (match) {
-                                        const cleanText = this.extractIdAndText(match[3]).text.trim();
-                                        if (execCompletedMap.has(cleanText)) {
-                                            const os = execCompletedMap.get(cleanText)!;
-                                            finalSLines[i] = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${os}]`);
-                                            mod = true;
-                                            plSkipIdx = cInd;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (dailyData) {
-                    let lastAnchorId: string | null = null;
-                    const tasksToInsert = [];
-                    if (dailyData.orderedTasks) {
-                        for (let ot of dailyData.orderedTasks) {
-
-                            if (ot.type === 'id') lastAnchorId = ot.key;
-
-                            else if (dailyData.byText[ot.key] && dailyData.byText[ot.key].length > 0) {
-
-                                tasksToInsert.push({ anchorId: lastAnchorId, task: { ...dailyData.byText[ot.key].shift(), id: this.generateBlockId(collisionFiles) } });
-                            }
-                        }
-                    }
-                    for (const [id, d] of Object.entries(dailyData.byId)) {
-                        if (!handledInFile.has(id)) tasksToInsert.push({ anchorId: null, task: { ...(d as TaskData), id } });
-                    }
-                    if (tasksToInsert.length > 0) {
-                        let exStart = -1, exEnd = finalSLines.length, inExSec = false;
-                        for (let i = 0; i < finalSLines.length; i++) {
-                            let l = finalSLines[i];
-                            if (!l) continue;
-                            if (REGEX.TOP_HEADING_START.test(l)) {
-                                if (inExSec) { exEnd = i; break; }
-                                inExSec = REGEX.EXEC_HEADER.test(l.trim());
-                                if (inExSec) exStart = i;
-                            }
-                        }
-                        if (exStart !== -1) {
-                            const ins = new Map<string, TaskData[]>();
-                            const fbt: TaskData[] = [];
-                            for (let item of tasksToInsert) {
-                                if (item.anchorId) {
-                                    if (!ins.has(item.anchorId)) ins.set(item.anchorId, []);
-                                    ins.get(item.anchorId)!.push(item.task as TaskData);
-                                } else fbt.push(item.task as TaskData);
-                            }
-                            let lastTIdx = exStart;
-                            for (let i = exEnd - 1; i > exStart; i--) {
-                                let l = finalSLines[i];
-                                if (!l) continue;
-                                if (REGEX.MATCH_TASK.test(l)) {
-                                    if (lastTIdx === exStart) lastTIdx = i;
-                                    const m = l.match(REGEX.TASK_LINE);
-                                    if (m) {
-                                        const { id } = this.extractIdAndText(m[3]);
-                                        if (id && ins.has(id)) {
-                                            const tl = ins.get(id)!;
-                                            let ia = i + 1;
-                                            const ntl = tl.map(nt => {
-
-                                                return `${nt.indent} [${nt.status || (nt.checked ? 'x' : ' ')}] ${nt.text} ^${nt.id}`;
-                                            });
-                                            finalSLines.splice(ia, 0, ...ntl);
-                                            mod = true;
-                                            exEnd += ntl.length;
-                                            if (lastTIdx === i) lastTIdx = ia + ntl.length - 1;
-                                            ins.delete(id);
-                                        }
-                                    }
-                                }
-                            }
-                            const rem = [];
-                            for (let list of ins.values()) rem.push(...list);
-                            rem.push(...fbt);
-                            if (rem.length > 0) {
-                                const ntl = rem.map(nt => `${nt.indent} [${nt.status || (nt.checked ? 'x' : ' ')}] ${nt.text} ^${nt.id}`);
-                                finalSLines.splice(lastTIdx + 1, 0, ...ntl);
-                                mod = true;
-                            }
-                        }
-                    }
-                }
-
-                if (isReset) {
-                    let cleanedLines: string[] = [], inCleanExSec = false;
-                    for (let i = 0; i < finalSLines.length; i++) {
-                        const cl = finalSLines[i];
-                        if (REGEX.TOP_HEADING_START.test(cl)) {
-                            inCleanExSec = REGEX.EXEC_HEADER.test(cl.trim());
-                            if (!inCleanExSec && execBuf.length > 0) {
-                                cleanedLines.push(...this.filterResetTasks(execBuf, true));
-                                execBuf = [];
-                            }
-                            cleanedLines.push(cl);
-                            continue;
-                        }
-                        if (inCleanExSec) execBuf.push(cl);
-                        else cleanedLines.push(cl);
-                    }
-                    if (execBuf.length > 0) {
-                        cleanedLines.push(...this.filterResetTasks(execBuf, true));
-                        execBuf = [];
-                    }
-                    if (mod || cleanedLines.join("\n") !== finalSLines.join("\n")) {
-                        mod = true;
-                        finalSLines = cleanedLines;
-                    }
-                }
-
-                // BUG-10: pluginWrite로 교체하여 프로젝트 파일 저장이 modifiedFiles에 쌓이는 것을 방지
-                if (mod) {
-                    try {
-                        await this.fileManager.pluginWrite(file, finalSLines.join("\n"));
-                    } catch (err) {
-                        console.error("[TaskUtils] Failed to write project progress file:", err);
-                    }
-                }
-
-                let execTasks: string[] = [], planTasksTotal = 0, planTasksDone = 0;
-                let pInEx = false, pInPl = false;
-                for (let l of finalSLines) {
-                    if (!l) continue;
-                    if (REGEX.TOP_HEADING_START.test(l)) {
-                        pInEx = REGEX.EXEC_HEADER.test(l.trim());
-                        pInPl = REGEX.WORK_SUMMARY_HEADER.test(l.trim());
-                    } else if (pInEx) {
-                        if (REGEX.MATCH_TASK.test(l) || /^##\s/.test(l.trim())) execTasks.push(l);
-                    } else if (pInPl && REGEX.MATCH_TASK.test(l)) {
-                        planTasksTotal++;
-                        if (REGEX.MATCH_TASK_COMPLETED.test(l)) planTasksDone++;
-                    }
-                }
-                overrideData[noteName] = { execTasks, planTasksDone, planTasksTotal };
-
-            } catch (e) {
-                console.error(`Sync error on [${file.path}]:`, e);
-                syncErrors.push({ file, error: e });
-            }
-        }));
-
-        // Bug C: 하나라도 실패하면 백업에서 전체 롤백
-        if (syncErrors.length > 0) {
-            console.warn(`[syncDailyToProjects] ${syncErrors.length}개 파일 동기화 실패, 전체 롤백 시작`);
-            for (const [path, backup] of backups.entries()) {
-                const f = app.vault.getAbstractFileByPath(path);
-                if (f instanceof TFile) {
-                    try { await this.fileManager.pluginWrite(f, backup); }
-                    catch (re) { console.error(`롤백 실패: ${path}`, re); }
-                }
-            }
-            throw new Error(`${syncErrors.length}개 파일 동기화 실패, 전체 롤백 완료`);
-        }
-
-        return overrideData;
     }
 
     // BUG-13: moment의 .date(n) setter는 체이닝으로 받아야 안전함

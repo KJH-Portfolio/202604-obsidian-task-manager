@@ -16,8 +16,6 @@ export const translations = {
     settings_language_name: { en: "Language (언어)", ko: "언어 (Language)" },
     settings_language_desc: { en: "Choose plugin default language. / 플러그인 기본 언어를 선택합니다.", ko: "플러그인 기본 언어를 선택합니다. / Choose plugin default language." },
 
-    settings_sync_startup_name: { en: "Sync Confirmation Popup on Startup", ko: "부팅 시 동기화 확인 팝업" },
-    settings_sync_startup_desc: { en: "Show a confirmation popup when starting Obsidian: 'Do you want to sync the schedule?'. If agreed, it syncs; if canceled, it skips. (Prevents conflicts with git pull, etc.)", ko: "옵시디언을 켤 때 '스케줄을 동기화하시겠습니까?' 확인 팝업을 표시합니다. 팝업에서 동의하면 동기화를 실행하고, 취소하면 건너뜁니다. (git 풀 등 다른 시스템과 충돌 방지)" },
 
     // ----------------------------------------------------
     // Path Settings
@@ -37,8 +35,6 @@ export const translations = {
     settings_templates_folder_name: { en: "Templates Folder Path", ko: "템플릿 폴더 경로" },
     settings_templates_folder_desc: { en: "Specify the folder path where the default template notes for the plugin (Daily Schedule, Project Plan) will be saved.", ko: "플러그인용 기본 템플릿 노트(데일리 스케줄, 프로젝트 계획서)가 보존될 폴더 경로를 지정하세요." },
 
-    settings_sync_log_name: { en: "Sync Log File Path", ko: "동기화 로그 파일 경로" },
-    settings_sync_log_desc: { en: "Specify the markdown file path where the change history will be recorded upon sync execution. (BUG-H: 하드코딩 제거)", ko: "동기화 실행 시 변경 이력이 기록될 마크다운 파일 경로를 지정하세요. (BUG-H: 하드코딩 제거)" },
 
     settings_midnight_offset_name: { en: "Midnight Offset Hour", ko: "자정 보정 기준 시간" },
     settings_midnight_offset_desc: { en: "Specify the hour until which morning executions are treated as records of the previous day. (0-12 hours)", ko: "새벽 몇 시 이전까지의 마감 실행을 전날 날짜의 기록으로 취급할지 지정합니다. (0~12시)" },
@@ -127,18 +123,20 @@ export const translations = {
     btn_confirm: { en: "Confirm", ko: "확인" },
     notice_empty_path: { en: "🚨 Please enter the folder path to create.", ko: "🚨 생성할 폴더 경로를 입력해 주세요." },
 
-    modal_startup_title: { en: "Schedule Sync", ko: "스케줄 동기화" },
-    modal_startup_desc: { en: "Sync tasks between Project Notes and the Main Schedule.", ko: "프로젝트 노트와 메인 스케줄 간의 할 일을 동기화합니다." },
-    modal_startup_notice: { en: "💡 Running sync after Git Pull helps prevent conflicts.", ko: "💡 Git Pull 등이 완료된 후 동기화를 실행하면 충돌을 방지할 수 있습니다." },
     btn_skip: { en: "Skip", ko: "건너뛰기" },
-    btn_sync_now: { en: "🔄 Sync Now", ko: "🔄 지금 동기화" },
+    btn_sync_now: { en: "Sync Now", ko: "지금 동기화" },
     btn_syncing: { en: "Syncing...", ko: "동기화 중..." },
+
+    // Startup sync modal
+    modal_startup_title: { en: "Sync Schedule", ko: "스케줄 동기화" },
+    modal_startup_desc: { en: "Would you like to sync the main schedule note now?", ko: "메인 스케줄 노트를 지금 동기화할까요?" },
+    modal_startup_notice: { en: "This will sort tasks and apply due date markers.", ko: "할 일 정렬 및 마감일 마커가 적용됩니다." },
 
     // ----------------------------------------------------
     // Commands
     // ----------------------------------------------------
+    cmd_sync_main: { en: "Sync Schedule (Todo Sort)", ko: "스케줄 동기화 (할 일 정렬)" },
     cmd_quick_capture: { en: "Quick Capture", ko: "할 일 빠른 등록" },
-    cmd_sync_main: { en: "Task Manage (Sync Main Schedule)", ko: "메인 스케줄 수시 동기화" },
     cmd_daily_reset: { en: "Daily Reset", ko: "메인 스케줄 일간 마감" },
     cmd_monthly_stats: { en: "Extract Monthly Routine Stats to Archive", ko: "월간 루틴 달성률 아카이브 추출" },
     cmd_quick_memo: { en: "Quick Idea Memo", ko: "빠른 아이디어 메모" },
@@ -170,7 +168,6 @@ export const translations = {
     header_stats: { en: "# Stats", ko: "# 통계" },
     header_plan: { en: "# Plan", ko: "# 계획" },
     header_record: { en: "# Record", ko: "# 기록" },
-    header_auto_sync_report: { en: "# Auto-sync Report", ko: "# 자동동기화 리포트" },
     msg_no_data: { en: "> [!info] Segment {num}: No data", ko: "> [!info] {num}구간: 데이터 없음" },
     segment_1: { en: "Segment 1 (1st-10th)", ko: "1구간 (1일~10일)" },
     segment_2: { en: "Segment 2 (11th-20th)", ko: "2구간 (11일~20일)" },
@@ -184,7 +181,6 @@ export const translations = {
     default_archive_folder: { en: "4. Archive/98.Schedule", ko: "4. Archive/98.Schedule" },
     default_fleeting_memo_path: { en: "5. Zettelkasten/01.Fleeting/Fleeting Memo.md", ko: "5. Zettelkasten/01.Fleeting/임시 메모.md" },
     default_templates_folder: { en: "3. Resource/01.Templates", ko: "3. Resource/01.Templates" },
-    default_sync_log_path: { en: "0. Inbox/Automation_Note.md", ko: "0. Inbox/자동화_노트.md" },
     default_project_directory: { en: "1. Project", ko: "1. Project" },
     default_stats_directory: { en: "1. Project/-Main/Stats", ko: "1. Project/-Main/Stats" },
     default_sample_project_name: { en: "Sample Project", ko: "샘플 프로젝트" },
@@ -223,7 +219,7 @@ export const translations = {
     notice_project_name_req: { en: "Please enter a project name.", ko: "프로젝트명을 입력해주세요." },
     notice_not_project_folder: { en: "⚠️ The currently open note is not in the project folder.", ko: "⚠️ 현재 열려 있는 노트가 프로젝트 폴더에 속해 있지 않습니다." },
     notice_add_task_error: { en: "🚨 An error occurred while adding the task.", ko: "🚨 할 일 추가 도중 에러가 발생했습니다." },
-    notice_sync_project_complete: { en: "🔄 Schedule and project sync complete.", ko: "🔄 스케줄 및 프로젝트 동기화가 완료되었습니다." },
+    notice_sync_project_complete: { en: "🔄 Schedule sync complete.", ko: "🔄 스케줄 동기화가 완료되었습니다." },
     notice_no_active_sync: { en: "⚠️ No active document to sync.", ko: "⚠️ 동기화할 활성 문서가 없습니다." },
     
     notice_para_created2: { en: "✅ PARA system folder structure and manual created.", ko: "✅ PARA 시스템 폴더 구조 및 가이드 문서가 생성되었습니다." },

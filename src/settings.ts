@@ -5,35 +5,31 @@ import { t } from "./i18n";
 
 export interface PluginSettings {
     language: "en" | "ko";
-    projectDirectory: string;
     mainSchedulePath: string;
     archiveDirectory: string;
     fleetingMemoPath: string;
     templatesDirectory: string;
     statsDirectory: string;
-    syncLogPath: string;
     midnightOffsetHour: number;
+    projectDirectory: string;
     syncOnStartup: boolean;
     customTemplates: {
         dailySchedule: string;
-        projectNote: string;
     };
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
     language: "en",
-    projectDirectory: "1. Project",
     mainSchedulePath: "1. Project/-Main/Schedule Management.md",
     archiveDirectory: "4. Archive/98.Schedule",
     fleetingMemoPath: "5. Zettelkasten/01.Fleeting/Fleeting Memo.md",
     templatesDirectory: "3. Resource/01.Templates",
     statsDirectory: "4. Archive/99.Stats",
-    syncLogPath: "0. Inbox/Automation_Note.md",
     midnightOffsetHour: 4,
-    syncOnStartup: false,
+    projectDirectory: "1. Project/01.List",
+    syncOnStartup: true,
     customTemplates: {
-        dailySchedule: "",
-        projectNote: ""
+        dailySchedule: ""
     }
 };
 
@@ -76,9 +72,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                         if (this.plugin.settings.mainSchedulePath === t("default_main_schedule_path", oldLang)) {
                             this.plugin.settings.mainSchedulePath = t("default_main_schedule_path", value);
                         }
-                        if (this.plugin.settings.projectDirectory === t("default_project_directory", oldLang)) {
-                            this.plugin.settings.projectDirectory = t("default_project_directory", value);
-                        }
                         if (this.plugin.settings.archiveDirectory === t("default_archive_folder", oldLang)) {
                             this.plugin.settings.archiveDirectory = t("default_archive_folder", value);
                         }
@@ -87,9 +80,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                         }
                         if (this.plugin.settings.templatesDirectory === t("default_templates_folder", oldLang)) {
                             this.plugin.settings.templatesDirectory = t("default_templates_folder", value);
-                        }
-                        if (this.plugin.settings.syncLogPath === t("default_sync_log_path", oldLang)) {
-                            this.plugin.settings.syncLogPath = t("default_sync_log_path", value);
                         }
                         if (this.plugin.settings.statsDirectory === t("default_stats_directory", oldLang)) {
                             this.plugin.settings.statsDirectory = t("default_stats_directory", value);
@@ -101,31 +91,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 });
             });
 
-        new Setting(containerEl)
-            .setName(t("settings_sync_startup_name", this.plugin.settings.language))
-            .setDesc(t("settings_sync_startup_desc", this.plugin.settings.language))
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.syncOnStartup)
-                .onChange(async (value) => {
-                    this.plugin.settings.syncOnStartup = value;
-                    await this.plugin.saveSettings();
-                }));
 
         // 1. 경로 설정 섹션
         new Setting(containerEl).setName(t("settings_header_paths", this.plugin.settings.language)).setHeading();
 
-        new Setting(containerEl)
-            .setName(t("settings_projects_folder_name", this.plugin.settings.language))
-            .setDesc(t("settings_projects_folder_desc", this.plugin.settings.language))
-            .addText(text => {
-                text.setPlaceholder(t("default_project_directory", this.plugin.settings.language))
-                    .setValue(this.plugin.settings.projectDirectory)
-                    .onChange(async (value) => {
-                        this.plugin.settings.projectDirectory = value.trim();
-                        await this.plugin.saveSettings();
-                    });
-                new FolderSuggest(this.app, text.inputEl);
-            });
 
         new Setting(containerEl)
             .setName(t("settings_main_schedule_name", this.plugin.settings.language))
@@ -180,19 +149,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 new FolderSuggest(this.app, text.inputEl);
             });
 
-        new Setting(containerEl)
-            .setName(t("settings_sync_log_name", this.plugin.settings.language))
-            .setDesc(t("settings_sync_log_desc", this.plugin.settings.language))
-            .addText(text => {
-                const defaultSyncLog = t("default_sync_log_path", this.plugin.settings.language);
-                text.setPlaceholder(defaultSyncLog)
-                    .setValue(this.plugin.settings.syncLogPath || defaultSyncLog)
-                    .onChange(async (value) => {
-                        this.plugin.settings.syncLogPath = value.trim();
-                        await this.plugin.saveSettings();
-                    });
-                new FileSuggest(this.app, text.inputEl);
-            });
 
         new Setting(containerEl)
             .setName(t("settings_midnight_offset_name", this.plugin.settings.language))
@@ -300,18 +256,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                     }
                 }));
 
-        new Setting(containerEl)
-            .setName(t("settings_sample_create_name", this.plugin.settings.language))
-            .setDesc(t("settings_sample_create_desc", this.plugin.settings.language))
-            .addButton(btn => btn
-                .setButtonText(t("settings_sample_create_btn", this.plugin.settings.language))
-                .setCta()
-                .onClick(async () => {
-                    const file = await this.plugin.createNewProjectFile(t("default_sample_project_name", this.plugin.settings.language));
-                    if (file) {
-                        // Notice is handled internally
-                    }
-                }));
 
         // 4. 커스텀 템플릿 에디터 섹션
         new Setting(containerEl).setName(t("settings_header_custom_templates", this.plugin.settings.language)).setHeading();
@@ -327,16 +271,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName(t("settings_custom_project_name", this.plugin.settings.language))
-            .setDesc(t("settings_custom_project_desc", this.plugin.settings.language))
-            .addTextArea(text => text
-                .setValue(this.plugin.settings.customTemplates.projectNote)
-                .setPlaceholder(t("settings_custom_project_placeholder", this.plugin.settings.language))
-                .onChange(async (value) => {
-                    this.plugin.settings.customTemplates.projectNote = value;
-                    await this.plugin.saveSettings();
-                }));
 
         // 5. 설정 초기화 섹션
         new Setting(containerEl).setName(t("settings_header_danger_zone", this.plugin.settings.language)).setHeading();

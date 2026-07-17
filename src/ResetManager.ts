@@ -205,10 +205,8 @@ export class ResetManager {
                         }
                     }
 
-                    // --- [Step 2] 프로젝트 파일 동기화 (# Project 리셋 모드) ---
-                    const dailyMap = this.utils.parseDailyProjectMap(resetContent);
+                    // --- [Step 2] 프로젝트 파일 획득 (완료 항목 정리를 위해) ---
                     const allFiles = this.utils.getProjectFiles();
-                    const filesForCollisionCheck = [...allFiles, dailyFile];
 
                     // [트랜잭션 백업] 프로젝트 파일 원본 캐싱 (미저장 에디터 내용 포함)
                     for (const f of allFiles) {
@@ -216,24 +214,31 @@ export class ResetManager {
                         originalProjectsCache.set(f, fileContent);
                     }
 
-                    if (dailyMap) {
-                        this.utils.syncDailyMap(dailyMap);
-                        const overrideData = await this.utils.syncDailyToProjects(this.app, dailyMap, allFiles, filesForCollisionCheck, true); // isReset: true
-                        const newProjSectionText = this.utils.renderProjectDashboardSection(await this.utils.getAllFullProjectResults(todayObj, overrideData, true));
-                        if (newProjSectionText) {
-                            resetContent = this.utils.replaceSection(resetContent, "# Project", newProjSectionText);
-                        }
-
-                    }
-
-                    // --- [Step 2-1] 프로젝트 파일 실행 섹션 완료 항목 정리 ---
+                    // --- [Step 2-1] 프로젝트 파일 실행 섹션 완료 항목 정리 및 식별자 동기화 ---
                     for (const projFile of allFiles) {
                         const projContent = await this.fileManager.getActiveViewOrFileText(projFile);
                         const projLines = projContent.split("\n");
 
+                        // 1. 실행 탭 내 완료된 항목의 식별자 추출
+                        const completedIds = new Set<string>();
+                        let inExecForExtract = false;
+                        for (const line of projLines) {
+                            if (REGEX.TOP_HEADING_START.test(line)) {
+                                inExecForExtract = REGEX.EXEC_HEADER.test(line.trim());
+                                continue;
+                            }
+                            if (inExecForExtract && REGEX.MATCH_TASK_COMPLETED.test(line)) {
+                                const match = line.match(REGEX.EXTRACT_ID);
+                                if (match && match[2]) {
+                                    completedIds.add(match[2]);
+                                }
+                            }
+                        }
+
+                        // 2. 원본(계획 탭 등) 완료 처리 및 실행 탭 청소
                         let execBuf: string[] = [], cleanedProjLines: string[] = [], inExecSec = false;
                         for (let i = 0; i < projLines.length; i++) {
-                            const cl = projLines[i];
+                            let cl = projLines[i];
                             if (REGEX.TOP_HEADING_START.test(cl)) {
                                 const wasExec = inExecSec;
                                 inExecSec = REGEX.EXEC_HEADER.test(cl.trim());
@@ -247,6 +252,13 @@ export class ResetManager {
                             if (inExecSec) {
                                 execBuf.push(cl);
                             } else {
+                                // 실행 탭이 아닌 구역(계획 등)에서 식별자가 일치하는 미완료 태스크를 [x]로 변경
+                                if (REGEX.MATCH_TASK.test(cl) && !REGEX.MATCH_TASK_COMPLETED.test(cl)) {
+                                    const match = cl.match(REGEX.EXTRACT_ID);
+                                    if (match && match[2] && completedIds.has(match[2])) {
+                                        cl = cl.replace(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/, `$1x$3`);
+                                    }
+                                }
                                 cleanedProjLines.push(cl);
                             }
                         }

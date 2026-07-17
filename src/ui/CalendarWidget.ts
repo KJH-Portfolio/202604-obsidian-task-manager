@@ -205,7 +205,7 @@ function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean
 
 const RebuildDecorations = StateEffect.define<null>();
 
-export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string } }) => ViewPlugin.fromClass(class {
+export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; language: string } }) => ViewPlugin.fromClass(class {
     decorations: DecorationSet;
     timer: number | null = null;
 
@@ -240,8 +240,7 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
         // 캘린더 클릭 기능 스코프 제한 (스케줄 노트 또는 프로젝트 폴더 내부만)
         const plugin = getPlugin();
         const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
-        const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
-        if (!isSchedule && !isProject) return builder.finish();
+        if (!isSchedule) return builder.finish();
 
         const processedLines = new Set<number>();
         const marks: { start: number; end: number; isOverdue: boolean }[] = [];
@@ -367,7 +366,7 @@ class TodayEmojiWidget extends WidgetType {
     }
 }
 
-export function buildTodayButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string } }) {
+export function buildTodayButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; language: string } }) {
     return ViewPlugin.fromClass(class {
         decorations: DecorationSet;
         currentView: EditorView;
@@ -406,8 +405,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
 
             const plugin = getPlugin();
             const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
-            const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
-            if (!isSchedule && !isProject) return builder.finish();
+            if (!isSchedule) return builder.finish();
 
             const getView = () => this.currentView;
 
@@ -445,8 +443,6 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                                 if (m) { header = m[1].trim().toLowerCase(); break; }
                             }
                             if (header === "todo" || header === "project") shouldShow = true;
-                        } else if (isProject) {
-                            shouldShow = true;
                         }
 
                         if (shouldShow) {

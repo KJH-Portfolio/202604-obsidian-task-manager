@@ -123,54 +123,8 @@ class QuickCaptureModal extends Modal {
     }
 }
 
-// 2. 새 프로젝트 생성 모달
-class CreateProjectModal extends Modal {
-    language: string;
-    projectName: string;
-    onSubmit: (projectName: string) => void;
-
-    constructor(app: App, language: string, onSubmit: (projectName: string) => void) {
-        super(app);
-        this.projectName = "";
-        this.language = language;
-        this.onSubmit = onSubmit;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.createEl("h3", { text: "🚀 새 프로젝트 생성" });
-
-        new Setting(contentEl)
-            .setName("프로젝트명")
-            .setDesc("생성할 프로젝트 노트의 제목을 입력하세요.")
-            .addText(text => text
-                .setPlaceholder("예: 파이썬 웹 크롤러 개발")
-                .onChange(value => this.projectName = value));
-
-        new Setting(contentEl)
-            .addButton(btn => btn
-                .setButtonText("프로젝트 생성")
-                .setCta()
-                .onClick(() => {
-                    if (this.projectName.trim() === "") {
-                        new Notice(t("notice_project_name_req", this.language));
-                        return;
-                    }
-                    this.close();
-                    this.onSubmit(this.projectName.trim());
-                }));
-    }
-
-    onClose() {
-        const { contentEl } = this;
-        contentEl.empty();
-    }
-}
-
-
-
 export default class MyWorldTaskManagerPlugin extends Plugin {
-    settings!: PluginSettings;
+    declare settings: PluginSettings;
     dateManager!: DateManager;
     fileManager!: FileManager;
     utils!: TaskUtils;
@@ -221,7 +175,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             if (path === this.settings.mainSchedulePath) {
                 await this.synchronizer.syncDailyTasks(fileToSync, silent);
             } else if (path.startsWith(this.settings.projectDirectory)) {
-                await this.synchronizer.pushProjectToSchedule(fileToSync, silent);
+                await this.synchronizer.syncProjectNoteIdentifiers(fileToSync, silent);
             }
         } catch (e) {
             console.error("Auto-sync error:", e);
@@ -286,8 +240,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             if (!targetFile) return;
 
             const isSchedule = targetFile.path === this.settings.mainSchedulePath;
-            const isProject = targetFile.path.startsWith(this.settings.projectDirectory);
-            if (!isSchedule && !isProject) return;
+            if (!isSchedule) return;
 
             const view = EditorView.findFromDOM(cmEditorEl as HTMLElement);
             if (!view) return;
@@ -390,8 +343,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         this.registerMarkdownPostProcessor((element, context) => {
             const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
-            const isProject = context.sourcePath.startsWith(this.settings.projectDirectory);
-            if (!isSchedule && !isProject) return;
+            if (!isSchedule) return;
 
             const checkboxes = element.querySelectorAll("input[type='checkbox']");
             checkboxes.forEach((cb) => {
@@ -815,19 +767,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             }
         });
 
-        // 명령어 C: 현재 프로젝트 정보를 스케줄에 반영 (push-project-to-schedule)
-        this.addCommand({
-            id: "push-project-to-schedule",
-            name: t("cmd_push_project", this.settings.language),
-            callback: async () => {
-                const activeFile = this.app.workspace.getActiveFile();
-                if (activeFile && activeFile.path.startsWith(this.settings.projectDirectory)) {
-                    await this.synchronizer.pushProjectToSchedule(activeFile);
-                } else {
-                    new Notice(t("notice_not_project_folder", this.settings.language));
-                }
-            }
-        });
 
         // 명령어 D: 월간 통계 수동 아카이빙 (monthly-stats-archive)
         this.addCommand({
@@ -930,22 +869,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             }
         });
 
-        // 명령어 H: 새 프로젝트 생성 (create-new-project)
-        this.addCommand({
-            id: "create-new-project",
-            name: t("cmd_create_project", this.settings.language),
-            callback: () => {
-                new CreateProjectModal(this.app, this.settings.language, (projectName) => {
-                    void (async () => {
-                        const file = await this.createNewProjectFile(projectName);
-                        if (file) {
-                            const leaf = this.app.workspace.getLeaf(false);
-                            await leaf.openFile(file);
-                        }
-                    })();
-                }).open();
-            }
-        });
 
         // 명령어 I: 오늘의 스케줄 관리 노트 생성 (create-today-schedule)
         this.addCommand({
@@ -995,82 +918,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         console.log("Unloading MyWorld Task Manager...");
     }
 
-    // 1. 공용 새 프로젝트 노트 생성 메서드
-    async createNewProjectFile(projectName: string): Promise<TFile | null> {
-        try {
-            const projectDir = this.settings.projectDirectory;
-            await this.utils.ensureFolder(projectDir);
-
-            const projectFilePath = `${projectDir}/${projectName}.md`;
-            const existing = this.app.vault.getAbstractFileByPath(projectFilePath);
-            if (existing) {
-                new Notice(t("notice_project_exists", this.settings.language));
-                return existing instanceof TFile ? existing : null;
-            }
-
-            // 템플릿 텍스트 가져오기
-            let templateText = this.settings.customTemplates.projectNote;
-            if (!templateText) {
-                const defaultPath = this.settings.language === 'en' 
-                    ? `${this.settings.templatesDirectory}/02.Project Plan Template.md`
-                    : `${this.settings.templatesDirectory}/02.프로젝트 계획서 템플릿.md`;
-                const defaultFile = this.app.vault.getAbstractFileByPath(defaultPath);
-                if (defaultFile && defaultFile instanceof TFile) {
-                    templateText = await this.app.vault.read(defaultFile);
-                } else {
-                    if (this.settings.language === 'en') {
-                        templateText = `---
-Created: "2000-01-01T00:00"
-Modified: "2000-01-01T00:00"
----
-# Execution
--
-# Overview
-- Deadline : 📅 2099-12-31 ~ 📅 2099-12-31
-- Goal :
-# Plan
-> **Progress**: **🚨 Needs writing!**
--
-# Details
-`;
-                    } else {
-                        templateText = `---
-작성일: "2000-01-01T00:00"
-수정일: "2000-01-01T00:00"
----
-# 실행
--
-# 개요
-- 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
-- 목표 :
-# 계획
-> **${t("progress_label", this.settings.language)}**: **${t("progress_need_write", this.settings.language)}**
--
-# 세부 사항
-`;
-                    }
-                }
-            }
-
-            const now = this.dateManager.getAdjustedNow();
-            const replacements = {
-                projectName: projectName,
-
-                date: now.format("YYYY-MM-DD"),
-
-                time: now.format("HH:mm")
-            };
-
-            const content = this.templateHelper.replacePlaceholder(templateText, replacements);
-            const newFile = await this.app.vault.create(projectFilePath, content);
-            new Notice(t("notice_project_created", this.settings.language, { projectName: projectName }));
-            return newFile;
-        } catch (err) {
-            console.error(err instanceof Error ? err.message : String(err));
-            new Notice(t("notice_project_error", this.settings.language));
-            return null;
-        }
-    }
 
     // 2. 공용 오늘의 스케줄 노트 생성 메서드
     async createTodayScheduleFile(): Promise<TFile | null> {
@@ -1163,7 +1010,9 @@ Modified: "2000-01-01T00:00"
 #### Todo
 - [ ] Task due today 📅 {{date}}
 # Project
-> 🚀 The overall project summary dashboard and callout list are updated here in real-time.
+\`\`\`dataviewjs
+dv.view("1. Project/01.List/스케줄렌더링");
+\`\`\`
 
 # Checklist
 
@@ -1232,7 +1081,9 @@ ${checklistTable}
 #### 할 일
 - [ ] 오늘 마감인 작업 📅 {{date}}
 # Project
-> ${t("overall_project_summary_desc", this.settings.language)}
+\`\`\`dataviewjs
+dv.view("1. Project/01.List/스케줄렌더링");
+\`\`\`
 
 # 체크리스트
 
