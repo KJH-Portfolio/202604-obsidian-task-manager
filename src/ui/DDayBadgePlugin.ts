@@ -11,7 +11,7 @@ class DDayBadgeWidget extends WidgetType {
     }
     toDOM() {
         const span = createSpan({ cls: "dday-virtual-badge" });
-        span.textContent = this.badge + " ";
+        span.textContent = this.badge;
         span.style.color = this.color;
         return span;
     }

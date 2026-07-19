@@ -503,7 +503,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             else { badge = "[D]"; color = "#969696"; }
 
                             const badgeSpan = createSpan({ cls: "dday-virtual-badge dday-virtual-badge-rm" });
-                            badgeSpan.textContent = badge + " ";
+                            badgeSpan.textContent = badge;
                             badgeSpan.style.color = color;
 
                             const checkbox = taskEl.querySelector("input[type='checkbox']");
