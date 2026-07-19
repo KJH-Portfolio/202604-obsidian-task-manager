@@ -7,6 +7,7 @@
 import { Plugin, TFile, Notice, Modal, App, MarkdownView } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { buildCalendarPopup, buildTodayButtonExtension, buildDateClickablePlugin } from "./ui/CalendarWidget";
+import { buildDDayBadgePlugin } from "./ui/DDayBadgePlugin";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab, StartupSyncModal } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { Synchronizer } from "./Synchronizer";
@@ -425,6 +426,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // CM6: 라이브 프리뷰용 날짜 텍스트 → 클릭 가능한 달력 팝업
         this.registerEditorExtension(buildDateClickablePlugin(this.app, () => this));
 
+        // CM6: 라이브 프리뷰용 D-Day 가상 뱃지 ([!], [D])
+        this.registerEditorExtension(buildDDayBadgePlugin(this.app));
+
         // Reading Mode 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
         this.registerMarkdownPostProcessor((element, context) => {
             const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
@@ -454,6 +458,47 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
 
                 const doc = element.ownerDocument;
+
+                // ── D-Day 가상 뱃지 주입 (Reading Mode) ─────────────────────────
+                if (isTaskItem && !taskEl.querySelector(".dday-virtual-badge-rm")) {
+                    const clonedForDate = taskEl.cloneNode(true) as HTMLElement;
+                    clonedForDate.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                    const rawTextForBadge = clonedForDate.textContent?.trim() || "";
+                    const dateMatchForBadge = rawTextForBadge.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                    const dataTask = taskEl.getAttribute("data-task") ?? "";
+                    // 완료 체크박스는 스킵
+                    if (dateMatchForBadge && !/^[xX]$/.test(dataTask)) {
+                        const dateStr = dateMatchForBadge[1];
+                        // @ts-ignore
+                        const targetDate = window.moment(dateStr, "YYYY-MM-DD", true);
+                        // @ts-ignore
+                        const today = window.moment().startOf('day');
+                        if (targetDate.isValid()) {
+                            const diff = targetDate.diff(today, 'days');
+                            let badge = "";
+                            let color = "";
+                            if (diff < 0) { badge = "[!]"; color = "#8c0028"; }
+                            else if (diff === 0) { badge = "[D]"; color = "#e93147"; }
+                            else if (diff === 1) { badge = "[D]"; color = "#ffd200"; }
+                            else if (diff === 2) { badge = "[D]"; color = "#44cf6e"; }
+                            else if (diff === 3) { badge = "[D]"; color = "#086ddd"; }
+                            else { badge = "[D]"; color = "#969696"; }
+
+                            const badgeSpan = document.createElement("span");
+                            badgeSpan.className = "dday-virtual-badge dday-virtual-badge-rm";
+                            badgeSpan.textContent = badge + " ";
+                            badgeSpan.style.color = color;
+                            badgeSpan.style.fontWeight = "800";
+                            badgeSpan.style.marginLeft = "4px";
+
+                            const checkbox = taskEl.querySelector("input[type='checkbox']");
+                            if (checkbox && checkbox.nextSibling) {
+                                taskEl.insertBefore(badgeSpan, checkbox.nextSibling);
+                            }
+                        }
+                    }
+                }
+                // ──────────────────────────────────────────────────────────────────
 
                 if (hasDateText && !taskEl.querySelector(".myworld-date-clickable")) {
                     const walker = doc.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {

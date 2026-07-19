@@ -282,19 +282,6 @@ export class TaskUtils {
 
 
     getMarker(dateStr: string, today: Date): string {
-        if (!dateStr) return "";
-        const cleanDate = dateStr.replace('📅', '').trim();
-        const parts = cleanDate.split('-');
-        if (parts.length < 3) return "";
-        const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        const diff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (diff < 0) return "!";
-        if (diff === 0) return "0";
-        if (diff === 1) return "1";
-        if (diff === 2) return "2";
-        if (diff === 3) return "3";
-        if (diff >= 4 && diff <= 7) return "7";
         return "";
     }
 
