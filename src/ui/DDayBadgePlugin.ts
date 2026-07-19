@@ -54,6 +54,11 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
         // @ts-ignore
         const today = window.moment().startOf('day');
         
+        const getIndent = (text: string) => {
+            const match = text.match(/^[\s]*/);
+            return match ? match[0].replace(/\t/g, "    ").length : 0;
+        };
+        
         for (const { from, to } of view.visibleRanges) {
             let pos = from;
             while (pos <= to) {
@@ -61,30 +66,61 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
                 pos = line.to + 1;
                 
                 const taskMatch = line.text.match(/^([\s]*[-*+]\s+\[.\])/);
-                const dateMatch = line.text.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
-                
-                if (taskMatch && dateMatch) {
-                    // @ts-ignore
-                    const targetDate = window.moment(dateMatch[1], "YYYY-MM-DD", true);
-                    if (targetDate.isValid()) {
-                        const diff = targetDate.diff(today, 'days');
-                        let badge = "";
-                        let color = "";
-                        
-                        if (diff < 0) { badge = "[!]"; color = "#8c0028"; }
-                        else if (diff === 0) { badge = "[D]"; color = "#e93147"; }
-                        else if (diff === 1) { badge = "[D]"; color = "#ffd200"; }
-                        else if (diff === 2) { badge = "[D]"; color = "#44cf6e"; }
-                        else if (diff === 3) { badge = "[D]"; color = "#086ddd"; }
-                        else { badge = "[D]"; color = "#969696"; }
+                if (taskMatch) {
+                    let dateStr: string | null = null;
+                    const dateMatch = line.text.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                    
+                    if (dateMatch) {
+                        dateStr = dateMatch[1];
+                    } else {
+                        // Look upwards for inherited date
+                        let currentIndent = getIndent(line.text);
+                        let lineNo = line.number - 1;
+                        while (lineNo >= 1) {
+                            const pLine = view.state.doc.line(lineNo);
+                            const pText = pLine.text;
+                            const pTaskMatch = pText.match(/^([\s]*[-*+]\s+\[.\])/);
+                            if (pTaskMatch) {
+                                const pIndent = getIndent(pText);
+                                if (pIndent < currentIndent) {
+                                    const pDateMatch = pText.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                                    if (pDateMatch) {
+                                        dateStr = pDateMatch[1];
+                                        break;
+                                    }
+                                    currentIndent = pIndent;
+                                    if (currentIndent === 0) break;
+                                }
+                            } else if (!/^\s*$/.test(pText)) {
+                                if (/^\S/.test(pText)) break;
+                            }
+                            lineNo--;
+                        }
+                    }
 
-                        const deco = Decoration.widget({
-                            widget: new DDayBadgeWidget(badge, color),
-                            side: 1
-                        });
-                        
-                        const insertPos = line.from + taskMatch[1].length;
-                        builder.add(insertPos, insertPos, deco);
+                    if (dateStr) {
+                        // @ts-ignore
+                        const targetDate = window.moment(dateStr, "YYYY-MM-DD", true);
+                        if (targetDate.isValid()) {
+                            const diff = targetDate.diff(today, 'days');
+                            let badge = "";
+                            let color = "";
+                            
+                            if (diff < 0) { badge = "[!]"; color = "#8c0028"; }
+                            else if (diff === 0) { badge = "[D]"; color = "#e93147"; }
+                            else if (diff === 1) { badge = "[D]"; color = "#ffd200"; }
+                            else if (diff === 2) { badge = "[D]"; color = "#44cf6e"; }
+                            else if (diff === 3) { badge = "[D]"; color = "#086ddd"; }
+                            else { badge = "[D]"; color = "#969696"; }
+
+                            const deco = Decoration.widget({
+                                widget: new DDayBadgeWidget(badge, color),
+                                side: 1
+                            });
+                            
+                            const insertPos = line.from + taskMatch[1].length;
+                            builder.add(insertPos, insertPos, deco);
+                        }
                     }
                 }
             }

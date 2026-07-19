@@ -483,10 +483,26 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     clonedForDate.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
                     const rawTextForBadge = clonedForDate.textContent?.trim() || "";
                     const dateMatchForBadge = rawTextForBadge.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                    let dateStr = dateMatchForBadge ? dateMatchForBadge[1] : null;
+
+                    if (!dateStr) {
+                        // Check ancestors
+                        let parentEl = taskEl.parentElement?.closest("li.task-list-item");
+                        while (parentEl) {
+                            const pCloned = parentEl.cloneNode(true) as HTMLElement;
+                            pCloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                            const pMatch = pCloned.textContent?.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                            if (pMatch) {
+                                dateStr = pMatch[1];
+                                break;
+                            }
+                            parentEl = parentEl.parentElement?.closest("li.task-list-item");
+                        }
+                    }
+
                     const dataTask = taskEl.getAttribute("data-task") ?? "";
                     // 완료 체크박스는 스킵
-                    if (dateMatchForBadge && !/^[xX]$/.test(dataTask)) {
-                        const dateStr = dateMatchForBadge[1];
+                    if (dateStr && !/^[xX]$/.test(dataTask)) {
                         // @ts-ignore
                         const targetDate = window.moment(dateStr, "YYYY-MM-DD", true);
                         // @ts-ignore
