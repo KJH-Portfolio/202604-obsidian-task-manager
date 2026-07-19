@@ -502,12 +502,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             else if (diff === 3) { badge = "[D]"; color = "#086ddd"; }
                             else { badge = "[D]"; color = "#969696"; }
 
-                            const badgeSpan = document.createElement("span");
-                            badgeSpan.className = "dday-virtual-badge dday-virtual-badge-rm";
+                            const badgeSpan = createSpan({ cls: "dday-virtual-badge dday-virtual-badge-rm" });
                             badgeSpan.textContent = badge + " ";
                             badgeSpan.style.color = color;
-                            badgeSpan.style.fontWeight = "800";
-                            badgeSpan.style.marginLeft = "4px";
 
                             const checkbox = taskEl.querySelector("input[type='checkbox']");
                             if (checkbox && checkbox.nextSibling) {

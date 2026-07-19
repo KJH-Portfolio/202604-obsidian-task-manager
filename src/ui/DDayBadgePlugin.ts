@@ -10,12 +10,9 @@ class DDayBadgeWidget extends WidgetType {
         return other.badge === this.badge && other.color === this.color;
     }
     toDOM() {
-        const span = document.createElement("span");
-        span.className = "dday-virtual-badge";
+        const span = createSpan({ cls: "dday-virtual-badge" });
         span.textContent = this.badge + " ";
         span.style.color = this.color;
-        span.style.fontWeight = "800";
-        span.style.marginLeft = "4px";
         return span;
     }
 }

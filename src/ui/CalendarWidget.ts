@@ -205,7 +205,7 @@ function isDateClickableRange(view: EditorView, pos: number): { isMatch: boolean
 
 const RebuildDecorations = StateEffect.define<null>();
 
-export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; language: string } }) => ViewPlugin.fromClass(class {
+export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string } }) => ViewPlugin.fromClass(class {
     decorations: DecorationSet;
     timer: number | null = null;
 
