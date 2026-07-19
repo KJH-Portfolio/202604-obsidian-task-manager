@@ -201,6 +201,24 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.resetManager = new ResetManager(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
         this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
 
+        // 강제로 scRender.js 업데이트 (데이터뷰 로직 최신화)
+        this.app.workspace.onLayoutReady(async () => {
+            try {
+                const folderPath = this.settings.projectDirectory + "/01.List";
+                const scRenderPath = `${folderPath}/scRender.js`;
+                const existingScRender = this.app.vault.getAbstractFileByPath(scRenderPath);
+                if (existingScRender instanceof TFile) {
+                    await this.app.vault.modify(existingScRender, this.templateHelper.scRenderJsContent);
+                } else if (!existingScRender) {
+                    // 상위 폴더가 존재하는지 확인 후 생성
+                    const folder = this.app.vault.getAbstractFileByPath(folderPath);
+                    if (folder) await this.app.vault.create(scRenderPath, this.templateHelper.scRenderJsContent);
+                }
+            } catch (e) {
+                console.error("Failed to update scRender.js on load:", e);
+            }
+        });
+
         // --- [Tasks 플러그인 특정 경고창 차단 옵저버] ---
         const attachNoticeObserver = (doc: Document) => {
             const noticeObserver = new MutationObserver((mutations) => {
@@ -1162,7 +1180,10 @@ ${checklistTable}
             const newFile = await this.app.vault.create(schedulePath, content);
 
             const scRenderPath = `${folderPath}/scRender.js`;
-            if (!this.app.vault.getAbstractFileByPath(scRenderPath)) {
+            const existingScRender = this.app.vault.getAbstractFileByPath(scRenderPath);
+            if (existingScRender instanceof TFile) {
+                await this.app.vault.modify(existingScRender, this.templateHelper.scRenderJsContent);
+            } else if (!existingScRender) {
                 await this.app.vault.create(scRenderPath, this.templateHelper.scRenderJsContent);
             }
 

@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+﻿import { App } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
@@ -240,11 +240,6 @@ if (projects.length > 0) {
             style.innerHTML = \`
                 .task-list-item { cursor: pointer; transition: background-color 0.2s ease; border-radius: 4px; padding-right: 5px; }
                 .task-list-item:hover { background-color: var(--background-modifier-hover); }
-                /* 뱃지 폰트 굵기 때문에 어긋난 체크박스의 높이를 위로 살짝 끌어올려서 텍스트와 중앙 정렬을 맞춥니다 */
-                .task-list-item > input.task-list-item-checkbox {
-                    position: relative;
-                    top: -1.5px;
-                }
             \`;
             dv.container.appendChild(style);
         }
@@ -520,3 +515,4 @@ Inbox에서 걸러진 정보 중 **'어떤 목적이나 행동'**이 수반되�
     }
 
 }
+

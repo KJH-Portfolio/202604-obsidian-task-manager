@@ -428,7 +428,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                     }
                     
                     const text = line.text;
-                    const isTask = /^(?:\s*>\s*)*\s*[-*+]\s+\[.\]/.test(text);
+                    const isTask = /^(?:\s*>\s*)*\s*[-*+]\s+\[.\]\s+\S/.test(text);
                     const isCompleted = /^(?:\s*>\s*)*\s*[-*+]\s+\[[xX-]\]/.test(text);
 
                     if (isTask && !isCompleted && !/\d{4}-\d{2}-\d{2}/.test(text)) {

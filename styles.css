@@ -3,16 +3,16 @@
    Performance impact is acceptable in the plugin context. */
 
 /* ========================================================
-   [커스텀 마커 기본 동작 설정]
-   옵시디언 기본 테마가 커스텀 체크박스(0,1,2,3,7,!)를
-   '완료된 작업'으로 간주하여 취소선을 긋는 현상 방지
+   [而ㅼ뒪? 留덉빱 湲곕낯 ?숈옉 ?ㅼ젙]
+   ?듭떆?붿뼵 湲곕낯 ?뚮쭏媛 而ㅼ뒪? 泥댄겕諛뺤뒪(0,1,2,3,7,!)瑜?
+   '?꾨즺???묒뾽'?쇰줈 媛꾩＜?섏뿬 痍⑥냼?좎쓣 湲뗫뒗 ?꾩긽 諛⑹?
    ======================================================== */
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="3"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="7"],
-/* 기본 상태 복구 (흐려짐 방지, 우선순위 극대화) */
+/* 湲곕낯 ?곹깭 蹂듦뎄 (?먮젮吏?諛⑹?, ?곗꽑?쒖쐞 洹밸??? */
 body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
 body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
 body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
@@ -29,7 +29,7 @@ body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[d
     opacity: 1;
     color: var(--text-normal);
 }
-/* 체크박스 진행 상태에 따른 색상 (콜아웃 내부에서도 선명하게) */
+/* 泥댄겕諛뺤뒪 吏꾪뻾 ?곹깭???곕Ⅸ ?됱긽 (肄쒖븘???대??먯꽌???좊챸?섍쾶) */
 body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
     background-color: rgba(255, 60, 80, 0.5);
@@ -67,7 +67,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     background-image: none;
 }
 
-/* 체크마크(V) 완벽하게 숨김 처리 */
+/* 泥댄겕留덊겕(V) ?꾨꼍?섍쾶 ?④? 泥섎━ */
 .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked::after,
 .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked::after,
 .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked::after,
@@ -83,7 +83,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     display: none;
     content: none;
 }
-.myworld-today-btn { cursor: pointer; font-size: 0.8em; padding: 2px 6px; margin-left: 6px; background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 4px; opacity: 0.7; transition: opacity 0.2s, transform 0.1s; vertical-align: middle; }
+.myworld-today-btn { cursor: pointer; font-size: 0.8em; padding: 2px 6px; margin-left: 6px; background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 4px; opacity: 0.7; transition: opacity 0.2s, transform 0.1s; vertical-align: baseline; position: relative; top: -1px; }
 .myworld-today-btn:hover { opacity: 1; transform: scale(1.05); }
 
 .myworld-date-clickable-text {
@@ -107,7 +107,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-date-clickable.myworld-overdue { color: var(--text-error); opacity: 0.75; }
 
 /* ========================================================
-   ── 달력 팝업 ──
+   ?? ?щ젰 ?앹뾽 ??
    ======================================================== */
 .myworld-cal-popup {
     background: var(--background-primary);
@@ -191,7 +191,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-cal-today-btn:hover { background: var(--interactive-accent-hover, var(--interactive-accent)); opacity: 0.85; }
 
 /* ========================================================
-   StartupSyncModal (부팅 확인 팝업)
+   StartupSyncModal (遺???뺤씤 ?앹뾽)
    ======================================================== */
 .myworld-startup-modal {
     width: 380px;
@@ -360,13 +360,354 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
 
 /* ── D-Day 가상 뱃지 ([!] / [D]) ──────────────────── */
 .dday-virtual-badge {
-    display: inline-block;
+    display: inline;
     font-weight: 800;
-    font-size: 0.82em;
-    letter-spacing: 0.01em;
     margin-left: 4px;
     margin-right: 2px;
     vertical-align: baseline;
     user-select: none;
     pointer-events: none;
 }
+
+/* 諭껋? ?고듃 援듦린 ?뚮Ц???닿툔??泥댄겕諛뺤뒪???믪씠瑜??띿뒪??以묒븰??留욎텛湲??꾪빐 蹂댁젙 */
+
+
+/* ========================================================
+   2. 가로형 클릭 버튼 UI (inline-routine.css)
+   - 오직 `> [!routine]` 콜아웃 상자 내부에서만 작동
+   ======================================================== */
+
+/* 2.1. 읽기 모드 (Reading View) 강제 */
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] li.task-list-item {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 20px;
+    padding: 4px 12px 4px 6px;
+    margin: 4px 8px 4px 0;
+    width: auto;
+    font-size: 0.9em;
+}
+
+/* 불릿 기호 제거 */
+.callout[data-callout="routine"] ul>li.task-list-item::marker,
+.callout[data-callout="routine"] ul>li.task-list-item::marker,
+.callout[data-callout="routine"] ul>li.task-list-item .list-bullet,
+.callout[data-callout="routine"] li.task-list-item .list-bullet {
+    display: none;
+    content: "";
+    font-size: 0;
+}
+
+/* 체크박스 정렬 */
+.callout[data-callout="routine"] ul input[type="checkbox"] {
+    margin: 0 8px 0 0;
+    cursor: pointer;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
+/* 2.2. 라이브 프리뷰 (Live Preview) 강제 */
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line,
+.callout[data-callout="routine"] .HyperMD-task-line {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 20px;
+    padding: 0px 12px 0px 6px;
+    margin: 4px 8px 4px 0;
+    width: auto;
+}
+
+/* 2.3. 완료 시 취소선 및 투명도 */
+.callout[data-callout="routine"] li.is-checked:not([data-task="-"]):not([data-task="/"]),
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
+    opacity: 0.4;
+    background-color: var(--background-primary);
+    text-decoration: line-through;
+}
+
+/* 2.4. 취소 시 디자인 (-) */
+.callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="-"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="-"] {
+    opacity: 0.5;
+    color: #ff5252;
+    font-weight: 700;
+    text-decoration: line-through;
+    background-color: rgba(255, 82, 82, 0.2);
+    border: 1px solid rgba(255, 82, 82, 0.5);
+}
+
+/* 2.5. 진행 중 디자인 (/) */
+.callout[data-callout="routine"] ul.contains-task-list>li.task-list-item[data-task="/"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="/"] {
+    opacity: 0.5;
+    color: #ffd04b;
+    font-weight: 700;
+    text-decoration: line-through;
+    background-color: rgba(255, 208, 75, 0.2);
+    border: 1px solid rgba(255, 208, 75, 0.5);
+}
+
+/* 2.6. 클릭 영역 전체 확장 */
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line,
+.callout[data-callout="routine"] .HyperMD-task-line {
+    position: relative;
+    overflow: hidden;
+}
+
+.callout[data-callout="routine"] input[type="checkbox"] {
+    position: relative;
+}
+
+.callout[data-callout="routine"] input[type="checkbox"]::after {
+    content: "";
+    position: absolute;
+    top: -100px;
+    bottom: -100px;
+    left: -100px;
+    right: -500px;
+    cursor: pointer;
+    z-index: 100;
+    background-color: transparent;
+}
+
+/* 2.7. 대시보드형 헤더 위젯(띠지) 디자인 */
+/* --- 읽기 모드 --- */
+.callout[data-callout="routine"] h1 {
+    background: linear-gradient(90deg, rgba(52, 152, 219, 0.25) 0%, rgba(52, 152, 219, 0) 100%);
+    border-left: 5px solid #3498db;
+    padding: 6px 15px;
+    border-radius: 4px;
+    margin-top: 1.0em;
+    margin-bottom: 0.5em;
+    color: var(--text-normal);
+    font-weight: 800;
+}
+
+/* --- 라이브 프리뷰 --- */
+.callout[data-callout="routine"] .cm-line.HyperMD-header-1 {
+    background: linear-gradient(90deg, rgba(52, 152, 219, 0.25) 0%, rgba(52, 152, 219, 0) 100%);
+    border-left: 5px solid #3498db;
+    padding: 10px 15px;
+    border-radius: 4px;
+    color: var(--text-normal);
+    font-weight: 800;
+}
+
+/* 2.8. 공간 압축 스페이스 (헤더 우측에 태스크 나열) */
+/* --- 읽기 모드 --- */
+.callout[data-callout="routine"] h1,
+.callout[data-callout="routine"] h2,
+.callout[data-callout="routine"] h3,
+.callout[data-callout="routine"] h4 {
+    float: left;
+    clear: both;
+    width: 60px;
+    text-align: right;
+    margin: 4px 15px 4px 0;
+    padding: 2px 0;
+    font-size: 1.0em;
+    border: none;
+    background: transparent;
+}
+
+.callout[data-callout="routine"] ul {
+    overflow: hidden;
+    margin: 2px 0 6px 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] ul>li.task-list-item {
+    order: 1;
+}
+
+.callout[data-callout="routine"] ul>li:not(.task-list-item) {
+    order: 2;
+    flex-basis: 100%;
+    display: inline-block;
+    margin: 4px 10px 4px 4px;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+/* --- 라이브 프리뷰 --- */
+.callout[data-callout="routine"] .cm-line.HyperMD-header {
+    display: block;
+    float: left;
+    clear: both;
+    width: 60px;
+    text-align: right;
+    margin: 4px 15px 4px 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 1.0em;
+}
+
+.callout[data-callout="routine"] .cm-line.HyperMD-list-line,
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line {
+    display: inline-flex;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.callout[data-callout="routine"] .cm-line:not(.HyperMD-task-line)>.cm-list-1 {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.callout[data-callout="routine"] .cm-line:empty {
+    display: none;
+}
+
+.myworld-padding-20-10 {
+    padding: 20px 10px;
+}
+
+.myworld-mt-0-mb-25 {
+    margin-top: 0;
+    margin-bottom: 25px;
+}
+
+.myworld-mb-25 {
+    margin-bottom: 25px;
+}
+
+.myworld-flex-baseline-gap10-mb10 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.myworld-text-muted-sm {
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.myworld-mb-35 {
+    margin-bottom: 35px;
+}
+
+.myworld-flex-end {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.myworld-flex-center-between-mb20 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.myworld-flex-baseline-gap10 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.myworld-text-muted-md {
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.myworld-flex-center-gap8 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.myworld-mb-20 {
+    margin-bottom: 20px;
+}
+
+
+.myworld-margin-0 {
+    margin: 0;
+}
+
+.myworld-w-100 {
+    width: 100%;
+}
+
+.myworld-h-100px {
+    height: 100px;
+}
+
+.myworld-p-12-15 {
+    padding: 12px 15px;
+}
+
+.myworld-text-1em {
+    font-size: 1em;
+}
+
+.myworld-rounded-6 {
+    border-radius: 6px;
+}
+
+.myworld-border-std {
+    border: 1px solid var(--background-modifier-border);
+}
+
+.myworld-resize-v {
+    resize: vertical;
+}
+
+.myworld-p-10-30 {
+    padding: 10px 30px;
+}
+
+.myworld-p-4 {
+    padding: 4px;
+}
+
+.myworld-rounded-4 {
+    border-radius: 4px;
+}
+
+.myworld-bg-secondary {
+    background-color: var(--background-secondary);
+}
+
+.myworld-text-normal {
+    color: var(--text-normal);
+}
+
+.myworld-p-4-10 {
+    padding: 4px 10px;
+}
+
+.myworld-text-10em {
+    font-size: 1.0em;
+}
+
+.myworld-shadow-none {
+    box-shadow: none;
+}
+
+.myworld-p-10 {
+    padding: 10px;
+}
+
+.myworld-d-none {
+    display: none;
+}
+
+
+
+
