@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice } from "obsidian";
+import { App, MarkdownView, Notice, TFile } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 
@@ -6,8 +6,8 @@ class CopyToExecutionWidget extends WidgetType {
     constructor(
         public getView: () => EditorView,
         public lang: string,
-        public fileManager: any,
-        public activeFile: any
+        public fileManager: { getActiveViewOrFileText: (f: TFile) => Promise<string>, pluginWrite: (f: TFile, text: string) => Promise<void> },
+        public activeFile: TFile
     ) {
         super();
     }
@@ -21,7 +21,7 @@ class CopyToExecutionWidget extends WidgetType {
     }
 
     toDOM() {
-        const span = document.createElement("span");
+        const span = createSpan();
         span.className = "myworld-copy-btn";
         span.textContent = "⬆️";
         span.title = this.lang === 'ko' ? "실행 탭으로 복사" : "Copy to Execution";
@@ -101,7 +101,7 @@ class CopyToExecutionWidget extends WidgetType {
 
 const RebuildDecorations = StateEffect.define<null>();
 
-export function buildCopyToExecutionButtonExtension(app: App, getPlugin: () => any) {
+export function buildCopyToExecutionButtonExtension(app: App, getPlugin: () => { settings: { projectDirectory: string; language: string }, fileManager: { getActiveViewOrFileText: (f: TFile) => Promise<string>, pluginWrite: (f: TFile, text: string) => Promise<void> } }) {
     return ViewPlugin.fromClass(class {
         decorations: DecorationSet;
         currentView: EditorView;

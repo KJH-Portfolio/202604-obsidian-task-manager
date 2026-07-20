@@ -365,7 +365,7 @@ class TodayEmojiWidget extends WidgetType {
     }
 }
 
-export function buildTodayButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; language: string } }) {
+export function buildTodayButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string } }) {
     return ViewPlugin.fromClass(class {
         decorations: DecorationSet;
         currentView: EditorView;

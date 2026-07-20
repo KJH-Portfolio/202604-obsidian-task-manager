@@ -699,7 +699,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     // @ts-ignore
                     window.myworldDebugLog.push(`[${context.sourcePath}] -> \n` + taskEl.outerHTML);
                     // @ts-ignore
-                    this.app.vault.adapter.write("debug_dom.txt", window.myworldDebugLog.join("\n\n---\n\n"));
+                    void this.app.vault.adapter.write("debug_dom.txt", window.myworldDebugLog.join("\n\n---\n\n"));
                 }
                 // --- DEBUG BLOCK END ---
 
