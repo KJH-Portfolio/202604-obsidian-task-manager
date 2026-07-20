@@ -67,14 +67,12 @@ export const translations = {
     notice_template_created: { en: "✅ Default template files created under {resultPath}!", ko: "✅ {resultPath} 하위에 기본 템플릿 파일들이 생성되었습니다!" },
     notice_template_error: { en: "🚨 An error occurred while creating templates.", ko: "🚨 템플릿 파일 생성 중 오류가 발생했습니다." },
 
-    settings_schedule_create_name: { en: "Create Schedule Note", ko: "스케줄 관리 노트 생성" },
+    settings_schedule_create_name: { en: "Create Daily Schedule Note", ko: "일간 스케줄 노트 자동 생성" },
     settings_schedule_create_desc: { en: "Instantly creates today's routine schedule note based on the 'Main Schedule Note Path'.", ko: "설정된 '메인 스케줄 노트 경로'에 오늘 날짜 기반의 루틴 스케줄 노트를 즉시 자동 생성합니다." },
-    settings_schedule_create_btn: { en: "Run Schedule Creation", ko: "스케줄 생성 실행" },
-    notice_schedule_created: { en: "✅ Schedule note created!", ko: "✅ 스케줄 관리 노트가 생성되었습니다!" },
+    settings_schedule_create_btn: { en: "Create Daily Schedule Note", ko: "스케줄 생성 실행" },
+    notice_schedule_created: { en: "✅ Daily Schedule note created!", ko: "✅ 일간 스케줄 노트가 생성되었습니다!" },
 
-    settings_sample_create_name: { en: "Create Sample Project Note", ko: "샘플 프로젝트 노트 생성" },
-    settings_sample_create_desc: { en: "Instantly creates a basic 'Sample Project.md' note under the 'Projects Folder Path'.", ko: "설정된 '프로젝트 폴더 경로' 하위에 기본 '샘플 프로젝트.md' 관리 문서를 즉시 자동 생성합니다." },
-    settings_sample_create_btn: { en: "Run Sample Creation", ko: "샘플 생성 실행" },
+
 
     // ----------------------------------------------------
     // Custom Template Settings
@@ -158,8 +156,8 @@ export const translations = {
     notice_project_exists: { en: "⚠️ Project with the same name already exists.", ko: "⚠️ 동일한 이름의 프로젝트가 이미 존재합니다." },
     notice_project_created: { en: "✅ New project note created: {projectName}", ko: "✅ 새 프로젝트 노트가 생성되었습니다: {projectName}" },
     notice_project_error: { en: "🚨 An error occurred while creating the project.", ko: "🚨 프로젝트 생성 중 에러가 발생했습니다." },
-    notice_schedule_exists: { en: "ℹ️ Schedule note already exists.", ko: "ℹ️ 스케줄 관리 노트가 이미 존재합니다." },
-    notice_schedule_error: { en: "🚨 An error occurred while creating the schedule note.", ko: "🚨 스케줄 관리 노트 생성 중 에러가 발생했습니다." },
+    notice_schedule_exists: { en: "ℹ️ Daily Schedule note already exists.", ko: "ℹ️ 일간 스케줄 노트가 이미 존재합니다." },
+    notice_schedule_error: { en: "🚨 An error occurred while creating the daily schedule note.", ko: "🚨 일간 스케줄 노트 생성 중 에러가 발생했습니다." },
     
     // ----------------------------------------------------
     // Parser Strings & Automated Generation
@@ -183,7 +181,7 @@ export const translations = {
     default_templates_folder: { en: "3. Resource/01.Templates", ko: "3. Resource/01.Templates" },
     default_project_directory: { en: "1. Project", ko: "1. Project" },
     default_stats_directory: { en: "1. Project/-Main/Stats", ko: "1. Project/-Main/Stats" },
-    default_sample_project_name: { en: "Sample Project", ko: "샘플 프로젝트" },
+
 
 
     // Default Values
@@ -262,8 +260,8 @@ export const translations = {
     cmd_setup_zettel: { en: "Setup Zettelkasten Structure", ko: "원클릭 제텔카스텐 폴더 구조 생성" },
 
     // New Notices
-    notice_no_schedule_path: { en: "🚨 Schedule note not found. Check path: {path}", ko: "🚨 스케줄 관리 노트를 찾을 수 없습니다. 경로를 확인하세요: {path}" },
-    notice_no_schedule: { en: "🚨 Schedule note not found: {path}", ko: "🚨 스케줄 관리 노트를 찾을 수 없습니다: {path}" },
+    notice_no_schedule_path: { en: "🚨 Daily Schedule note not found. Check path: {path}", ko: "🚨 일간 스케줄 노트를 찾을 수 없습니다. 경로를 확인하세요: {path}" },
+    notice_no_schedule: { en: "🚨 Daily Schedule note not found: {path}", ko: "🚨 일간 스케줄 노트를 찾을 수 없습니다: {path}" },
     notice_archive_updating: { en: "📂 Updating weekly archive...", ko: "📂 주간 아카이브 갱신 중..." },
     notice_project_emptied: { en: "✅ [{noteName}] Project was emptied and pushed to schedule.", ko: "✅ [{noteName}] 프로젝트가 비워져 스케줄에 반영되었습니다." },
 
@@ -278,7 +276,7 @@ export const translations = {
     settings_plugins_desc: { en: "View the list of plugins required for MyWorld Task Manager to work perfectly.", ko: "MyWorld Task Manager를 100% 활용하기 위해 함께 설치해야 하는 필수 플러그인 목록을 확인합니다." },
     settings_plugins_btn: { en: "View Plugins", ko: "목록 보기" },
     modal_plugins_title: { en: "Essential & Recommended Plugins", ko: "필수 및 권장 플러그인 안내" },
-    modal_plugins_desc: { en: "To fully utilize this plugin, please install and enable the following plugins in Obsidian:\n\n🚨 [Required] Advanced URI (by Vinzent03)\nWhy? The 'Magic Buttons' (Quick Capture, Daily Reset, Monthly Archive, etc.) in the daily schedule use `obsidian://advanced-uri` links. Without this plugin, clicking them will do nothing.\n\n🌟 [Highly Recommended] Periodic Notes\nWhy? Essential for seamlessly generating and managing your daily schedule notes every day.\n\n🌟 [Highly Recommended] Calendar (by Liam Cain)\nWhy? Highly recommended for quickly navigating between daily schedules using the right sidebar calendar.", ko: "이 플러그인을 100% 활용하기 위해 다음 플러그인들을 꼭 함께 설치해 주세요:\n\n🚨 [필수] Advanced URI (by Vinzent03)\n왜 필요한가요? 데일리 스케줄 상단의 '매직 버튼(빠른 캡처, 일간 마감 등)'은 명령 실행을 위해 이 플러그인에 의존합니다. 설치하지 않으면 버튼을 눌러도 반응하지 않습니다.\n\n🌟 [강력 권장] Periodic Notes\n왜 필요한가요? 매일 새로운 스케줄 노트를 쉽게 자동 생성하고 관리하려면 필수적입니다.\n\n🌟 [강력 권장] Calendar (by Liam Cain)\n왜 필요한가요? 우측 사이드바에 달력을 띄워두고 특정 날짜의 스케줄로 빠르게 이동하기 위해 가장 찰떡궁합입니다." }
+    modal_plugins_desc: { en: "To fully utilize this plugin, please install and enable the following plugins in Obsidian:\n\n🚨 [Required] Advanced URI (by Vinzent03)\nWhy? The 'Magic Buttons' (Quick Capture, Daily Reset, Monthly Archive, etc.) in the daily schedule use `obsidian://advanced-uri` links. Without this plugin, clicking them will do nothing.\n\n🌟 [Highly Recommended] Periodic Notes\nWhy? Helpful for seamlessly navigating and managing your daily schedule notes every day, in addition to the plugin's built-in creation button.\n\n🌟 [Highly Recommended] Calendar (by Liam Cain)\nWhy? Highly recommended for quickly navigating between daily schedules using the right sidebar calendar.", ko: "이 플러그인을 100% 활용하기 위해 다음 플러그인들을 꼭 함께 설치해 주세요:\n\n🚨 [필수] Advanced URI (by Vinzent03)\n왜 필요한가요? 데일리 스케줄 상단의 '매직 버튼(빠른 캡처, 일간 마감 등)'은 명령 실행을 위해 이 플러그인에 의존합니다. 설치하지 않으면 버튼을 눌러도 반응하지 않습니다.\n\n🌟 [강력 권장] Periodic Notes\n왜 필요한가요? 플러그인에 내장된 '스케줄 자동 생성' 버튼 외에도, 매일 새로운 스케줄 노트를 쉽게 관리하고 다른 날짜로 이동하려면 권장됩니다.\n\n🌟 [강력 권장] Calendar (by Liam Cain)\n왜 필요한가요? 우측 사이드바에 달력을 띄워두고 특정 날짜의 스케줄로 빠르게 이동하기 위해 가장 찰떡궁합입니다." }
 };
 
 export function t(key: keyof typeof translations, language: string, params: Record<string, string | number> = {}): string {
