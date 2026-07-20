@@ -67,7 +67,7 @@ Use the icon buttons at the top of the Schedule Management note and within Proje
 
 ### ✏️ Quick Task Capture (Pencil Icon)
 *   **Location**: Top of the Daily Schedule note.
-*   **Action**: Opens a quick-entry modal. Type a task, press enter, and it's instantly injected under `# Todo`, automatically sorted and synced.
+*   **Action**: Opens a quick-entry modal. Type a task, press enter, and it's instantly injected under `# Todo` (or `#### 할 일`), automatically sorted and synced.
 
 ### 🌤️ Daily Reset & Wrap-up (Sun & Cloud Icon)
 *   **Location**: Top of the Daily Schedule note.
@@ -79,7 +79,7 @@ Use the icon buttons at the top of the Schedule Management note and within Proje
 
 ### 📋 Fleeting Memo (Clipboard Icon)
 *   **Location**: Top of the Daily Schedule note.
-*   **Action**: Instantly opens a blank note (`임시 메모.md`) to capture long, sudden ideas.
+*   **Action**: Instantly opens a blank note (e.g., `Fleeting Memo 2026-07-21.md`) in your Inbox to capture long, sudden ideas.
 
 ---
 
@@ -89,23 +89,25 @@ To maintain perfect synchronization, the plugin relies on specific document stru
 
 ### ⛔ [Strictly Prohibited] Do not edit these signposts
 Modifying these will break the synchronization logic:
-1. **Major Headers**: `# Todo`, `#### 할 일`, `# Project`, `# 루틴`, `# 체크리스트`, `# 통계`, `# 계획`, `# 실행`.
+1. **Major Headers**: `# Todo` (or `#### 할 일`), `# Project`, `# Routine` (or `# 루틴`), `# Checklist` (or `# 체크리스트`), `# Statistics` (or `# 통계`), `# Plan` (or `# 계획`), `# Execution` (or `# 실행`).
 2. **Block IDs (`^xxxxxx`)**: The unique 6-character identifiers at the end of synced tasks.
 3. **Table Skeleton Symbols (`|`)**: Deleting pipe symbols breaks the routine and statistics tables.
+4. **Date Emoji (`📅`)**: The specific calendar emoji used to parse deadlines.
 
 ### ✅ [Freely Editable] Customize to your liking
 As long as signposts are intact, the content is 100% yours:
-1. **Routine Table Columns**: Rename 'Reading' to 'Meditation' as long as the top and bottom tables match.
+1. **Routine Table Columns**: Rename 'Step' or 'Block' to 'Meditation' or 'Reading' as long as the top and bottom tables match identically.
 2. **Task Content**: Edit the text or the checkbox state (`x`, `-`, `/`, `>`).
 3. **Routine Callouts**: Freely edit text inside the `> [!routine]` blocks.
 4. **Task Order**: Rearrange tasks freely; as long as the `^identifier` is attached, it will sync.
+5. **Copy to Execution**: Just click the ⬆️ button next to a planned task in a project note to instantly send it to the execution list!
 
 ---
 
 ## 💡 Advanced Mechanics
 
 *   **📅 D-Day Inheritance**: If a parent task has a date emoji (e.g., `📅 2026-06-10`), indented child tasks will automatically inherit that deadline.
-*   **🗑️ Hard Deletion (`//`)**: To permanently delete a task without leaving an archived trace, append `//` to the end of the line (e.g., `- [ ] Cancelled task // ^a1b2c3`) and click Sync.
+*   **🗑️ Hard Deletion (`//`)**: To permanently delete a task without leaving an archived trace, append `//` to the end of the line (e.g., `- [ ] Cancelled task // ^a1b2c3`) and click the checkbox.
 *   **🔍 Multi-Window Resilience**: Whether you are editing in a popout window, Live Preview, or Reading View, the CodeMirror 6 widgets and synchronization engine track your active context perfectly.
 
 ---

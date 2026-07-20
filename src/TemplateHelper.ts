@@ -1,4 +1,4 @@
-﻿import { App } from "obsidian";
+import { App } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
@@ -261,17 +261,17 @@ if (projects.length > 0) {
 수정일: "2000-01-01T00:00"
 ---
 # 실행
-- [ ] 갑자기 떠오른 즉각적인 임시 작업이나 아이디어를 이곳에 자유롭게 기록하세요. 📆
-- [ ] 혹은 하단의 '계획(Plan)' 구역에서 복사한 핵심 중요 태스크를 이곳에 배치하면 해당 작업 또한 메인 스케줄에 즉시 연동됩니다. 📆
+- [ ] 갑자기 떠오른 즉각적인 임시 작업이나 아이디어를 이곳에 자유롭게 기록하세요. 📅
+- [ ] 혹은 하단의 '계획(Plan)' 구역에서 ⬆️ 버튼을 눌러 핵심 중요 태스크를 이곳으로 보내면 메인 스케줄에 즉시 연동됩니다. 📅
 
 # 개요
-- 기한 : 📆 2099-12-31 ~ 📆 2099-12-31
+- 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
 - 목표 : 프로젝트가 달성하고자 하는 궁극적인 목표를 한 줄로 선명하게 작성하세요.
 
 # 계획
 > **${t("progress_label", this.settings.language)}**: **${t("progress_need_write", this.settings.language)}**
-- [ ] 프로젝트의 구체적인 실행 계획을 행동(Task) 단위로 쪼개어 이곳에 작성하세요. 📆 2026-07-14 ^step1
-- [ ] 작성한 태스크를 데일리 노트의 \`#### 할일\` 영역으로 복사해서 가져가면 스케줄에 연동됩니다. ^step2
+- [ ] 프로젝트의 구체적인 실행 계획을 행동(Task) 단위로 쪼개어 이곳에 작성하세요. 📅 2026-07-14 ^step1
+- [ ] 작성한 태스크 옆에 나타나는 ⬆️(실행 복사) 버튼을 클릭하면 최상단 \`# 실행\` 영역으로 쉽게 올려보낼 수 있습니다. ^step2
 - [ ] 태스크 끝에 생성되는 고유 ID(\`^step3\`)를 통해 흩어진 태스크들의 진행률이 이 프로젝트 노트로 실시간 통합됩니다. ^step3
 
 # 세부 사항
@@ -283,17 +283,17 @@ Created: "2000-01-01T00:00"
 Modified: "2000-01-01T00:00"
 ---
 # Execution
-- [ ] Freely jot down any sudden ideas or immediate, temporary tasks here. 📆
-- [ ] Or, paste critical tasks copied from the 'Plan' section below. These tasks will also instantly sync to your main schedule. 📆
+- [ ] Freely jot down any sudden ideas or immediate, temporary tasks here. 📅
+- [ ] Or, click the ⬆️ button in the 'Plan' section below to send critical tasks here. These tasks will also instantly sync to your main schedule. 📅
 
 # Overview
-- Deadline : 📆 2099-12-31 ~ 📆 2099-12-31
+- Deadline : 📅 2099-12-31 ~ 📅 2099-12-31
 - Goal : Write a clear, one-line objective that this project ultimately aims to achieve.
 
 # Plan
 > **Progress**: **🚨 Needs writing!**
-- [ ] Break down your specific execution plans into actionable tasks here. 📆 2026-07-14 ^step1
-- [ ] Copy these tasks into the \`#### Todo\` section of your daily schedule to sync them. ^step2
+- [ ] Break down your specific execution plans into actionable tasks here. 📅 2026-07-14 ^step1
+- [ ] Click the ⬆️ (Copy to Execution) button that appears next to the task to easily send it to the \`# Execution\` section at the top. ^step2
 - [ ] The unique ID (\`^step3\`) at the end of each task ensures that progress from scattered tasks is integrated back here in real-time. ^step3
 
 # Details
@@ -308,37 +308,39 @@ Freely document detailed notes, meeting minutes, reference links, and other proj
 
         const projectGuideText_ko = `# 📘 프로젝트 노트 작성 가이드
 
-이 문서는 프로젝트 노트에서 **'어떻게 태스크를 쪼개고, 어떻게 데일리 스케줄과 연동시키는지'**를 알려주는 가이드입니다.
+이 문서는 프로젝트 노트에서 **'어떻게 태스크를 쪼개고, 어떻게 메인 스케줄과 연동시키는지'**를 알려주는 가이드입니다.
 
 ---
 
-## 🎯 핵심 연동 원리 (식별자 맵핑)
+## 🎯 핵심 연동 원리 (식별자 맵핑 및 ⬆️ 버튼)
 프로젝트 노트 하단의 **'계획(Plan)'** 구역에 체크박스를 만들고 글을 쓰면, 플러그인이 자동으로 문장 끝에 \`^abc12\` 와 같은 **고유 식별자(ID)**를 부여해 줍니다. 
-1. 이 체크박스 줄을 통째로 복사해서 **데일리 스케줄 노트의 \`#### 할일\` 영역**에 붙여넣어 보세요!
-2. 그러면 데일리 노트에서 그 할 일을 체크(완료)하는 순간, 프로젝트 노트의 원본 태스크도 **자동으로 완료 처리**되며 프로젝트의 총 **진행률(%)**이 즉시 올라갑니다!
+1. 작성된 계획 태스크 옆에 나타나는 **⬆️(실행 탭으로 복사) 버튼**을 클릭해 보세요!
+2. 해당 태스크가 최상단의 **\`# 실행\` 구역으로 자동 복사**되며, 메인 스케줄 노트 대시보드에 즉시 노출됩니다.
+3. 스케줄 화면이나 프로젝트 내에서 그 할 일을 체크(완료)하는 순간, 프로젝트 노트의 원본 태스크도 **자동으로 완료 처리**되며 프로젝트의 총 **진행률(%)**이 즉시 올라갑니다!
 
 ## 💡 요약: 예쁘게 쓰는 방법
-- **# 개요**: 언제부터 언제까지 할 건지, 가장 큰 목표가 뭔지 적어두세요.
+- **# 개요**: 언제부터 언제까지 할 건지, 가장 큰 목표가 뭔지 적어두세요. 날짜는 📅(달력) 아이콘을 사용합니다.
 - **# 계획**: 여기에 해야 할 일들을 쭉 나열하세요. (자동으로 식별자가 생깁니다)
-- **# 실행**: 계획에서 복사해 온 중요한 태스크나, 당장 쳐내야 할 단발성 태스크들을 올려두고 관리하세요.
+- **# 실행**: ⬆️ 버튼을 통해 '계획'에서 올려보낸 중요한 태스크나, 당장 쳐내야 할 단발성 태스크들을 올려두고 관리하세요.
 - **# 세부 사항**: 관련된 메모나 링크, 긴 회의록 등을 편하게 적어두시면 됩니다.
 `;
 
         const projectGuideText_en = `# 📘 Project Note Guide
 
-This document explains **how to break down tasks and sync them with your daily schedule** in a Project Note.
+This document explains **how to break down tasks and sync them with your main schedule** in a Project Note.
 
 ---
 
-## 🎯 Core Sync Principle (ID Mapping)
+## 🎯 Core Sync Principle (ID Mapping & ⬆️ Button)
 When you create a checkbox and write text in the **'Plan'** section at the bottom of a project note, the plugin automatically assigns a **unique ID** like \`^abc12\` at the end of the sentence.
-1. Try copying this entire checkbox line and pasting it into the **\`#### Todo\` section of your Daily Schedule Note**!
-2. When you check off that task in your daily note, the original task in the project note is **automatically marked as complete**, and the project's total **progress (%)** updates instantly!
+1. Try clicking the **⬆️ (Copy to Execution) button** that appears next to the planned task!
+2. The task is **automatically copied to the \`# Execution\` section** at the top, and will instantly appear on your main schedule dashboard.
+3. When you check off that task on your schedule or in the project, the original task in the project note is **automatically marked as complete**, and the project's total **progress (%)** updates instantly!
 
 ## 💡 Summary: Best Practices
-- **# Overview**: Write down the start/end dates and your main goal.
+- **# Overview**: Write down the start/end dates and your main goal. Use the 📅 (calendar) icon for dates.
 - **# Plan**: List everything you need to do here. (IDs will generate automatically).
-- **# Execution**: Keep critical tasks copied from the Plan here, or jot down immediate, temporary tasks.
+- **# Execution**: Keep critical tasks sent up from the 'Plan' section via the ⬆️ button, or jot down immediate, temporary tasks.
 - **# Details**: Freely write related notes, links, or long meeting minutes here.
 `;
 
