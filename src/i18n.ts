@@ -67,10 +67,10 @@ export const translations = {
     notice_template_created: { en: "✅ Default template files created under {resultPath}!", ko: "✅ {resultPath} 하위에 기본 템플릿 파일들이 생성되었습니다!" },
     notice_template_error: { en: "🚨 An error occurred while creating templates.", ko: "🚨 템플릿 파일 생성 중 오류가 발생했습니다." },
 
-    settings_schedule_create_name: { en: "Create Daily Schedule Note", ko: "일간 스케줄 노트 자동 생성" },
-    settings_schedule_create_desc: { en: "Instantly creates today's routine schedule note based on the 'Main Schedule Note Path'.", ko: "설정된 '메인 스케줄 노트 경로'에 오늘 날짜 기반의 루틴 스케줄 노트를 즉시 자동 생성합니다." },
-    settings_schedule_create_btn: { en: "Create Daily Schedule Note", ko: "스케줄 생성 실행" },
-    notice_schedule_created: { en: "✅ Daily Schedule note created!", ko: "✅ 일간 스케줄 노트가 생성되었습니다!" },
+    settings_schedule_create_name: { en: "Create Schedule Management Note", ko: "스케줄 관리 노트 생성" },
+    settings_schedule_create_desc: { en: "Instantly creates the permanent Schedule Management note based on the 'Main Schedule Note Path'.", ko: "설정된 '메인 스케줄 노트 경로'를 감지하여 관제탑 역할의 영구 스케줄 노트를 즉시 생성합니다." },
+    settings_schedule_create_btn: { en: "Run Schedule Creation", ko: "스케줄 생성 실행" },
+    notice_schedule_created: { en: "✅ Schedule Management note created!", ko: "✅ 스케줄 관리 노트가 생성되었습니다!" },
 
 
 
@@ -156,8 +156,8 @@ export const translations = {
     notice_project_exists: { en: "⚠️ Project with the same name already exists.", ko: "⚠️ 동일한 이름의 프로젝트가 이미 존재합니다." },
     notice_project_created: { en: "✅ New project note created: {projectName}", ko: "✅ 새 프로젝트 노트가 생성되었습니다: {projectName}" },
     notice_project_error: { en: "🚨 An error occurred while creating the project.", ko: "🚨 프로젝트 생성 중 에러가 발생했습니다." },
-    notice_schedule_exists: { en: "ℹ️ Daily Schedule note already exists.", ko: "ℹ️ 일간 스케줄 노트가 이미 존재합니다." },
-    notice_schedule_error: { en: "🚨 An error occurred while creating the daily schedule note.", ko: "🚨 일간 스케줄 노트 생성 중 에러가 발생했습니다." },
+    notice_schedule_exists: { en: "ℹ️ Schedule Management note already exists.", ko: "ℹ️ 스케줄 관리 노트가 이미 존재합니다." },
+    notice_schedule_error: { en: "🚨 An error occurred while creating the schedule management note.", ko: "🚨 스케줄 관리 노트 생성 중 에러가 발생했습니다." },
     
     // ----------------------------------------------------
     // Parser Strings & Automated Generation
@@ -260,8 +260,8 @@ export const translations = {
     cmd_setup_zettel: { en: "Setup Zettelkasten Structure", ko: "원클릭 제텔카스텐 폴더 구조 생성" },
 
     // New Notices
-    notice_no_schedule_path: { en: "🚨 Daily Schedule note not found. Check path: {path}", ko: "🚨 일간 스케줄 노트를 찾을 수 없습니다. 경로를 확인하세요: {path}" },
-    notice_no_schedule: { en: "🚨 Daily Schedule note not found: {path}", ko: "🚨 일간 스케줄 노트를 찾을 수 없습니다: {path}" },
+    notice_no_schedule_path: { en: "🚨 Schedule Management note not found. Check path: {path}", ko: "🚨 스케줄 관리 노트를 찾을 수 없습니다. 경로를 확인하세요: {path}" },
+    notice_no_schedule: { en: "🚨 Schedule Management note not found: {path}", ko: "🚨 스케줄 관리 노트를 찾을 수 없습니다: {path}" },
     notice_archive_updating: { en: "📂 Updating weekly archive...", ko: "📂 주간 아카이브 갱신 중..." },
     notice_project_emptied: { en: "✅ [{noteName}] Project was emptied and pushed to schedule.", ko: "✅ [{noteName}] 프로젝트가 비워져 스케줄에 반영되었습니다." },
 
