@@ -50,7 +50,7 @@ Navigate to the **[2. Knowledge Management System Setup Helper]** section in set
 ### Step 3. Create Default Templates
 Navigate to the **[3. Basic Environment and File Creation Helper]** section:
 *   **`[Create Project Plan Template]`**: Generates the `01.Project Plan Template.md` and its guide note. You will be prompted to specify the destination path (e.g., `3. Resource/01.Templates`).
-*   **`[Create Schedule Management Note]`**: Creates the `스케줄 관리.md` (Schedule Management) file, which acts as your core control tower.
+*   **`[Create Daily Schedule Note]`**: Creates today's daily schedule note (e.g., `01.스케줄.md`), which acts as your core control tower.
 
 > [!TIP] Check Default Setting Paths
 > Go to the **[1. Path Settings]** tab at the top of the settings page and ensure the specified paths match the actual folders you created.
