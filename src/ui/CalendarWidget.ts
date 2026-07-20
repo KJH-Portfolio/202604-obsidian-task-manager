@@ -404,7 +404,8 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
 
             const plugin = getPlugin();
             const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
-            if (!isSchedule) return builder.finish();
+            const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
+            if (!isSchedule && !isProject) return builder.finish();
 
             const getView = () => this.currentView;
 
@@ -434,14 +435,17 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                     if (isTask && !isCompleted && !/\d{4}-\d{2}-\d{2}/.test(text)) {
                         let shouldShow = false;
 
+                        let header = "";
+                        for (let i = line.number; i > 0; i--) {
+                            const l = view.state.doc.line(i).text;
+                            const m = l.match(/^#\s+(.*)$/);
+                            if (m) { header = m[1].trim().toLowerCase(); break; }
+                        }
+
                         if (isSchedule) {
-                            let header = "";
-                            for (let i = line.number; i > 0; i--) {
-                                const l = view.state.doc.line(i).text;
-                                const m = l.match(/^#\s+(.*)$/);
-                                if (m) { header = m[1].trim().toLowerCase(); break; }
-                            }
                             if (header === "todo" || header === "project") shouldShow = true;
+                        } else if (isProject) {
+                            shouldShow = true;
                         }
 
                         if (shouldShow) {

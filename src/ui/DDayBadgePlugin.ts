@@ -54,9 +54,13 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
         // @ts-ignore
         const today = window.moment().startOf('day');
         
+        const tabSize = view.state.tabSize || 4;
+        
         const getIndent = (text: string) => {
             const match = text.match(/^[\s]*/);
-            return match ? match[0].replace(/\t/g, "    ").length : 0;
+            if (!match) return 0;
+            const spaces = match[0].replace(/\t/g, " ".repeat(tabSize));
+            return spaces.length;
         };
         
         for (const { from, to } of view.visibleRanges) {
@@ -65,8 +69,8 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
                 const line = view.state.doc.lineAt(pos);
                 pos = line.to + 1;
                 
-                const taskMatch = line.text.match(/^([\s]*[-*+]\s+\[.\])/);
-                if (taskMatch) {
+                const taskMatch = line.text.match(/^([\s]*[-*+]\s+\[(.)\])/);
+                if (taskMatch && taskMatch[2] === " ") {
                     let dateStr: string | null = null;
                     const dateMatch = line.text.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
                     

@@ -8,6 +8,7 @@ import { Plugin, TFile, Notice, Modal, App, MarkdownView } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { buildCalendarPopup, buildTodayButtonExtension, buildDateClickablePlugin } from "./ui/CalendarWidget";
 import { buildDDayBadgePlugin } from "./ui/DDayBadgePlugin";
+import { buildCopyToExecutionButtonExtension } from "./ui/CopyToExecutionWidget";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab, StartupSyncModal } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { Synchronizer } from "./Synchronizer";
@@ -380,7 +381,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     const nextMarker = /^[xX]$/.test(currentMarker) ? " " : "x";
 
                     const clonedForMatch = taskEl.cloneNode(true) as HTMLElement;
-                    clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
+                    clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
                     const rawText = clonedForMatch.textContent?.trim() || "";
                     const cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
 
@@ -391,7 +392,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     let occurrenceIndex = 0;
                     for (const t of allTasks) {
                         const tCloned = t.cloneNode(true) as HTMLElement;
-                        (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
+                        (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
                         const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
                         if (tClean === cleanText) {
                             if (t === taskEl) break;
@@ -408,30 +409,43 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const fileContent = await this.fileManager.getActiveViewOrFileText(targetFile);
                         const lines = fileContent.split("\n");
                         let modified = false;
-                        let matchCount = 0;
-                        for (let i = 0; i < lines.length; i++) {
-                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
-                                let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
-                                if (lineClean === cleanText) {
-                                    if (matchCount === occurrenceIndex) {
-                                        lines[i] = lines[i].replace(
-                                            /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/,
-                                            `$1${nextMarker}$3`
-                                        );
-                                        modified = true;
-                                        break;
+                        
+                        let targetLineIndex = -1;
+                        const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
+                        if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
+                            const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
+                            if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[lineNum])) {
+                                targetLineIndex = lineNum;
+                            }
+                        }
+                        
+                        if (targetLineIndex === -1) {
+                            let matchCount = 0;
+                            for (let i = 0; i < lines.length; i++) {
+                                if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                                    let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
+                                    if (lineClean === cleanText) {
+                                        if (matchCount === occurrenceIndex) {
+                                            targetLineIndex = i;
+                                            break;
+                                        }
+                                        matchCount++;
                                     }
-                                    matchCount++;
                                 }
                             }
                         }
+
+                        if (targetLineIndex !== -1) {
+                            lines[targetLineIndex] = lines[targetLineIndex].replace(
+                                /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/,
+                                `$1${nextMarker}$3`
+                            );
+                            modified = true;
+                        }
+                        
                         if (modified) {
-                            await this.fileManager.pluginWrite(targetFile, lines.join("\n"));
-                            // BUG-FIX: pluginWrite()는 pluginWritingFiles에 해시를 등록하여
-                            // vault.on('modify')에서 modifiedFiles에 추가되지 않도록 필터링됨.
-                            // 이로 인해 탭 전환 없이는 동기화가 트리거되지 않으므로,
-                            // 파일 수정 직후 force=true로 즉시 동기화를 호출한다.
-                            void this.triggerAutoSyncForFile(targetFile, true, true); // silent=true: 로딩창/노티스 숨김
+                            await this.fileManager.saveIfChanged(targetFile, fileContent, lines.join("\n"));
+                            void this.triggerAutoSyncForFile(targetFile, true, true);
                         }
                     });
                 });
@@ -443,6 +457,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         // CM6: 라이브 프리뷰용 날짜 텍스트 → 클릭 가능한 달력 팝업
         this.registerEditorExtension(buildDateClickablePlugin(this.app, () => this));
+
+        // CM6: 라이브 프리뷰용 계획->실행 복사 버튼
+        this.registerEditorExtension(buildCopyToExecutionButtonExtension(this.app, () => this));
 
         // CM6: 라이브 프리뷰용 D-Day 가상 뱃지 ([!], [D])
         this.registerEditorExtension(buildDDayBadgePlugin(this.app));
@@ -460,6 +477,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             if (!clickFile || !(clickFile instanceof TFile)) return;
 
             listItems.forEach(taskEl => {
+                try {
                 const isTaskItem = taskEl.classList.contains("task-list-item");
                 // [x] / [X] 만 스킵 — [1],[0],[!] 등 커스텀 마커는 처리 대상
                 if (isTaskItem && /^[xX]$/.test(taskEl.getAttribute("data-task") ?? "")) return;
@@ -523,8 +541,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             badgeSpan.style.color = color;
 
                             const checkbox = taskEl.querySelector("input[type='checkbox']");
-                            if (checkbox && checkbox.nextSibling) {
-                                taskEl.insertBefore(badgeSpan, checkbox.nextSibling);
+                            if (checkbox && checkbox.nextSibling && checkbox.parentNode) {
+                                checkbox.parentNode.insertBefore(badgeSpan, checkbox.nextSibling);
+                            } else if (checkbox && checkbox.parentNode) {
+                                checkbox.parentNode.appendChild(badgeSpan);
+                            } else {
+                                taskEl.appendChild(badgeSpan);
                             }
                         }
                     }
@@ -578,13 +600,15 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             ev.stopPropagation();
                             const rect = dateSpan.getBoundingClientRect();
 
-                            const cleanTextForMatch = rawText.replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                            const taskClone = taskEl.cloneNode(true) as HTMLElement;
+                            taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+                            const cleanTextForMatch = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
                             const container = taskEl.closest(".markdown-reading-view") || doc.body;
                             const allTasks = Array.from((container as HTMLElement).querySelectorAll(isTaskItem ? ".task-list-item" : "li:not(.task-list-item)"));
                             let occurrenceIndex = 0;
                             for (const t of allTasks) {
                                 const tCloned = t.cloneNode(true);
-                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(e => e.remove());
+                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
                                 const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
                                 if (tClean === cleanTextForMatch) {
                                     if (t === taskEl) break;
@@ -595,34 +619,56 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
                                 this.enqueueFileWrite(clickFile.path, async () => {
                                     const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                    const fileContent = this.utils.preprocessContent(rawContent);
-                                    const lines = fileContent.split("\n");
-                                    let matchCount = 0;
-                                    for (let i = 0; i < lines.length; i++) {
-                                        const lineHasDate = lines[i].includes(dateStr);
-                                        const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
-                                        const isLineList = /^\s*(?:>\s*)*[-*+]/.test(lines[i]);
+                                    const lines = rawContent.split("\n");
+                                    let targetLineIndex = -1;
+                                    const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
+                                    if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
+                                        const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
+                                        if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+/.test(lines[lineNum])) {
+                                            targetLineIndex = lineNum;
+                                        }
+                                    }
+                                    
+                                    if (targetLineIndex === -1) {
+                                        let matchCount = 0;
+                                        for (let i = 0; i < lines.length; i++) {
+                                            const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
+                                            const isLineList = /^\s*(?:>\s*)*[-*+]\s+/.test(lines[i]);
 
-                                        if (lineHasDate && ((isTaskItem && isLineTask) || (!isTaskItem && isLineList && !isLineTask))) {
-                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
-                                            if (lineClean === cleanTextForMatch) {
-                                                if (matchCount === occurrenceIndex) {
-                                                    let dateOccurrence = 0;
-                                                    lines[i] = lines[i].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
-                                                        if (dateOccurrence === currentTargetIndex) {
-                                                            dateOccurrence++;
-                                                            if (newDate === null) return "";
-                                                            return m.replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/, `\uD83D\uDCC5 ${newDate}`);
-                                                        }
-                                                        dateOccurrence++;
-                                                        return m;
-                                                    });
-                                                    await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
-                                                    break;
+                                            if ((isTaskItem && isLineTask) || (!isTaskItem && isLineList && !isLineTask)) {
+                                                let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                                if (lineClean === cleanTextForMatch) {
+                                                    if (matchCount === occurrenceIndex) {
+                                                        targetLineIndex = i;
+                                                        break;
+                                                    }
+                                                    matchCount++;
                                                 }
-                                                matchCount++;
                                             }
                                         }
+                                    }
+                                    
+                                    if (targetLineIndex !== -1) {
+                                        let dateOccurrence = 0;
+                                        const origLine = lines[targetLineIndex];
+                                        lines[targetLineIndex] = lines[targetLineIndex].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
+                                            if (dateOccurrence === currentTargetIndex) {
+                                                dateOccurrence++;
+                                                if (newDate === null) return "";
+                                                return m.replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/, `\uD83D\uDCC5 ${newDate}`);
+                                            }
+                                            dateOccurrence++;
+                                            return m;
+                                        });
+                                        const newLine = lines[targetLineIndex];
+                                        if (origLine === newLine) {
+                                            new Notice(`[Debug] 변경 사항 없음!\nLine: ${targetLineIndex}\nTargetIdx: ${currentTargetIndex}\n원본: ${origLine}`);
+                                        } else {
+                                            new Notice(`[Debug] 변경 완료!\nLine: ${targetLineIndex}\nTargetIdx: ${currentTargetIndex}\n${newLine}`);
+                                        }
+                                        await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
+                                    } else {
+                                        new Notice(`[Debug] targetLineIndex를 찾지 못했습니다.\ncleanText: ${cleanTextForMatch}`);
                                     }
                                 });
                             }, activeDocument, this.settings.language);
@@ -643,38 +689,77 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     nodesToProcess.forEach(processTextNode);
                 }
 
-                if (isTaskItem && !hasDateText && !hasDateAttr && !hasButton) {
-                    let shouldShow = false;
-                    if (isSchedule) {
-                        // DOM 렌더링 순서에 의존하는 방식 대신 소스 텍스트 기반으로 상위 헤더 탐색
-                        // → 파일 재저장 후 re-render 시에도 안정적으로 동작
-                        const sectionInfo = context.getSectionInfo(element);
-                        if (sectionInfo) {
-                            const sourceLines = sectionInfo.text.split('\n');
-                            let foundHeader = '';
-                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
-                                const m = sourceLines[i]?.match(/^#\s+(.+)$/);
-                                if (m) {
-                                    foundHeader = m[1].trim().toLowerCase();
+                const taskStatus = taskEl.getAttribute("data-task") ?? "";
+                
+                // --- DEBUG BLOCK START ---
+                // @ts-ignore
+                if (!window.myworldDebugLog) window.myworldDebugLog = [];
+                // @ts-ignore
+                if (window.myworldDebugLog.length < 20) {
+                    // @ts-ignore
+                    window.myworldDebugLog.push(`[${context.sourcePath}] -> \n` + taskEl.outerHTML);
+                    // @ts-ignore
+                    this.app.vault.adapter.write("debug_dom.txt", window.myworldDebugLog.join("\n\n---\n\n"));
+                }
+                // --- DEBUG BLOCK END ---
+
+                const isUnchecked = taskStatus === " " || taskStatus === "";
+
+                if (isTaskItem && !taskEl.querySelector(".myworld-copy-btn") && isUnchecked) {
+                    let shouldShowCopy = false;
+                    let foundHeader = "";
+                    if (isProject || isSchedule) {
+                        const cache = this.app.metadataCache.getCache(context.sourcePath);
+                        let lineNum = -1;
+                        if (taskEl.dataset.line) {
+                            lineNum = parseInt(taskEl.dataset.line, 10);
+                        } else {
+                            const parent = taskEl.closest("[data-line]");
+                            if (parent) lineNum = parseInt((parent as HTMLElement).dataset.line!, 10);
+                        }
+
+                        if (lineNum !== -1 && cache && cache.headings) {
+                            let nearestHeading = null;
+                            for (const h of cache.headings) {
+                                if (h.position.start.line <= lineNum) {
+                                    if (h.level === 1) {
+                                        nearestHeading = h;
+                                    }
+                                } else {
                                     break;
                                 }
                             }
-                            if (foundHeader === 'todo' || foundHeader === 'project') shouldShow = true;
+                            if (nearestHeading) foundHeader = nearestHeading.heading.trim().toLowerCase();
+                        } else {
+                            const sectionInfo = context.getSectionInfo(element);
+                            if (sectionInfo) {
+                                const sourceLines = sectionInfo.text.split('\n');
+                                for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                    const m = sourceLines[i]?.match(/^#\s+(.+)$/);
+                                    if (m) {
+                                        foundHeader = m[1].trim().toLowerCase();
+                                        break;
+                                    }
+                                }
+                            }
                         }
-                    } else if (isProject) {
-                        shouldShow = true;
+                        
+                        if (isProject && (foundHeader === '계획' || foundHeader === 'plan')) shouldShowCopy = true;
                     }
 
-                    if (shouldShow) {
-                                                const btn = createSpan();
-                        btn.className = "myworld-today-btn";
-                        btn.textContent = "📅";
-                        btn.title = "날짜 지정";
+                    if (shouldShowCopy) {
+                        const btn = createSpan();
+                        btn.className = "myworld-copy-btn";
+                        btn.textContent = "⬆️";
+                        btn.title = this.settings.language === 'ko' ? "실행 탭으로 복사" : "Copy to Execution";
+                        
                         btn.addEventListener("mousedown", (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-
-                            let cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
+                            
+                            const taskClone = taskEl.cloneNode(true) as HTMLElement;
+                            taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
                             if (!cleanText) return;
 
                             const container = taskEl.closest(".markdown-reading-view") || doc.body;
@@ -682,8 +767,165 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             let occurrenceIndex = 0;
                             for (const t of allTasks) {
                                 const tCloned = t.cloneNode(true) as HTMLElement;
-                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
-                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").trim();
+                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
+                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                if (tClean === cleanText) {
+                                    if (t === taskEl) break;
+                                    occurrenceIndex++;
+                                }
+                            }
+
+                            this.enqueueFileWrite(clickFile.path, async () => {
+                                const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                const lines = rawContent.split("\n");
+                                
+                                let taskText = "";
+                                let taskLineNum = -1;
+                                
+                                const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
+                                if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
+                                    const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
+                                    if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[lineNum])) {
+                                        taskLineNum = lineNum;
+                                        taskText = lines[lineNum];
+                                    }
+                                }
+
+                                if (taskLineNum === -1) {
+                                    let matchCount = 0;
+                                    for (let i = 0; i < lines.length; i++) {
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                                            const lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                            if (lineClean === cleanText) {
+                                                if (matchCount === occurrenceIndex) {
+                                                    taskText = lines[i];
+                                                    taskLineNum = i;
+                                                    break;
+                                                }
+                                                matchCount++;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (!taskText) return;
+
+                                const getIndent = (s: string) => {
+                                    const m = s.match(/^([\s\t]*)/);
+                                    if (!m) return 0;
+                                    return m[1].replace(/\t/g, "    ").length;
+                                }
+                                const baseIndent = getIndent(taskText);
+                                let nextLine = taskLineNum + 1;
+                                while (nextLine < lines.length) {
+                                    const nextText = lines[nextLine];
+                                    if (nextText.trim() === "") {
+                                        nextLine++;
+                                        continue;
+                                    }
+                                    if (getIndent(nextText) <= baseIndent) {
+                                        break;
+                                    }
+                                    taskText += "\n" + nextText;
+                                    nextLine++;
+                                }
+
+                                let targetIndex = -1;
+                                for (let i = 0; i < lines.length; i++) {
+                                    const h = lines[i].trim().toLowerCase();
+                                    if (h === "# 실행" || h === "# execution") {
+                                        targetIndex = i + 1;
+                                        while (targetIndex < lines.length) {
+                                            if (lines[targetIndex].startsWith("#")) {
+                                                while(targetIndex > i + 1 && lines[targetIndex - 1].trim() === "") {
+                                                    targetIndex--;
+                                                }
+                                                break;
+                                            }
+                                            targetIndex++;
+                                        }
+                                        break;
+                                    }
+                                }
+                                
+                                if (targetIndex !== -1) {
+                                    lines.splice(targetIndex, 0, taskText);
+                                    await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
+                                    new Notice(this.settings.language === 'ko' ? "실행 탭으로 복사 완료!" : "Copied to Execution tab!");
+                                }
+                            });
+                        });
+
+                        const targetContainer = taskEl.querySelector(".list-item-content") || taskEl;
+                        const childList = Array.from(targetContainer.children).find(c => c.tagName === "UL" || c.tagName === "OL");
+                        
+                        if (childList) {
+                            targetContainer.insertBefore(btn, childList);
+                        } else {
+                            targetContainer.appendChild(btn);
+                        }
+                    }
+                }
+
+                if (isTaskItem && !hasDateText && !hasDateAttr && !hasButton) {
+                    let shouldShow = false;
+                    let foundHeader = "";
+                    if (isSchedule || isProject) {
+                        const cache = this.app.metadataCache.getCache(context.sourcePath);
+                        const sectionInfo = context.getSectionInfo(element);
+                        const lineNum = sectionInfo ? sectionInfo.lineStart : -1;
+
+                        if (lineNum !== -1 && cache && cache.headings) {
+                            let nearestHeading = null;
+                            for (const h of cache.headings) {
+                                if (h.position.start.line <= lineNum) {
+                                    if (h.level === 1) {
+                                        nearestHeading = h;
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (nearestHeading) foundHeader = nearestHeading.heading.trim().toLowerCase();
+                        } else if (sectionInfo) {
+                            const sourceLines = sectionInfo.text.split('\n');
+                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                const m = sourceLines[i]?.match(/^#\s+(.+)$/);
+                                if (m) {
+                                    foundHeader = m[1].trim().toLowerCase();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (isSchedule) {
+                        if (foundHeader === 'todo' || foundHeader === 'project') shouldShow = true;
+                    } else if (isProject) {
+                        shouldShow = true;
+                    }
+
+                    if (shouldShow) {
+                        const btn = createSpan();
+                        btn.className = "myworld-today-btn";
+                        btn.textContent = "📅";
+                        btn.title = "날짜 지정";
+                        btn.addEventListener("mousedown", (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            const taskClone = taskEl.cloneNode(true) as HTMLElement;
+                            taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                            if (!cleanText) return;
+
+                            const container = taskEl.closest(".markdown-reading-view") || doc.body;
+                            const allTasks = Array.from((container as HTMLElement).querySelectorAll(".task-list-item"));
+                            let occurrenceIndex = 0;
+                            for (const t of allTasks) {
+                                const tCloned = t.cloneNode(true) as HTMLElement;
+                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
+                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
                                 if (tClean === cleanText) {
                                     if (t === taskEl) break;
                                     occurrenceIndex++;
@@ -694,52 +936,64 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             const todayStr = window.moment().format("YYYY-MM-DD");
                             this.enqueueFileWrite(clickFile.path, async () => {
                                 const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                const fileContent = this.utils.preprocessContent(rawContent);
-                                const lines = fileContent.split("\n");
+                                const lines = rawContent.split("\n");
                                 let modified = false;
-                                let matchCount = 0;
 
-                                for (let i = 0; i < lines.length; i++) {
-                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                        let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
-                                        if (lineClean === cleanText) {
-                                            if (matchCount === occurrenceIndex) {
-                                                const text = lines[i];
-                                                const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                                if (idMatch) {
-                                                    lines[i] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${todayStr}` + idMatch[0];
-                                                } else {
-                                                    lines[i] = text + ` 📅 ${todayStr}`;
+                                let targetLineIndex = -1;
+                                const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
+                                if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
+                                    const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
+                                    if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+/.test(lines[lineNum])) {
+                                        targetLineIndex = lineNum;
+                                    }
+                                }
+
+                                if (targetLineIndex === -1) {
+                                    let matchCount = 0;
+                                    for (let i = 0; i < lines.length; i++) {
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
+                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                            if (lineClean === cleanText) {
+                                                if (matchCount === occurrenceIndex) {
+                                                    targetLineIndex = i;
+                                                    break;
                                                 }
-                                                modified = true;
-                                                break;
+                                                matchCount++;
                                             }
-                                            matchCount++;
                                         }
                                     }
                                 }
 
+                                if (targetLineIndex !== -1) {
+                                    const text = lines[targetLineIndex];
+                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                    if (idMatch) {
+                                        lines[targetLineIndex] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${todayStr}` + idMatch[0];
+                                    } else {
+                                        lines[targetLineIndex] = text + ` 📅 ${todayStr}`;
+                                    }
+                                    modified = true;
+                                }
+
                                 if (modified) {
-                                    await this.fileManager.pluginWrite(clickFile, lines.join("\n"));
+                                    await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
                                     btn.remove();
                                 }
                             });
                         });
 
-                        const checkbox = taskEl.querySelector("input[type='checkbox']");
-                        if (checkbox && checkbox.nextSibling) {
-                            const nextNode = checkbox.nextSibling;
-                            if (nextNode.nodeType === 3 && nextNode.textContent) {
-                                nextNode.textContent = nextNode.textContent.replace(/\n$/, '');
-                            }
-                            taskEl.insertBefore(btn, nextNode.nextSibling);
-                        } else if (taskTextSpan) {
-                            taskTextSpan.appendChild(btn);
+                        const targetContainer = taskEl.querySelector(".list-item-content") || taskEl;
+                        const childList = Array.from(targetContainer.children).find(c => c.tagName === "UL" || c.tagName === "OL");
+                        
+                        if (childList) {
+                            targetContainer.insertBefore(btn, childList);
                         } else {
-                            const childList = Array.from(taskEl.children).find(c => c.tagName === "UL" || c.tagName === "OL");
-                            taskEl.insertBefore(btn, childList || null);
+                            targetContainer.appendChild(btn);
                         }
                     }
+                }
+                } catch (e) {
+                    console.warn("MyWorld 플러그인: 특정 Task 렌더링 실패 (스킵함)", e, taskEl);
                 }
             });
         });
