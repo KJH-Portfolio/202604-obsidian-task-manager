@@ -360,8 +360,10 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
 
 /* ── D-Day 가상 뱃지 ([!] / [D]) ──────────────────── */
 .dday-virtual-badge {
-    display: inline;
+    display: inline-block;
     font-weight: 800;
+    font-size: 0.82em;
+    letter-spacing: 0.01em;
     margin-left: 4px;
     margin-right: 2px;
     vertical-align: baseline;
