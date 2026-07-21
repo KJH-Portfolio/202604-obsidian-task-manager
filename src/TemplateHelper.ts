@@ -127,7 +127,7 @@ for (let p of pages) {
             badgeMap.set(t.line, { badge, color });
             // t.text를 수정하면 원본 파일 매칭에 실패하여 클릭 시 업데이트가 안되는 버그 발생
             // 따라서 시각적 렌더링에만 관여하는 t.visual 속성을 사용합니다.
-            t.visual = \`<span style="color: \${color}; font-weight: 800;">\${badge}</span>\` + t.text;
+            t.visual = \`<span><span class="dday-virtual-badge" style="color: \${color};">\${badge}</span>\` + t.text + \`</span>\`;
         }
     });
 
@@ -235,11 +235,12 @@ if (projects.length > 0) {
                     if (checkbox) checkbox.click(); // 체크박스 클릭 트리거
                 }
             });
-            // 시각적 피드백(마우스 호버 시 색상 변화, 커서 포인터) 및 체크박스 수직 정렬 보정
+            // 시각적 피드백(마우스 호버 시 색상 변화, 커서 포인터)
+            dv.container.classList.add("myworld-dv-container");
             const style = createEl("style");
             style.innerHTML = \`
-                .task-list-item { cursor: pointer; transition: background-color 0.2s ease; border-radius: 4px; padding-right: 5px; }
-                .task-list-item:hover { background-color: var(--background-modifier-hover); }
+                .myworld-dv-container .task-list-item { cursor: pointer; transition: background-color 0.2s ease; border-radius: 4px; padding-right: 5px; }
+                .myworld-dv-container .task-list-item:hover { background-color: var(--background-modifier-hover); }
             \`;
             dv.container.appendChild(style);
         }
