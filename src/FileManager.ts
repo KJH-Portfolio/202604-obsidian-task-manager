@@ -36,6 +36,39 @@ export class FileManager {
         return null;
     }
 
+    /**
+     * 경로 상의 노트를 안전하게 가져오고, 없으면 상위 폴더와 기본 노트를 자동으로 뚝딱 생성.
+     * 사용자가 노트를 삭제하더라도 에러 없이 자동 복구 생성됨.
+     */
+    async ensureFileExists(path: string, defaultContent = ""): Promise<TFile | null> {
+        if (!path) return null;
+        let file = this.getFile(path);
+        if (file) return file;
+
+        const findInVault = this.app.vault.getFiles().find(f => f.path === path);
+        if (findInVault instanceof TFile) return findInVault;
+
+        const lastSlash = path.lastIndexOf('/');
+        if (lastSlash !== -1) {
+            const folder = path.substring(0, lastSlash);
+            const parts = folder.split('/');
+            let current = '';
+            for (const p of parts) {
+                if (!p) continue;
+                current = current === '' ? p : `${current}/${p}`;
+                if (!this.app.vault.getAbstractFileByPath(current)) {
+                    try { await this.app.vault.createFolder(current); } catch {}
+                }
+            }
+        }
+
+        try {
+            return await this.app.vault.create(path, defaultContent);
+        } catch {
+            return this.getFile(path) || this.app.vault.getFiles().find(f => f.path === path) || null;
+        }
+    }
+
     async getActiveViewOrFileText(file: TFile): Promise<string> {
         // --- 성능개선 3번 수정: 모든 열린 탭 스캔 (Fallback) ---
         // 사용자가 타이핑 직후 다른 탭으로 이동(active-leaf-change)하면 해당 파일은 더 이상 'active'가 아닙니다.
@@ -187,8 +220,29 @@ export class FileManager {
             return changes;
         }
 
-        // 줄 수가 다를 경우: startIdx~origEnd 구간을 newLines의 startIdx~newEnd로 교체.
-        // 전체 문서가 아닌 "실제로 달라진 구간"만 교체하므로 스크롤 튐이 발생하지 않는다.
+        // 줄 수가 다를 경우:
+        if (origEnd < startIdx) {
+            // 순수 줄 삽입: 삭제 없이 줄이 새로 들어온 경우
+            const insertText = newLines.slice(startIdx, newEnd + 1).join("\n") + "\n";
+            return [{
+                from: { line: startIdx, ch: 0 },
+                to:   { line: startIdx, ch: 0 },
+                text: insertText
+            }];
+        }
+
+        if (newEnd < startIdx) {
+            // 순수 줄 삭제: 줄이 완전히 지워진 경우
+            const endLineIndex = origEnd + 1 < origLines.length ? origEnd + 1 : origEnd;
+            const endCh = origEnd + 1 < origLines.length ? 0 : origLines[origEnd].length;
+            return [{
+                from: { line: startIdx, ch: 0 },
+                to:   { line: endLineIndex, ch: endCh },
+                text: ""
+            }];
+        }
+
+        // 구간 교체: 일부 삭제 후 일부 삽입
         const replacementText = newLines.slice(startIdx, newEnd + 1).join("\n");
         return [{
             from: { line: startIdx, ch: 0 },

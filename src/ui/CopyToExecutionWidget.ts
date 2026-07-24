@@ -35,6 +35,7 @@ class CopyToExecutionWidget extends WidgetType {
                 try {
                     const clickedView = this.getView();
                     const pos = clickedView.posAtDOM(span);
+                    if (pos === null || pos < 0 || pos > clickedView.state.doc.length) return;
                     const line = clickedView.state.doc.lineAt(pos);
                     const taskText = line.text;
 

@@ -69,7 +69,7 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
                 const line = view.state.doc.lineAt(pos);
                 pos = line.to + 1;
                 
-                const taskMatch = line.text.match(/^([\s]*[-*+]\s+\[(.)\])/);
+                const taskMatch = line.text.match(/^([\s]*(?:>\s*)*[-*+]\s+\[(.)\])/);
                 if (taskMatch && taskMatch[2] === " ") {
                     let dateStr: string | null = null;
                     const dateMatch = line.text.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
@@ -83,7 +83,7 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
                         while (lineNo >= 1) {
                             const pLine = view.state.doc.line(lineNo);
                             const pText = pLine.text;
-                            const pTaskMatch = pText.match(/^([\s]*[-*+]\s+\[.\])/);
+                            const pTaskMatch = pText.match(/^([\s]*(?:>\s*)*[-*+]\s+\[.\])/);
                             if (pTaskMatch) {
                                 const pIndent = getIndent(pText);
                                 if (pIndent < currentIndent) {

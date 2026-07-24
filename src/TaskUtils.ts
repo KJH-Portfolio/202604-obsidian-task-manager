@@ -11,22 +11,8 @@ import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 import { PluginSettings } from "./settings";
 import { t } from "./i18n";
-
-export const REGEX = {
-    EXTRACT_ID: /^(.*?)(?:\s*\^([a-zA-Z0-9]+))?$/,
-    TASK_LINE: /^(\s*[-*+])\s+\[(.)\]\s+(.*)$/,
-    MATCH_TASK: /^\s*[-*+]\s+\[.\]/,
-    MATCH_TASK_COMPLETED: /^[\s]*[-*+]\s+\[[xX-]\]/,
-    STATUS_MATCH: /^[\s]*[-*+]\s+\[(.)\]/,
-    DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
-    TOP_HEADING_START: /^#\s+/,
-    EXEC_HEADER: /^#\s+(실행|Execution)$/i,
-    PLAN_HEADER: /^#\s+(계획|Plan)$/i,
-    WORK_SUMMARY_HEADER: /^#\s+(계획|Plan|Work Summary|Plan Overview)$/i,
-    NOTE_LINK: /^##\s+(.+)$/,
-
-    INDENT: /^\s*/
-};
+import { REGEX } from "./Constants";
+export { REGEX };
 
 export const MARKER_PRI: Record<string, number> = {
     '!': 1,
@@ -141,7 +127,7 @@ export class TaskUtils {
             else if (sectionName === "# 계획" || sectionName === "# Plan") escapedSectionName = "# (계획|Plan)";
             else if (sectionName === "# 실행" || sectionName === "# Execution") escapedSectionName = "# (실행|Execution)";
 
-            const safeRegex = new RegExp(`(^|\\n)${escapedSectionName}[ \\t]*(?=\\n|$)`);
+            const safeRegex = new RegExp(`(^|\\n)${escapedSectionName}[ \\t]*(?=\\n|$)`, 'i');
             const sMatch = safeRegex.exec(fileOrContent);
             if (!sMatch) return null;
 
@@ -351,7 +337,7 @@ export class TaskUtils {
                 }
             }
 
-            l = l.replace(/^(\s*[-*+]\s+)\[.\]/, `$1[${status}]`);
+            l = l.replace(/^(\s*(?:>\s*)*[-*+]\s+)\[.\]/, `$1[${status}]`);
             return l;
         });
     }
@@ -997,7 +983,16 @@ ${t("header_record", this.settings.language)}
 ${dailyRecord ? dailyRecord + '\n\n' : ''}${chkSectionText}${t("header_stats", this.settings.language)}
 ${weeklyStatsDashboard}
 `;
-            await app.vault.create(weeklyInfo.path, initialContent);
+            try {
+                await app.vault.create(weeklyInfo.path, initialContent);
+            } catch (err: any) {
+                const existing = app.vault.getAbstractFileByPath(weeklyInfo.path) || app.vault.getFiles().find(f => f.path === weeklyInfo.path);
+                if (existing instanceof TFile) {
+                    await this.fileManager.pluginWrite(existing, initialContent);
+                } else {
+                    throw err;
+                }
+            }
         }
     }
 
@@ -1026,7 +1021,7 @@ ${weeklyStatsDashboard}
                 console.error("[TaskUtils] Failed to write monthly stats file:", err);
             }
         } else {
-            await app.vault.create(monthlyInfo.path, `---
+            const initialMonthlyText = `---
 작성일: "2000-01-01T00:00"
 수정일: "2000-01-01T00:00"
 ---
@@ -1034,7 +1029,18 @@ ${weeklyStatsDashboard}
 
 ${t("header_record", this.settings.language)}
 
-${t("header_stats", this.settings.language)}\n${dashboardStr}\n`);
+${t("header_stats", this.settings.language)}\n${dashboardStr}\n`;
+
+            try {
+                await app.vault.create(monthlyInfo.path, initialMonthlyText);
+            } catch (err: any) {
+                const existing = app.vault.getAbstractFileByPath(monthlyInfo.path) || app.vault.getFiles().find(f => f.path === monthlyInfo.path);
+                if (existing instanceof TFile) {
+                    await this.fileManager.pluginWrite(existing, initialMonthlyText);
+                } else {
+                    throw err;
+                }
+            }
         }
         return originalContent;
     }

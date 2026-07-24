@@ -1,20 +1,22 @@
 export const REGEX = {
-    EXTRACT_ID: /^(.*?)(?:\s*\^([a-zA-Z0-9]+))?$/,
-    TASK_LINE: /^(\s*[-*+])\s+\[(.)\]\s+(.*)$/,
-    MATCH_TASK: /^\s*[-*+]\s+\[.\]/,
-    MATCH_TASK_COMPLETED: /^[\s]*[-*+]\s+\[[xX-]\]/,
-    STATUS_MATCH: /^[\s]*[-*+]\s+\[(.)\]/,
+    EXTRACT_ID: /^(.*?)(?:\s*\^([a-zA-Z0-9-]+))?\s*$/,
+    TASK_LINE: /^(\s*(?:>\s*)*[-*+])\s+\[(.)\]\s+(.*)$/,
+    MATCH_TASK: /^\s*(?:>\s*)*[-*+]\s+\[.\]/,
+    MATCH_TASK_COMPLETED: /^\s*(?:>\s*)*[-*+]\s+\[[xX-]\]/,
+    STATUS_MATCH: /^\s*(?:>\s*)*[-*+]\s+\[(.)\]/,
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
     HEADING_START: /^#+\s+/,
-    TOP_HEADING_START: /^#\s+/,
-    EXEC_HEADER: /^#\s+(실행|Execution)$/m,
+    TOP_HEADING_START: /^#+\s+/,
+    EXEC_HEADER: /^#+\s+(실행|Execution)$/im,
+    PLAN_HEADER: /^#+\s+(계획|Plan)$/i,
+    WORK_SUMMARY_HEADER: /^#+\s+(계획|Plan|Work Summary|Plan Overview)$/i,
 
     NOTE_LINK: /^##\s+(.+)$/,
-    SUMMARY_MATCH: /^[\s]*[-*+]\s+\[([xX ])\]/,
+    SUMMARY_MATCH: /^\s*(?:>\s*)*[-*+]\s+\[([xX ])\]/,
     MARKER_REPLACE_2: /(\[[^\]]\])\s*/,
 
     TODO_HEADER: /(?:^|\n)#\s+Todo(?=\n|$)/i,
-    INDENT: /^\s*/
+    INDENT: /^\s*(?:>\s*)*/
 };
 
 export const MARKER_PRI: Record<string, number> = {

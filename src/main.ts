@@ -16,6 +16,9 @@ import { ResetManager } from "./ResetManager";
 import { TemplateHelper } from "./TemplateHelper";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
+import { TaskQueue } from "./TaskQueue";
+import { EventController } from "./controllers/EventController";
+import { CommandController } from "./controllers/CommandController";
 import { t } from "./i18n";
 
 // 1. 빠른 할 일 캡처 모달
@@ -133,6 +136,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     synchronizer!: Synchronizer;
     resetManager!: ResetManager;
     templateHelper!: TemplateHelper;
+    taskQueue: TaskQueue = new TaskQueue();
 
     modifiedFiles: Set<string> = new Set<string>();
     lastActiveFile: TFile | null = null;
@@ -147,7 +151,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
      * 연속 클릭 시 이전 작업이 완료된 후 다음 작업이 실행됨을 보장한다.
      * 작업 완료 후 자신이 마지막 Promise이면 Map에서 해당 키를 삭제하여 메모리 누수 방지.
      */
-    private enqueueFileWrite(filePath: string, task: () => Promise<void>): void {
+    public enqueueFileWrite(filePath: string, task: () => Promise<void>): void {
         const current = this.fileWriteQueue.get(filePath) ?? Promise.resolve();
         const next = current.then(task).catch((e: unknown) => {
             console.error('enqueueFileWrite error:', e);
@@ -162,29 +166,33 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
     private syncLock: Set<string> = new Set<string>();
 
-    private async triggerAutoSyncForFile(fileToSync: TFile, force = false, silent = false) {
+    public async triggerAutoSyncForFile(fileToSync: TFile, force = false, silent = false) {
         if (!force && !this.modifiedFiles.has(fileToSync.path)) return;
 
         const path = fileToSync.path;
-        // 동기화 중복 실행 방지 (Race Condition Lock)
-        if (this.syncLock.has(path)) {
-            console.warn(`Sync already in progress for ${path}. Skipping overlapping sync.`);
-            return;
-        }
-        this.syncLock.add(path);
 
-        try {
-            if (path === this.settings.mainSchedulePath) {
-                await this.synchronizer.syncDailyTasks(fileToSync, silent);
-            } else if (path.startsWith(this.settings.projectDirectory)) {
-                await this.synchronizer.syncProjectNoteIdentifiers(fileToSync, silent);
+        // 300ms 디바운스 및 순차 실행 큐(TaskQueue) 적용
+        this.taskQueue.enqueue(path, async () => {
+            // 동기화 중복 실행 방지 (Race Condition Lock)
+            if (this.syncLock.has(path)) {
+                console.warn(`Sync already in progress for ${path}. Skipping overlapping sync.`);
+                return;
             }
-        } catch (e) {
-            console.error("Auto-sync error:", e);
-        } finally {
-            this.modifiedFiles.delete(path);
-            this.syncLock.delete(path);
-        }
+            this.syncLock.add(path);
+
+            try {
+                if (path === this.settings.mainSchedulePath) {
+                    await this.synchronizer.syncDailyTasks(fileToSync, silent);
+                } else if (path.startsWith(this.settings.projectDirectory)) {
+                    await this.synchronizer.syncProjectNoteIdentifiers(fileToSync, silent);
+                }
+            } catch (e) {
+                console.error("Auto-sync error:", e);
+            } finally {
+                this.modifiedFiles.delete(path);
+                this.syncLock.delete(path);
+            }
+        }, 300);
     }
 
     async onload() {
@@ -201,6 +209,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
         this.resetManager = new ResetManager(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
         this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
+
+        // 3. 컨트롤러 인스턴스 생성 및 이벤트/명령어 등록
+        const eventController = new EventController(this.app, this);
+        eventController.registerEvents();
+
+        const commandController = new CommandController(this.app, this);
+        commandController.registerCommands();
 
         // 강제로 scRender.js 업데이트 (데이터뷰 로직 최신화)
         this.app.workspace.onLayoutReady(async () => {
@@ -1245,7 +1260,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     }
 
     onunload() {
-        // console.log("Unloading MyWorld Task Manager...");
+        this.taskQueue.clear();
     }
 
 
