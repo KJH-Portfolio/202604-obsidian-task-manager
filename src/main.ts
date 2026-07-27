@@ -4,11 +4,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { Plugin, TFile, Notice, Modal, App, MarkdownView } from "obsidian";
+import { Plugin, TFile, Notice, Modal, App, MarkdownView, setIcon } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { buildCalendarPopup, buildTodayButtonExtension, buildDateClickablePlugin } from "./ui/CalendarWidget";
 import { buildDDayBadgePlugin } from "./ui/DDayBadgePlugin";
 import { buildCopyToExecutionButtonExtension } from "./ui/CopyToExecutionWidget";
+import { buildAddExecutionTaskButtonExtension } from "./ui/AddExecutionTaskWidget";
+import { buildScheduleHeaderButtonsExtension, ScheduleHeaderActionType } from "./ui/ScheduleHeaderButtonsWidget";
 import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab, StartupSyncModal } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { Synchronizer } from "./Synchronizer";
@@ -18,20 +20,22 @@ import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 import { TaskQueue } from "./TaskQueue";
 import { EventController } from "./controllers/EventController";
-import { CommandController } from "./controllers/CommandController";
-import { t } from "./i18n";
+
+import { t, translations } from "./i18n";
 
 // 1. 빠른 할 일 캡처 모달
 class QuickCaptureModal extends Modal {
     content: string;
     selectedDate: string;
     language: string;
+    descKey: keyof typeof translations;
     onSubmit: (content: string) => Promise<void> | void;
 
-    constructor(app: App, language: string, onSubmit: (content: string) => void) {
+    constructor(app: App, language: string, onSubmit: (content: string) => void, descKey: keyof typeof translations = "modal_add_task_desc") {
         super(app);
         this.content = "";
         this.language = language;
+        this.descKey = descKey;
         // window.moment is available in Obsidian
         this.selectedDate = window.moment().format("YYYY-MM-DD");
         this.onSubmit = onSubmit;
@@ -50,7 +54,7 @@ class QuickCaptureModal extends Modal {
         const leftGroup = headerContainer.createDiv({ cls: "myworld-flex-baseline-gap10" });
         const title = leftGroup.createEl("h3", { text: t("modal_add_task_title", this.language) });
         title.addClass("myworld-margin-0");
-        leftGroup.createSpan({ text: t("modal_add_task_desc", this.language), cls: "myworld-text-muted-md" });
+        leftGroup.createSpan({ text: t(this.descKey, this.language), cls: "myworld-text-muted-md" });
 
         // Right part: Date Picker & Tomorrow Button
         const rightGroup = headerContainer.createDiv({ cls: "myworld-flex-center-gap8" });
@@ -213,9 +217,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // 3. 컨트롤러 인스턴스 생성 및 이벤트/명령어 등록
         const eventController = new EventController(this.app, this);
         eventController.registerEvents();
-
-        const commandController = new CommandController(this.app, this);
-        commandController.registerCommands();
 
         // 강제로 scRender.js 업데이트 (데이터뷰 로직 최신화)
         this.app.workspace.onLayoutReady(async () => {
@@ -380,72 +381,52 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
             if (!isSchedule) return;
 
-            const checkboxes = element.querySelectorAll("input[type='checkbox']");
-            checkboxes.forEach((cb) => {
-                // 옵시디언의 읽기 모드 체크박스 핸들러는 주로 click 이벤트를 위임(delegation)하여 처리하므로,
-                // 체크박스 자체에 click 이벤트를 달고 stopPropagation()을 호출하면 완벽히 차단됨
-                cb.addEventListener("click", (e) => {
+            const items = element.querySelectorAll(".task-list-item, input[type='checkbox']");
+            items.forEach((item) => {
+                const handler = (e: Event) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    e.stopImmediatePropagation();
 
                     const target = e.target as HTMLElement;
-                    const taskEl = target.closest(".task-list-item") as HTMLElement | null;
+                    const taskEl = (target.closest(".task-list-item") || item.closest(".task-list-item")) as HTMLElement | null;
                     if (!taskEl) return;
 
                     const currentMarker = taskEl.getAttribute("data-task") ?? " ";
                     const nextMarker = /^[xX]$/.test(currentMarker) ? " " : "x";
 
                     const clonedForMatch = taskEl.cloneNode(true) as HTMLElement;
-                    clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
+                    clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable, .dday-virtual-badge, .myworld-copy-btn, input").forEach(el => el.remove());
                     const rawText = clonedForMatch.textContent?.trim() || "";
                     const cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
 
                     if (!cleanText) return;
 
-                    const container = taskEl.closest(".markdown-reading-view") || taskEl.ownerDocument.body;
-                    const allTasks = Array.from((container as HTMLElement).querySelectorAll(".task-list-item")) as HTMLElement[];
-                    let occurrenceIndex = 0;
-                    for (const t of allTasks) {
-                        const tCloned = t.cloneNode(true) as HTMLElement;
-                        (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
-                        const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
-                        if (tClean === cleanText) {
-                            if (t === taskEl) break;
-                            occurrenceIndex++;
-                        }
-                    }
-
                     const targetFile = this.app.vault.getAbstractFileByPath(context.sourcePath);
                     if (!targetFile || !(targetFile instanceof TFile)) return;
 
-                    // BUG-02: Race Condition 방지 - read→modify 전 과정을 직렬화 큐로 순서 보장
-                    // pluginWrite 사용으로 vault.on('modify') 해시 필터도 함께 적용
                     this.enqueueFileWrite(targetFile.path, async () => {
                         const fileContent = await this.fileManager.getActiveViewOrFileText(targetFile);
                         const lines = fileContent.split("\n");
-                        let modified = false;
-                        
                         let targetLineIndex = -1;
-                        const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
-                        if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
-                            const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
-                            if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[lineNum])) {
-                                targetLineIndex = lineNum;
+
+                        // 1. exact 핀포인트 매칭 정규식: 태스크 텍스트와 정확히 일치하는 파일 라인 탐색
+                        const escapedText = cleanText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const exactRegex = new RegExp(`^\\s*(?:>\\s*)*[-*+]\\s+\\[.\\]\\s*${escapedText}(?:\\s+.*)?$`);
+
+                        for (let i = 0; i < lines.length; i++) {
+                            if (exactRegex.test(lines[i])) {
+                                targetLineIndex = i;
+                                break;
                             }
                         }
-                        
+
+                        // 2. 부분 일치 fallback
                         if (targetLineIndex === -1) {
-                            let matchCount = 0;
                             for (let i = 0; i < lines.length; i++) {
-                                if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
-                                    let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s+\^[a-zA-Z0-9]+$/, "").trim();
-                                    if (lineClean === cleanText) {
-                                        if (matchCount === occurrenceIndex) {
-                                            targetLineIndex = i;
-                                            break;
-                                        }
-                                        matchCount++;
-                                    }
+                                if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText)) {
+                                    targetLineIndex = i;
+                                    break;
                                 }
                             }
                         }
@@ -455,15 +436,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 /^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/,
                                 `$1${nextMarker}$3`
                             );
-                            modified = true;
-                        }
-                        
-                        if (modified) {
                             await this.fileManager.saveIfChanged(targetFile, fileContent, lines.join("\n"));
                             void this.triggerAutoSyncForFile(targetFile, true, true);
                         }
                     });
-                });
+                };
+
+                item.addEventListener("click", handler, { capture: true });
             });
         });
 
@@ -476,8 +455,87 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // CM6: 라이브 프리뷰용 계획->실행 복사 버튼
         this.registerEditorExtension(buildCopyToExecutionButtonExtension(this.app, () => this));
 
+        // CM6: 라이브 프리뷰용 # 실행 헤더 ✏️ 빠른 Task 추가 버튼
+        this.registerEditorExtension(buildAddExecutionTaskButtonExtension(this.app, () => this, (file) => this.openAddExecutionTaskModal(file)));
+
+        // CM6: 라이브 프리뷰용 스케줄 헤더 버튼들 (루틴->일간마감, Todo->빠른추가+임시메모, 통계->월간아카이브)
+        this.registerEditorExtension(buildScheduleHeaderButtonsExtension(this.app, () => this, (file, action) => this.handleScheduleHeaderAction(file, action)));
+
         // CM6: 라이브 프리뷰용 D-Day 가상 뱃지 ([!], [D])
         this.registerEditorExtension(buildDDayBadgePlugin(this.app));
+
+        // Reading Mode: 스케줄 노트 헤더 전용 버튼들 (루틴, Todo, 통계)
+        this.registerMarkdownPostProcessor((element, context) => {
+            const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
+            if (!isSchedule) return;
+
+            const headings = Array.from(element.querySelectorAll("h1, h2, h3, h4, h5, h6")) as HTMLElement[];
+            headings.forEach(h => {
+                const text = h.textContent?.trim().toLowerCase() || "";
+                const isKo = this.settings.language === "ko";
+
+                const addBtn = (actionType: ScheduleHeaderActionType, iconName: string, tooltip: string) => {
+                    const btn = createSpan();
+                    btn.className = `myworld-header-action-btn myworld-btn-${actionType}`;
+                    setIcon(btn, iconName);
+                    btn.title = tooltip;
+                    btn.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
+                        if (file && file instanceof TFile) {
+                            this.handleScheduleHeaderAction(file, actionType);
+                        }
+                    });
+                    h.appendChild(btn);
+                };
+
+                if (text === "루틴" || text === "routine") {
+                    if (!h.querySelector(".myworld-btn-daily-reset")) {
+                        addBtn("daily-reset", "sun", isKo ? "일간 마감 실행" : "Run Daily Reset");
+                    }
+                } else if (text === "todo") {
+                    if (!h.querySelector(".myworld-btn-quick-capture")) {
+                        addBtn("quick-capture", "pencil", isKo ? "빠른 할 일 등록" : "Quick Capture");
+                    }
+                    if (!h.querySelector(".myworld-btn-fleeting-memo")) {
+                        addBtn("fleeting-memo", "file-text", isKo ? "임시 메모 열기" : "Open Fleeting Memo");
+                    }
+                } else if (text === "통계" || text === "stats") {
+                    if (!h.querySelector(".myworld-btn-monthly-archive")) {
+                        addBtn("monthly-archive", "archive", isKo ? "월간 아카이브 생성" : "Create Monthly Archive");
+                    }
+                }
+            });
+        });
+
+        // Reading Mode: 프로젝트 노트 # 실행 헤더 ➕ 빠른 Task 추가 버튼
+        this.registerMarkdownPostProcessor((element, context) => {
+            const isProject = context.sourcePath.startsWith(this.settings.projectDirectory);
+            if (!isProject) return;
+
+            const headings = Array.from(element.querySelectorAll("h1, h2, h3, h4, h5, h6")) as HTMLElement[];
+            headings.forEach(h => {
+                const text = h.textContent?.trim().toLowerCase() || "";
+                if (text === "실행" || text === "execution") {
+                    if (!h.querySelector(".myworld-add-execution-btn")) {
+                        const btn = createSpan();
+                        btn.className = "myworld-add-execution-btn";
+                        setIcon(btn, "pencil");
+                        btn.title = this.settings.language === 'ko' ? "실행 할 일 추가" : "Add Task to Execution";
+                        btn.addEventListener("click", (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
+                            if (file && file instanceof TFile) {
+                                this.openAddExecutionTaskModal(file);
+                            }
+                        });
+                        h.appendChild(btn);
+                    }
+                }
+            });
+        });
 
         // Reading Mode 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
         this.registerMarkdownPostProcessor((element, context) => {
@@ -665,7 +723,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     
                                     if (targetLineIndex !== -1) {
                                         let dateOccurrence = 0;
-                                        const origLine = lines[targetLineIndex];
                                         lines[targetLineIndex] = lines[targetLineIndex].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
                                             if (dateOccurrence === currentTargetIndex) {
                                                 dateOccurrence++;
@@ -675,15 +732,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                             dateOccurrence++;
                                             return m;
                                         });
-                                        const newLine = lines[targetLineIndex];
-                                        if (origLine === newLine) {
-                                            new Notice(`[Debug] 변경 사항 없음!\nLine: ${targetLineIndex}\nTargetIdx: ${currentTargetIndex}\n원본: ${origLine}`);
-                                        } else {
-                                            new Notice(`[Debug] 변경 완료!\nLine: ${targetLineIndex}\nTargetIdx: ${currentTargetIndex}\n${newLine}`);
-                                        }
                                         await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
-                                    } else {
-                                        new Notice(`[Debug] targetLineIndex를 찾지 못했습니다.\ncleanText: ${cleanTextForMatch}`);
                                     }
                                 });
                             }, activeDocument, this.settings.language);
@@ -705,18 +754,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 }
 
                 const taskStatus = taskEl.getAttribute("data-task") ?? "";
-                
-                // --- DEBUG BLOCK START ---
-                // @ts-ignore
-                if (!window.myworldDebugLog) window.myworldDebugLog = [];
-                // @ts-ignore
-                if (window.myworldDebugLog.length < 20) {
-                    // @ts-ignore
-                    window.myworldDebugLog.push(`[${context.sourcePath}] -> \n` + taskEl.outerHTML);
-                    // @ts-ignore
-                    void this.app.vault.adapter.write("debug_dom.txt", window.myworldDebugLog.join("\n\n---\n\n"));
-                }
-                // --- DEBUG BLOCK END ---
 
                 const isUnchecked = taskStatus === " " || taskStatus === "";
 
@@ -1046,21 +1083,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             })
         );
 
-        this.registerEvent(
-            this.app.workspace.on('active-leaf-change', () => {
-                const activeFile = this.app.workspace.getActiveFile();
-
-                // 만약 이전 활성 파일이 있었고, 그것이 현재 활성 파일과 다르고, 수정된 목록에 있다면
-                if (this.lastActiveFile && (!activeFile || this.lastActiveFile.path !== activeFile.path)) {
-                    if (this.modifiedFiles.has(this.lastActiveFile.path)) {
-                        void this.triggerAutoSyncForFile(this.lastActiveFile);
-                    }
-                }
-                this.lastActiveFile = activeFile;
-            })
-        );
-
         // 플러그인 로드 시(초기 1회) 스케줄 기준 전체 동기화 확인 팝업 (설정에서 켜진 경우에만)
+        // active-leaf-change는 EventController에서 단일 관리
         this.app.workspace.onLayoutReady(() => {
             this.lastActiveFile = this.app.workspace.getActiveFile();
             if (!this.settings.syncOnStartup) {
@@ -1301,21 +1325,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 Created: "2000-01-01T00:00"
 Modified: "2000-01-01T00:00"
 ---
--
-<div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; justify-content: center;">
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:quick-capture" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #00cec9;">✏️</div>
-  </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:daily-task-reset" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #ff7675;">🌤️</div>
-  </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:monthly-stats-archive" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #fdcb6e;">🗂️</div>
-  </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:open-memo" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #74b9ff;">📋</div>
-  </a>
-</div>
+
 # Routine
 >Step : Follow the plan. Sleep at 1:30.
 
@@ -1372,21 +1382,7 @@ ${checklistTable}
 작성일: "2000-01-01T00:00"
 수정일: "2000-01-01T00:00"
 ---
--
-<div style="display: flex; gap: 20px; margin-bottom: 20px; align-items: center; justify-content: center;">
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:quick-capture" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #00cec9;">✏️</div>
-  </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:daily-task-reset" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #ff7675;">🌤️</div>
-  </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:monthly-stats-archive" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #fdcb6e;">🗂️</div>
-  </a>
-  <a href="obsidian://advanced-uri?commandid=myworld-task-manager:open-memo" style="text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 6px;">
-    <div style="width: 46px; height: 46px; background: rgba(255,255,255,0.02); border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; border-top: 2px solid #74b9ff;">📋</div>
-  </a>
-</div>
+
 # 루틴
 >Step : 계획 따라 움직이기. 1:30 취침하기.
 
@@ -1512,6 +1508,104 @@ ${checklistTable}
             console.error(err instanceof Error ? err.message : String(err));
             new Notice(t("notice_quick_memo_error", this.settings.language));
             return null;
+        }
+    }
+
+    // 4. 공용 프로젝트 노트 # 실행 섹션 태스크 빠른 추가 모달 메서드
+    openAddExecutionTaskModal(projectFile: TFile): void {
+        new QuickCaptureModal(this.app, this.settings.language, (content) => {
+            void (async () => {
+                try {
+                    const original = await this.fileManager.getActiveViewOrFileText(projectFile);
+                    let text = this.utils.preprocessContent(original);
+
+                    // 식별자(^id) 자동 생성하여 메인 스케줄 노트 동기화 대비
+                    const newId = this.utils.generateBlockId([projectFile]);
+                    const newTaskLine = `- [ ] ${content} ^${newId}`;
+
+                    // # 실행 또는 # Execution 섹션 범위 탐색
+                    const execRange = this.utils.getSectionRange(text, "# 실행") || this.utils.getSectionRange(text, "# Execution");
+
+                    if (execRange) {
+                        const startIdx = (execRange as { start: number; end: number }).start;
+                        const headerMatch = text.substring(startIdx).match(/^#+\s+(실행|Execution)/i);
+                        const headerLen = headerMatch ? headerMatch[0].length : 4;
+
+                        const before = text.substring(0, startIdx + headerLen);
+                        const after = text.substring(startIdx + headerLen);
+
+                        text = before + "\n" + newTaskLine + after;
+                    } else {
+                        // 섹션이 존재하지 않을 경우 파일 상단에 신규 생성
+                        text = `# 실행\n${newTaskLine}\n\n` + text;
+                    }
+
+                    await this.fileManager.saveIfChanged(projectFile, original, text);
+                    this.modifiedFiles.add(projectFile.path);
+                    void this.triggerAutoSyncForFile(projectFile, true, true);
+                    new Notice(`${t("notice_task_added", this.settings.language)}: "${content}"`);
+                } catch (err) {
+                    console.error(err instanceof Error ? err.message : String(err));
+                    new Notice(t("notice_add_task_error", this.settings.language));
+                }
+            })();
+        }, "modal_add_task_desc_project").open();
+    }
+
+    // 5. 스케줄 노트 헤더 전용 액션 처리 핸들러 (루틴->일간마감, Todo->빠른추가/임시메모, 통계->월간아카이브)
+    handleScheduleHeaderAction(file: TFile, action: ScheduleHeaderActionType): void {
+        switch (action) {
+            case "quick-capture":
+                new QuickCaptureModal(this.app, this.settings.language, (content) => {
+                    void (async () => {
+                        try {
+                            const original = await this.fileManager.getActiveViewOrFileText(file);
+                            let text = this.utils.preprocessContent(original);
+
+                            const todoHeader = "#### 할 일";
+                            const todoRange = this.utils.getSectionRange(text, todoHeader, 4);
+
+                            const newTaskLine = `- [ ] ${content}`;
+
+                            if (todoRange) {
+                                const startIdx = (todoRange as { start: number; end: number }).start;
+                                const before = text.substring(0, startIdx + todoHeader.length);
+                                const after = text.substring(startIdx + todoHeader.length);
+                                text = before + "\n" + newTaskLine + after;
+                            } else {
+                                const mainTodoHeader = "# Todo";
+                                const mainTodoRange = this.utils.getSectionRange(text, mainTodoHeader, 1);
+                                if (mainTodoRange) {
+                                    const startIdx = (mainTodoRange as { start: number; end: number }).start;
+                                    const before = text.substring(0, startIdx + mainTodoHeader.length);
+                                    const after = text.substring(startIdx + mainTodoHeader.length);
+                                    text = before + "\n" + newTaskLine + after;
+                                } else {
+                                    text = text.trimEnd() + "\n\n" + newTaskLine;
+                                }
+                            }
+
+                            const todayObj = this.dateManager.getTodayStart();
+                            text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
+
+                            await this.fileManager.saveIfChanged(file, original, text);
+                            new Notice(`${t("notice_task_added", this.settings.language)}: "${content}"`);
+                        } catch (err) {
+                            console.error(err instanceof Error ? err.message : String(err));
+                            new Notice(t("notice_add_task_error", this.settings.language));
+                        }
+                    })();
+                }).open();
+                break;
+            case "fleeting-memo":
+                void this.openOrCreateFleetingMemoFile();
+                break;
+            case "daily-reset":
+                void this.resetManager.runDailyReset(file);
+                break;
+            case "monthly-archive":
+                void this.resetManager.runManualArchive(file);
+                break;
         }
     }
 

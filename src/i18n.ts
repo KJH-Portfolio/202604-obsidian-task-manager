@@ -147,6 +147,7 @@ export const translations = {
     // ----------------------------------------------------
     modal_add_task_title: { en: "✏️ Add Task", ko: "✏️ 할 일 등록" },
     modal_add_task_desc: { en: "Will be added instantly to the main schedule.", ko: "메인 스케줄에 즉시 추가됩니다." },
+    modal_add_task_desc_project: { en: "Will be added instantly to the project Execution section.", ko: "프로젝트 실행 탭에 즉시 추가됩니다." },
     modal_add_task_placeholder: { en: "e.g. Drink 2L water", ko: "예: 물 2L 마시기" },
     modal_add_task_btn: { en: "Save (Enter)", ko: "저장하기 (Enter)" },
     modal_empty_warning: { en: "Please enter a task or text.", ko: "할 일 또는 텍스트를 입력하세요." },
@@ -272,6 +273,21 @@ export const translations = {
 
     no_data: { en: "No data to display.", ko: "표시할 데이터가 없습니다." },
     stats_title: { en: "Checklist Statistics", ko: "체크리스트 통계" },
+
+    // ----------------------------------------------------
+    // Daily Reset Modal & Stats Table
+    // ----------------------------------------------------
+    modal_reset_title: { en: "🌤️ Daily Reset & Review", ko: "🌤️ 일간 마감 및 데일리 리셋" },
+    modal_review_label: { en: "Today's Review", ko: "오늘의 회고" },
+    modal_review_desc: { en: "Enter your thoughts or reflections for today.", ko: "오늘 하루의 생각이나 소회를 기입하세요." },
+    modal_review_placeholder: { en: "Write your review for today here...", ko: "여기에 오늘의 회고를 작성하세요..." },
+    modal_step_label: { en: "Tomorrow's Step", ko: "내일의 Step" },
+    modal_step_desc: { en: "Enter your core D-day goal to execute tomorrow.", ko: "내일 실행할 핵심 디데이 목표를 기입하세요." },
+    modal_step_placeholder: { en: "e.g. Follow the plan...", ko: "예: 계획 따라 움직이기 등..." },
+    modal_submit_btn: { en: "Submit & Finish", ko: "제출 및 마감" },
+
+    table_header_item: { en: "Item", ko: "항목" },
+    table_header_chart: { en: "Cumulative Chart", ko: "세부 누적 그래프" },
 
     // Essential Plugins
     settings_header_plugins: { en: "Essential Plugins", ko: "필수 플러그인 안내" },

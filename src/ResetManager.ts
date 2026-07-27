@@ -15,10 +15,12 @@ import { REGEX } from "./Constants";
 export class DailyResetModal extends Modal {
     review: string;
     step: string;
+    language: string;
     onSubmit: (review: string, step: string) => Promise<void> | void;
 
-    constructor(app: App, defaultReview: string, onSubmit: (review: string, step: string) => Promise<void> | void) {
+    constructor(app: App, language: string, defaultReview: string, onSubmit: (review: string, step: string) => Promise<void> | void) {
         super(app);
+        this.language = language;
         this.review = defaultReview;
         this.step = "";
         this.onSubmit = onSubmit;
@@ -28,16 +30,16 @@ export class DailyResetModal extends Modal {
         const { contentEl } = this;
         contentEl.addClass("myworld-padding-20-10");
 
-        contentEl.createEl("h2", { text: "🌤️ 일간 마감 및 데일리 리셋", cls: "myworld-mt-0-mb-25" });
+        contentEl.createEl("h2", { text: t("modal_reset_title", this.language), cls: "myworld-mt-0-mb-25" });
 
         // 오늘의 회고
         const reviewContainer = contentEl.createDiv({ cls: "myworld-mb-25" });
         const reviewHeader = reviewContainer.createDiv({ cls: "myworld-flex-baseline-gap10-mb10" });
-        const reviewLabel = reviewHeader.createEl("h4", { text: "오늘의 회고" });
+        const reviewLabel = reviewHeader.createEl("h4", { text: t("modal_review_label", this.language) });
         reviewLabel.addClass("myworld-margin-0");
-        reviewHeader.createSpan({ text: "오늘 하루의 생각이나 소회를 기입하세요.", cls: "myworld-text-muted-sm" });
+        reviewHeader.createSpan({ text: t("modal_review_desc", this.language), cls: "myworld-text-muted-sm" });
 
-        const reviewInputEl = reviewContainer.createEl("textarea", { attr: { placeholder: "여기에 오늘의 회고를 작성하세요..." } });
+        const reviewInputEl = reviewContainer.createEl("textarea", { attr: { placeholder: t("modal_review_placeholder", this.language) } });
         reviewInputEl.value = this.review;
         reviewInputEl.addClass("myworld-w-100");
         reviewInputEl.addClass("myworld-h-100px");
@@ -53,11 +55,11 @@ export class DailyResetModal extends Modal {
         // 내일의 Step
         const stepContainer = contentEl.createDiv({ cls: "myworld-mb-35" });
         const stepHeader = stepContainer.createDiv({ cls: "myworld-flex-baseline-gap10-mb10" });
-        const stepLabel = stepHeader.createEl("h4", { text: "내일의 Step" });
+        const stepLabel = stepHeader.createEl("h4", { text: t("modal_step_label", this.language) });
         stepLabel.addClass("myworld-margin-0");
-        stepHeader.createSpan({ text: "내일 실행할 핵심 디데이 목표를 기입하세요.", cls: "myworld-text-muted-sm" });
+        stepHeader.createSpan({ text: t("modal_step_desc", this.language), cls: "myworld-text-muted-sm" });
 
-        const stepInputEl = stepContainer.createEl("input", { type: "text", attr: { placeholder: "예: 계획 따라 움직이기 등..." } });
+        const stepInputEl = stepContainer.createEl("input", { type: "text", attr: { placeholder: t("modal_step_placeholder", this.language) } });
         stepInputEl.value = this.step;
         stepInputEl.addClass("myworld-w-100");
         stepInputEl.addClass("myworld-p-12-15");
@@ -83,7 +85,7 @@ export class DailyResetModal extends Modal {
 
         // Submit Button
         const btnContainer = contentEl.createDiv({ cls: "myworld-flex-end" });
-        const btn = btnContainer.createEl("button", { text: "제출 및 마감" });
+        const btn = btnContainer.createEl("button", { text: t("modal_submit_btn", this.language) });
         btn.addClass("mod-cta");
         btn.addClass("myworld-p-10-30");
         btn.addClass("myworld-text-1em");
@@ -133,7 +135,7 @@ export class ResetManager {
             const defaultReview = dailyMeta.review === "미작성" ? "" : dailyMeta.review;
 
             // 회고/Step 입력 창 띄우기
-            new DailyResetModal(this.app, defaultReview, async (reviewInput, stepInput) => {
+            new DailyResetModal(this.app, this.settings.language, defaultReview, async (reviewInput, stepInput) => {
                 const originalProjectsCache: Map<TFile, string> = new Map();
                 try {
                     this.utils.showLoadingOverlay("⏳ 일간 마감 처리 중...");

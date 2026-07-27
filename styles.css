@@ -724,3 +724,36 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     opacity: 1;
     transform: scale(1.1);
 }
+
+.myworld-add-execution-btn,
+.myworld-header-action-btn {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin-left: 6px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    color: var(--text-accent);
+    opacity: 0.75;
+    transition: opacity 0.2s, transform 0.1s, background-color 0.2s, color 0.2s;
+    user-select: none;
+    line-height: 1;
+    font-size: 0.7em;
+}
+
+.myworld-add-execution-btn svg,
+.myworld-header-action-btn svg {
+    width: 0.85em;
+    height: 0.85em;
+    stroke-width: 2.5;
+}
+
+.myworld-add-execution-btn:hover,
+.myworld-header-action-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
+    background-color: var(--background-modifier-hover);
+    color: var(--interactive-accent-hover, var(--text-accent));
+}

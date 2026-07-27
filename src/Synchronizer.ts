@@ -88,6 +88,9 @@ export class Synchronizer {
             if (isModified) {
                 const newContent = lines.join("\n");
                 await this.fileManager.saveIfChanged(projectFile, originalContent, newContent);
+                if (!silent) {
+                    // 수동 조작 시 로깅 처리
+                }
             }
         } catch (e) {
             console.error("Project Identifier Sync Error:", e);

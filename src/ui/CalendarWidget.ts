@@ -396,13 +396,13 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
         }
 
         buildDecorations(view: EditorView) {
-            const lang = getPlugin().settings.language || "en";
             const builder = new RangeSetBuilder<Decoration>();
             const leaf = app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(view.dom));
             const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
             if (!activeFile) return builder.finish();
 
             const plugin = getPlugin();
+            const lang = plugin.settings.language || "en";
             const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
             const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
             if (!isSchedule && !isProject) return builder.finish();

@@ -6,30 +6,13 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
 import { DailyMeta } from "./types";
 import { App, TFile, TFolder } from "obsidian";
-import { moment } from "obsidian";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 import { PluginSettings } from "./settings";
 import { t } from "./i18n";
-import { REGEX } from "./Constants";
-export { REGEX };
+import { REGEX, MARKER_PRI, EMOJI_MAP } from "./Constants";
+export { REGEX, MARKER_PRI, EMOJI_MAP };
 
-export const MARKER_PRI: Record<string, number> = {
-    '!': 1,
-    '0': 2,
-    '1': 3,
-    '2': 4,
-    '3': 5,
-    '7': 6,
-    '': 99
-};
-
-export const EMOJI_MAP: Record<string, string> = {
-    "1": "🟦",
-    "2": "🟩",
-    "3": "🟨",
-    "4": "🟥"
-};
 
 export interface TaskNode {
     line: string;
@@ -268,7 +251,14 @@ export class TaskUtils {
 
 
     getMarker(dateStr: string, today: Date): string {
-        return "";
+        if (!dateStr) return "";
+        const match = dateStr.match(REGEX.DATE_LABEL);
+        if (!match) return "";
+        const parts = match[0].split('-');
+        const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        const diff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff < 0) return "[!] ";
+        return "[D] ";
     }
 
     applyMarkersToLines(linesArray: string[], todayObj: Date): string[] {
@@ -326,18 +316,17 @@ export class TaskUtils {
             // Clean legacy #D- and #Past tags to completely migrate to new markers
             l = l.replace(/\s*#(?:D-\d+|Past)\s*/ig, ' ');
 
+            // Clean accidentally injected [[D]] or [D] text corruption from previous bug
+            l = l.replace(/^(\s*(?:>\s*)*[-*+]\s+)(?:\[\[[^\]]+\]\]|\[[D!]\])\s*/g, '$1[ ] ');
+
             let status = (d as { propStatus?: string }).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", " "])[1];
 
             if (!d.isCompleted) {
-                if (d.m) {
-                    status = d.m.trim();
-                } else if (["!", "0", "1", "2", "3", "7"].includes(status)) {
-                    // 날짜가 없는데 기존 마커가 날짜 전용 마커라면 초기화 (빈 칸)
-                    status = " ";
-                }
+                // 미완료 태스크의 체크박스 상태는 언제나 표준 공백(" ") 유지
+                status = " ";
             }
 
-            l = l.replace(/^(\s*(?:>\s*)*[-*+]\s+)\[.\]/, `$1[${status}]`);
+            l = l.replace(/^(\s*(?:>\s*)*[-*+]\s+)\[[^\]]*\]/, `$1[${status}]`);
             return l;
         });
     }
@@ -596,7 +585,9 @@ export class TaskUtils {
         res += `> <div style="padding: 12px; background: var(--background-secondary); border-radius: 8px; border: 1px solid var(--background-modifier-border); margin: 0 0 8px 0;">${summaryBar}${legendRow}</div>\n`;
         res += `> \n`;
 
-        const TH = '<tr style="border-bottom: 2px solid var(--background-modifier-border);"><th style="padding: 6px 10px; text-align: left; width: 30%;">항목</th><th style="padding: 6px 10px; width: 70%; text-align: left;">세부 누적 그래프</th></tr>';
+        const thItem = t("table_header_item", this.settings.language);
+        const thChart = t("table_header_chart", this.settings.language);
+        const TH = `<tr style="border-bottom: 2px solid var(--background-modifier-border);"><th style="padding: 6px 10px; text-align: left; width: 30%;">${thItem}</th><th style="padding: 6px 10px; width: 70%; text-align: left;">${thChart}</th></tr>`;
         let rows = "";
 
         for (let [name, counts] of Object.entries(cs)) {
@@ -644,7 +635,7 @@ export class TaskUtils {
             if (parts.length <= 2) return line;
 
             const firstCol = parts[1].trim();
-            if (firstCol === "상태" || Object.values(EMOJI_MAP).includes(firstCol)) return line;
+            if (firstCol === "상태" || firstCol === "Status" || Object.values(EMOJI_MAP).includes(firstCol)) return line;
 
             for (let i = 2; i < parts.length; i++) {
                 let colHeader = headers[i] || "";
@@ -1050,9 +1041,6 @@ ${t("header_stats", this.settings.language)}\n${dashboardStr}\n`;
         return now.clone().date(day);
     }
 
-    cleanTaskText(text: string): string {
-        return text.trim();
-    }
 
 }
 

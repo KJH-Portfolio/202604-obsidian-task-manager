@@ -229,13 +229,11 @@ if (projects.length > 0) {
             dv.container.dataset.clickBound = "true";
             dv.container.addEventListener('click', (e) => {
                 let li = e.target.closest('.task-list-item');
-                // 체크박스나 링크 자체를 클릭한 게 아니라면
                 if (li && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A') {
                     let checkbox = li.querySelector('input.task-list-item-checkbox');
-                    if (checkbox) checkbox.click(); // 체크박스 클릭 트리거
+                    if (checkbox) checkbox.click();
                 }
             });
-            // 시각적 피드백(마우스 호버 시 색상 변화, 커서 포인터)
             dv.container.classList.add("myworld-dv-container");
             const style = createEl("style");
             style.innerHTML = \`
@@ -262,7 +260,7 @@ if (projects.length > 0) {
 수정일: "2000-01-01T00:00"
 ---
 # 실행
-- [ ] 갑자기 떠오른 즉각적인 임시 작업이나 아이디어를 이곳에 자유롭게 기록하세요. 📅
+- [ ] \`# 실행\` 헤더 옆의 ✏️ 버튼을 누르거나 이곳에 임시 작업 및 아이디어를 즉시 입력하세요. 📅
 - [ ] 혹은 하단의 '계획(Plan)' 구역에서 ⬆️ 버튼을 눌러 핵심 중요 태스크를 이곳으로 보내면 메인 스케줄에 즉시 연동됩니다. 📅
 
 # 개요
@@ -284,7 +282,7 @@ Created: "2000-01-01T00:00"
 Modified: "2000-01-01T00:00"
 ---
 # Execution
-- [ ] Freely jot down any sudden ideas or immediate, temporary tasks here. 📅
+- [ ] Click the ✏️ button next to the \`# Execution\` header or jot down immediate tasks here. 📅
 - [ ] Or, click the ⬆️ button in the 'Plan' section below to send critical tasks here. These tasks will also instantly sync to your main schedule. 📅
 
 # Overview
@@ -313,16 +311,16 @@ Freely document detailed notes, meeting minutes, reference links, and other proj
 
 ---
 
-## 🎯 핵심 연동 원리 (식별자 맵핑 및 ⬆️ 버튼)
-프로젝트 노트 하단의 **'계획(Plan)'** 구역에 체크박스를 만들고 글을 쓰면, 플러그인이 자동으로 문장 끝에 \`^abc12\` 와 같은 **고유 식별자(ID)**를 부여해 줍니다. 
-1. 작성된 계획 태스크 옆에 나타나는 **⬆️(실행 탭으로 복사) 버튼**을 클릭해 보세요!
-2. 해당 태스크가 최상단의 **\`# 실행\` 구역으로 자동 복사**되며, 메인 스케줄 노트 대시보드에 즉시 노출됩니다.
-3. 스케줄 화면이나 프로젝트 내에서 그 할 일을 체크(완료)하는 순간, 프로젝트 노트의 원본 태스크도 **자동으로 완료 처리**되며 프로젝트의 총 **진행률(%)**이 즉시 올라갑니다!
+## 🎯 핵심 연동 원리 (식별자 맵핑, ⬆️ 복사 & ✏️ 빠른 추가)
+1. **\`# 실행\` 헤더 ✏️ 빠른 추가 버튼**: 최상단 \`# 실행\` 헤더 옆에 위치한 **✏️(빠른 추가) 버튼**을 클릭하여 당장 쳐내야 할 태스크를 즉시 생성할 수 있습니다.
+2. **\`계획(Plan)\` ⬆️ 복사 버튼**: 프로젝트 노트 하단의 **'계획(Plan)'** 구역에 체크박스를 만들고 글을 쓰면, 플러그인이 자동으로 문장 끝에 \`^abc12\` 와 같은 **고유 식별자(ID)**를 부여해 줍니다. 
+   - 작성된 계획 태스크 옆에 나타나는 **⬆️(실행 탭으로 복사) 버튼**을 클릭하면 해당 태스크가 최상단의 **\`# 실행\` 구역으로 자동 복사**되며, 메인 스케줄 노트 대시보드에 즉시 노출됩니다.
+3. **양방향 완료 동기화**: 스케줄 화면이나 프로젝트 내에서 그 할 일을 체크(완료)하는 순간, 프로젝트 노트의 원본 태스크도 **자동으로 완료 처리**되며 프로젝트의 총 **진행률(%)**이 즉시 올라갑니다!
 
 ## 💡 요약: 예쁘게 쓰는 방법
 - **# 개요**: 언제부터 언제까지 할 건지, 가장 큰 목표가 뭔지 적어두세요. 날짜는 📅(달력) 아이콘을 사용합니다.
 - **# 계획**: 여기에 해야 할 일들을 쭉 나열하세요. (자동으로 식별자가 생깁니다)
-- **# 실행**: ⬆️ 버튼을 통해 '계획'에서 올려보낸 중요한 태스크나, 당장 쳐내야 할 단발성 태스크들을 올려두고 관리하세요.
+- **# 실행**: ✏️ 버튼을 눌러 빠른 태스크를 추가하거나, ⬆️ 버튼을 통해 '계획'에서 올려보낸 중요한 태스크들을 수집하고 관리하세요.
 - **# 세부 사항**: 관련된 메모나 링크, 긴 회의록 등을 편하게 적어두시면 됩니다.
 `;
 
@@ -332,16 +330,16 @@ This document explains **how to break down tasks and sync them with your main sc
 
 ---
 
-## 🎯 Core Sync Principle (ID Mapping & ⬆️ Button)
-When you create a checkbox and write text in the **'Plan'** section at the bottom of a project note, the plugin automatically assigns a **unique ID** like \`^abc12\` at the end of the sentence.
-1. Try clicking the **⬆️ (Copy to Execution) button** that appears next to the planned task!
-2. The task is **automatically copied to the \`# Execution\` section** at the top, and will instantly appear on your main schedule dashboard.
-3. When you check off that task on your schedule or in the project, the original task in the project note is **automatically marked as complete**, and the project's total **progress (%)** updates instantly!
+## 🎯 Core Sync Principle (ID Mapping, ⬆️ Copy & ✏️ Quick Add)
+1. **\`# Execution\` ✏️ Quick Add Button**: Click the **✏️ (Quick Add) button** next to the top \`# Execution\` header to instantly create immediate tasks.
+2. **\`Plan\` ⬆️ Copy Button**: When you create a checkbox in the **'Plan'** section at the bottom of a project note, the plugin automatically assigns a **unique ID** like \`^abc12\` at the end.
+   - Click the **⬆️ (Copy to Execution) button** next to the planned task to copy it to the \`# Execution\` section at the top, which will instantly appear on your main schedule dashboard.
+3. **Bi-directional Sync**: Checking off that task on your schedule or project note **automatically completes the original task** and updates the total **progress (%)** instantly!
 
 ## 💡 Summary: Best Practices
 - **# Overview**: Write down the start/end dates and your main goal. Use the 📅 (calendar) icon for dates.
 - **# Plan**: List everything you need to do here. (IDs will generate automatically).
-- **# Execution**: Keep critical tasks sent up from the 'Plan' section via the ⬆️ button, or jot down immediate, temporary tasks.
+- **# Execution**: Click the ✏️ button to add immediate tasks, or manage critical tasks sent up from 'Plan' via the ⬆️ button.
 - **# Details**: Freely write related notes, links, or long meeting minutes here.
 `;
 

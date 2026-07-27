@@ -1,14 +1,11 @@
 # MyWorld Task Manager
 
-> [!WARNING] 🚨 Major Update Notice (Action Required) 🚨
-> For a better user experience and performance, the template generation and schedule rendering system has been **massively refactored to use dynamic rendering via Dataview**!
+> [!WARNING] 🚨 Major Update Notice 🚨
+> For a better user experience and performance, the template generation and schedule rendering system has been **massively upgraded with Header-Integrated Action Buttons** and dynamic Dataview rendering!
 > 
-> We have completely eliminated the inconvenient path hardcoding and template entanglement issues to prioritize user convenience.
+> We have completely eliminated inconvenient HTML button blocks (`<div>`), hardcoded Templater scripts, and external Advanced URI dependencies.
 > 
-> **⚠️ Note:** Because of this, there might be conflicts with the hardcoded contents of your older schedule notes. 
-> Please copy and paste any important contents from your existing schedule notes to a safe place. Then, click the **'Create Daily Schedule'** button in the plugin to generate a brand-new format schedule note, and paste your contents back.
-> 
-> We will continue to improve the plugin with your convenience as our top priority. Thank you!
+> **⚠️ Note:** Older schedule notes containing legacy HTML button blocks can be easily cleaned up. Enjoy clean, pure markdown notes with instant header action widgets!
 
 > **A Powerful Obsidian Plugin for Centralized Task & Schedule Management**
 >
@@ -21,10 +18,11 @@
 *   **🔄 Bi-directional Auto-Synchronization**: Tasks created or completed in your daily schedule automatically sync back to their original project notes in the background as you type or save.
 *   **📅 Smart Priority Sorting**: Utilizing custom markdown checkbox markers (`[0]`, `[1]`, `[!]`, etc.), tasks are automatically calculated for D-Day and sorted by urgency.
 *   **🌤️ Daily Routine Automation**: Reset your daily checklists with a single click. Completed routines are archived into a master statistics table, and tasks are rolled over smoothly.
+*   **🧩 Header-Integrated Action Buttons (NEW)**: Sleek, compact action widgets seamlessly embedded right next to markdown headers (`# Todo`, `# Routine`, `# Stats`, `# Execution`). Zero HTML clutter in your notes!
 *   **🗂️ 1-Click System Setup**: Automatically generates a complete PARA (Project, Area, Resource, Archive) and Zettelkasten folder structure, along with default templates.
-*   **🚀 Perfect Multi-Window Support (NEW)**: Flawless synchronization and UI rendering across multiple Obsidian popout windows. No more context switching bugs.
-*   **🎨 Revamped UI/UX (NEW)**: Beautifully designed Calendar widgets for date picking, an interactive Startup Sync Modal, and inline routine checklists. Fully integrated with CodeMirror 6 for seamless Live Preview and Reading View support.
-*   **⚙️ Standardized Settings (NEW)**: A newly overhauled settings tab featuring togglable update notices, robust path configurations, and developer feedback links.
+*   **🚀 Perfect Multi-Window Support**: Flawless synchronization and UI rendering across multiple Obsidian popout windows.
+*   **🎨 Revamped UI/UX**: Beautifully designed Calendar widgets for date picking, an interactive Startup Sync Modal, and inline routine checklists. Fully integrated with CodeMirror 6 for seamless Live Preview and Reading View support.
+*   **⚙️ Standardized Settings**: A newly overhauled settings tab featuring togglable update notices, robust path configurations, and developer feedback links.
 
 ---
 
@@ -33,10 +31,9 @@
 If you have installed the plugin for the first time, please set up the framework in the following order:
 
 ### Step 0. Install Required Plugins
-To use the "Magic Buttons" (Quick Capture, Daily Reset, Monthly Archive, etc.) generated in the templates, you **MUST** install the following plugin:
-*   **[Required] Advanced URI (by Vinzent03)**: This plugin allows markdown links (`obsidian://advanced-uri?commandid=...`) to trigger internal plugin commands. Without it, the magic buttons will not work.
 *   **[Required] Dataview (by blacksmithgu)**: Essential for dynamic rendering of your schedule and tasks. The plugin relies heavily on Dataview scripts to sync and display your project tasks in real-time.
 *   **[Highly Recommended] Periodic Notes & Calendar**: For seamless daily schedule creation and navigation.
+*   *(Note: Advanced URI plugin is NO LONGER required! Buttons run natively inside Obsidian headers.)*
 
 ### Step 1. Enable the Plugin
 1. Go to Obsidian Settings > `Community plugins` tab and ensure **MyWorld Task Manager** is enabled.
@@ -59,27 +56,27 @@ Navigate to the **[3. Basic Environment and File Creation Helper]** section:
 
 ## 🎛️ Core Workflow & Controls
 
-Use the icon buttons at the top of the Schedule Management note and within Project notes to drive your daily workflow.
+Click the sleek action buttons embedded right next to markdown headers in your Schedule and Project notes to drive your workflow.
 
 ### 🔄 Real-time Auto-Sync & Manual Refresh
 *   **Background Sync**: All task states (edits, completions) and D-Day calculations are automatically synced bi-directionally in the background whenever you modify a file.
 *   **Manual Refresh (Hotkey)**: You do not need to press any sync buttons anymore! However, if you ever want to force an immediate refresh of the current view, you can assign a hotkey to the `Refresh Active View Sync` command in Obsidian's hotkey settings.
 
 ### ✏️ Quick Task Capture (Pencil Icon)
-*   **Location**: Top of the Daily Schedule note.
-*   **Action**: Opens a quick-entry modal. Type a task, press enter, and it's instantly injected under `# Todo` (or `#### 할 일`), automatically sorted and synced.
+*   **Location**: Embedded next to `# Todo` in Schedule notes & `# Execution` in Project notes.
+*   **Action**: Opens a quick-entry modal. Type a task, press enter, and it's instantly injected under the section with automatic D-Day sorting and bi-directional sync.
 
-### 🌤️ Daily Reset & Wrap-up (Sun & Cloud Icon)
-*   **Location**: Top of the Daily Schedule note.
+### 📋 Fleeting Memo (File Icon)
+*   **Location**: Embedded next to `# Todo` in Schedule notes.
+*   **Action**: Instantly opens a blank note (e.g., `Fleeting Memo 2026-07-27.md`) in your Zettelkasten Inbox to capture sudden ideas.
+
+### 🌤️ Daily Reset & Wrap-up (Sun Icon)
+*   **Location**: Embedded next to `# Routine` (or `# 루틴`) in Schedule notes.
 *   **Action**: Prompts for a daily review, extracts checked routines from the top table into the master `# Checklist` statistics table, unchecks routines for tomorrow, and cleans up completed tasks.
 
-### 🗂️ Monthly Archive (Folder Icon)
-*   **Location**: Top of the Daily Schedule note.
+### 🗂️ Monthly Archive (Archive Icon)
+*   **Location**: Embedded next to `# Stats` (or `# 통계`) in Schedule notes.
 *   **Action**: Manually aggregates the current month's routine achievement statistics and archives them neatly into your Archive folder.
-
-### 📋 Fleeting Memo (Clipboard Icon)
-*   **Location**: Top of the Daily Schedule note.
-*   **Action**: Instantly opens a blank note (e.g., `Fleeting Memo 2026-07-21.md`) in your Inbox to capture long, sudden ideas.
 
 ---
 
@@ -116,8 +113,8 @@ As long as signposts are intact, the content is 100% yours:
 
 *   **Q. I pressed Daily Reset but got an error!**
     *   **A.** A required header (e.g., `# Todo`) might be missing or renamed. The plugin's **Transaction Rollback** feature safely restores the file. Fix the header and try again.
-*   **Q. Can I delete my old Templater scripts?**
-    *   **A.** Yes! This plugin entirely replaces them, operating faster and much safer.
+*   **Q. Can I delete my old Templater scripts and Advanced URI plugin?**
+    *   **A.** Yes! This plugin entirely operates natively inside Obsidian headers without needing Templater or Advanced URI.
 *   **Q. I can't click checkboxes in Live Preview.**
     *   **A.** This was fixed in version 1.0.52! Please update the plugin. The `z-index` and `pointer-events` have been optimized to bypass CodeMirror's invisible DOM layers.
 

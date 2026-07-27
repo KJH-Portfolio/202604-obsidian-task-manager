@@ -4,7 +4,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { moment } from "obsidian";
 import { PluginSettings } from "./settings";
 import { DATE_FORMATS } from "./Constants";
 

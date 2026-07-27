@@ -5,7 +5,6 @@ export const REGEX = {
     MATCH_TASK_COMPLETED: /^\s*(?:>\s*)*[-*+]\s+\[[xX-]\]/,
     STATUS_MATCH: /^\s*(?:>\s*)*[-*+]\s+\[(.)\]/,
     DATE_LABEL: /📅\s*\d{4}-\d{2}-\d{2}/,
-    HEADING_START: /^#+\s+/,
     TOP_HEADING_START: /^#+\s+/,
     EXEC_HEADER: /^#+\s+(실행|Execution)$/im,
     PLAN_HEADER: /^#+\s+(계획|Plan)$/i,
