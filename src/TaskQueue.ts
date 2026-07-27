@@ -1,7 +1,7 @@
 export class TaskQueue {
     private queue: Array<() => Promise<void>> = [];
     private isProcessing = false;
-    private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+    private debounceTimers: Map<string, number> = new Map();
 
     /**
      * 특정 키(key)에 대해 300ms 디바운싱 후 순차적(직렬화) 큐에 등록하여 실행.
@@ -9,14 +9,14 @@ export class TaskQueue {
      */
     enqueue(key: string, task: () => Promise<void>, debounceMs = 300): void {
         const existingTimer = this.debounceTimers.get(key);
-        if (existingTimer) {
-            clearTimeout(existingTimer);
+        if (existingTimer !== undefined) {
+            window.clearTimeout(existingTimer);
         }
 
-        const timer = setTimeout(() => {
+        const timer: number = window.setTimeout(() => {
             this.debounceTimers.delete(key);
             this.queue.push(task);
-            this.processQueue();
+            void this.processQueue();
         }, debounceMs);
 
         this.debounceTimers.set(key, timer);
@@ -42,7 +42,7 @@ export class TaskQueue {
         }
 
         this.isProcessing = false;
-        this.processQueue();
+        void this.processQueue();
     }
 
     /**
@@ -50,7 +50,7 @@ export class TaskQueue {
      */
     clear(): void {
         for (const timer of this.debounceTimers.values()) {
-            clearTimeout(timer);
+            window.clearTimeout(timer);
         }
         this.debounceTimers.clear();
         this.queue = [];

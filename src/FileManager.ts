@@ -57,7 +57,7 @@ export class FileManager {
                 if (!p) continue;
                 current = current === '' ? p : `${current}/${p}`;
                 if (!this.app.vault.getAbstractFileByPath(current)) {
-                    try { await this.app.vault.createFolder(current); } catch {}
+                    try { await this.app.vault.createFolder(current); } catch { /* ignore */ }
                 }
             }
         }

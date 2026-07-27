@@ -976,7 +976,7 @@ ${weeklyStatsDashboard}
 `;
             try {
                 await app.vault.create(weeklyInfo.path, initialContent);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 const existing = app.vault.getAbstractFileByPath(weeklyInfo.path) || app.vault.getFiles().find(f => f.path === weeklyInfo.path);
                 if (existing instanceof TFile) {
                     await this.fileManager.pluginWrite(existing, initialContent);
@@ -1024,7 +1024,7 @@ ${t("header_stats", this.settings.language)}\n${dashboardStr}\n`;
 
             try {
                 await app.vault.create(monthlyInfo.path, initialMonthlyText);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 const existing = app.vault.getAbstractFileByPath(monthlyInfo.path) || app.vault.getFiles().find(f => f.path === monthlyInfo.path);
                 if (existing instanceof TFile) {
                     await this.fileManager.pluginWrite(existing, initialMonthlyText);
