@@ -1,6 +1,6 @@
-import { App, Modal, Setting, Notice, setIcon } from "obsidian";
-import { RoutineStructure, RoutineCategory, RoutineDiff } from "../types";
-import { t } from "../i18n";
+import { App, Modal, Setting } from "obsidian";
+import { RoutineStructure, RoutineDiff } from "../types";
+
 
 export class RoutineManagerModal extends Modal {
     private initialStructure: RoutineStructure;
@@ -184,10 +184,11 @@ export class RoutineManagerModal extends Modal {
             text: isKo ? "💾 저장 및 양식 동기화" : "💾 Save & Sync Structure",
             cls: "mod-cta"
         });
-        saveBtn.addEventListener("click", async () => {
+        saveBtn.addEventListener("click", () => {
             const diff = this.computeDiff();
-            await this.onSaveCallback(this.currentStructure, diff);
-            this.close();
+            void this.onSaveCallback(this.currentStructure, diff).then(() => {
+                this.close();
+            });
         });
     }
 
@@ -200,7 +201,6 @@ export class RoutineManagerModal extends Modal {
         const addedCategories: string[] = [];
 
         const currentCatIds = new Set(this.currentStructure.categories.map(c => c.id));
-        const currentNames = new Set(this.currentStructure.categories.map(c => c.name));
 
         // 삭제된 카테고리
         for (const [id, origName] of this.originalCategoryNamesById.entries()) {

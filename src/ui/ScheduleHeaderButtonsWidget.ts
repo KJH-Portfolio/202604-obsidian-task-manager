@@ -28,12 +28,34 @@ class ScheduleHeaderBtnWidget extends WidgetType {
         span.title = this.tooltip;
         span.contentEditable = "false";
 
+        // 에디터 모드(CodeMirror)는 부모 .cm-line에 CSS :has로 접근 불가하므로
+        // daily-reset 버튼은 인라인 스타일로 직접 위치를 지정
+        if (this.actionType === "daily-reset") {
+            span.style.position = "absolute";
+            span.style.right = "8px";
+            span.style.top = "50%";
+            span.style.transform = "translateY(-50%)";
+            span.style.marginLeft = "0";
+        }
+
         setIcon(span, this.iconName);
 
         span.addEventListener("mousedown", (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.onClick();
+        });
+
+        span.addEventListener("mouseenter", () => {
+            if (this.actionType === "daily-reset") {
+                span.style.transform = "translateY(-50%) scale(1.18)";
+            }
+        });
+
+        span.addEventListener("mouseleave", () => {
+            if (this.actionType === "daily-reset") {
+                span.style.transform = "translateY(-50%)";
+            }
         });
 
         return span;
@@ -111,6 +133,11 @@ export function buildScheduleHeaderButtonsExtension(
 
                     // 1. # 루틴 / # Routine ➔ ⚙️ 루틴 편집 + 🌤️ 일간 마감 (가장 우측)
                     if (/^#\s+(루틴|Routine)$/i.test(text)) {
+                        // .cm-line에 position: relative 클래스 부여 (daily-reset absolute 포지션용)
+                        builder.add(
+                            line.from, line.from,
+                            Decoration.line({ class: "myworld-header-with-btn" })
+                        );
                         builder.add(
                             line.to, line.to,
                             Decoration.widget({

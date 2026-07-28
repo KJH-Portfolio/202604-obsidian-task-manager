@@ -3,8 +3,7 @@ import MyWorldTaskManagerPlugin from "./main";
 import { FolderSuggest, FileSuggest } from "./suggest";
 import { t } from "./i18n";
 import { RoutineStructure } from "./types";
-import { RoutineManagerModal } from "./ui/RoutineManagerModal";
-import { RoutineSyncEngine } from "./RoutineSyncEngine";
+
 
 export interface PluginSettings {
     language: "en" | "ko";
@@ -46,6 +45,10 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
     }
 
     private refresh(): void {
+        this.renderSettings();
+    }
+
+    display(): void {
         this.renderSettings();
     }
 

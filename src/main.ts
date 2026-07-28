@@ -490,6 +490,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         }
                     });
                     h.appendChild(btn);
+                    h.addClass("myworld-header-with-btn");
                 };
 
                 if (text === "루틴" || text === "routine") {

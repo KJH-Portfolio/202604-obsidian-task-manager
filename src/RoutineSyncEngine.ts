@@ -80,7 +80,7 @@ export class RoutineSyncEngine {
                     }
                     const catName = catMatch[1].trim();
                     currentCat = {
-                        id: catName.toLowerCase().replace(/\s+/g, "-") + "_" + Math.random().toString(36).substr(2, 5),
+                        id: catName.toLowerCase().replace(/\s+/g, "-") + "_" + Math.random().toString(36).substring(2, 7),
                         name: catName,
                         items: []
                     };
@@ -243,7 +243,8 @@ export class RoutineSyncEngine {
                     const newTableLines: string[] = [newHeaderLine, newSeparatorLine];
 
                     // 4) 데이터 행(Data Rows) 컬럼 재배열 및 셀 채우기
-                    const nowDay = (window as any).moment ? (window as any).moment().date() : new Date().getDate();
+                    const momentFn = (window as { moment?: () => { date: () => number } }).moment;
+                    const nowDay = momentFn ? momentFn().date() : new Date().getDate();
 
                     for (let r = 2; r < tableLines.length; r++) {
                         const rowStr = tableLines[r];

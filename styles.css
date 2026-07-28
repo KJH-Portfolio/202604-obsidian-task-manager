@@ -759,24 +759,29 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
 }
 
 /* Align header action buttons - position daily reset sun button at the absolute rightmost edge of the line */
-.markdown-rendered h1:has(.myworld-header-action-btn),
-.markdown-rendered h2:has(.myworld-header-action-btn),
-.markdown-rendered h3:has(.myworld-header-action-btn),
-.markdown-rendered h4:has(.myworld-header-action-btn),
-.cm-line:has(.myworld-header-action-btn) {
-    position: relative !important;
+/* NOTE: JS must add class "myworld-header-with-btn" to the parent h1/h2/h3/h4/.cm-line element */
+.markdown-rendered h1.myworld-header-with-btn,
+.markdown-rendered h2.myworld-header-with-btn,
+.markdown-rendered h3.myworld-header-with-btn,
+.markdown-rendered h4.myworld-header-with-btn,
+.cm-line.myworld-header-with-btn {
+    position: relative;
 }
 
-.myworld-btn-daily-reset {
-    position: absolute !important;
-    right: 8px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    margin-left: 0 !important;
+/* Editor mode: .cm-line containing a myworld button needs position:relative for absolute child buttons */
+/* JS (ScheduleHeaderButtonsWidget.toDOM) adds inline styles directly to daily-reset span,
+   so we only need relative context on the parent line. The widget's inline styles handle the rest. */
+
+.myworld-header-with-btn .myworld-btn-daily-reset {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0;
 }
 
-.myworld-btn-daily-reset:hover {
-    transform: translateY(-50%) scale(1.18) !important;
+.myworld-header-with-btn .myworld-btn-daily-reset:hover {
+    transform: translateY(-50%) scale(1.18);
     background-color: var(--background-modifier-hover);
     color: var(--interactive-accent-hover, var(--text-accent));
 }
