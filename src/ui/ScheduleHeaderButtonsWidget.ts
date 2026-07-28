@@ -29,13 +29,15 @@ class ScheduleHeaderBtnWidget extends WidgetType {
         span.contentEditable = "false";
 
         // 에디터 모드(CodeMirror)는 부모 .cm-line에 CSS :has로 접근 불가하므로
-        // daily-reset 버튼은 인라인 스타일로 직접 위치를 지정
+        // daily-reset 버튼은 setCssStyles()로 위치를 지정
         if (this.actionType === "daily-reset") {
-            span.style.position = "absolute";
-            span.style.right = "8px";
-            span.style.top = "50%";
-            span.style.transform = "translateY(-50%)";
-            span.style.marginLeft = "0";
+            span.setCssStyles({
+                position: "absolute",
+                right: "8px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                marginLeft: "0"
+            });
         }
 
         setIcon(span, this.iconName);
@@ -48,13 +50,13 @@ class ScheduleHeaderBtnWidget extends WidgetType {
 
         span.addEventListener("mouseenter", () => {
             if (this.actionType === "daily-reset") {
-                span.style.transform = "translateY(-50%) scale(1.18)";
+                span.setCssStyles({ transform: "translateY(-50%) scale(1.18)" });
             }
         });
 
         span.addEventListener("mouseleave", () => {
             if (this.actionType === "daily-reset") {
-                span.style.transform = "translateY(-50%)";
+                span.setCssStyles({ transform: "translateY(-50%)" });
             }
         });
 

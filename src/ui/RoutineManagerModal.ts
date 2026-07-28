@@ -20,8 +20,8 @@ export class RoutineManagerModal extends Modal {
         super(app);
         this.language = language;
         // 깊은 복사
-        this.initialStructure = JSON.parse(JSON.stringify(initialStructure));
-        this.currentStructure = JSON.parse(JSON.stringify(initialStructure));
+        this.initialStructure = JSON.parse(JSON.stringify(initialStructure)) as RoutineStructure;
+        this.currentStructure = JSON.parse(JSON.stringify(initialStructure)) as RoutineStructure;
         this.onSaveCallback = onSave;
 
         // 기존 ID별 원래 이름 추적
