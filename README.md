@@ -1,122 +1,117 @@
 # MyWorld Task Manager
 
-> [!WARNING] 🚨 Major Update Notice 🚨
-> For a better user experience and performance, the template generation and schedule rendering system has been **massively upgraded with Header-Integrated Action Buttons** and dynamic Dataview rendering!
-> 
-> We have completely eliminated inconvenient HTML button blocks (`<div>`), hardcoded Templater scripts, and external Advanced URI dependencies.
-> 
-> **⚠️ Note:** Older schedule notes containing legacy HTML button blocks can be easily cleaned up. Enjoy clean, pure markdown notes with instant header action widgets!
+> [!NOTE] 🚨 Major Update Notice (v1.0.100) 🚨
+> **루틴 관리 전용 GUI 모달 도입 & 헤더 액션 위젯 연동!**
+> 마크다운 텍스트를 직접 수정하다 양식이 깨지는 불편함을 완전히 해소했습니다.
+> `# 루틴` 헤더 옆의 **⚙️ (루틴 편집) 버튼**을 눌러 안전하게 루틴을 추가/수정/삭제/순서 변경할 수 있으며, 주간/월간 아카이브 노트 및 체크리스트 표 전체에 찰떡같이 자동 동기화됩니다!
 
 > **A Powerful Obsidian Plugin for Centralized Task & Schedule Management**
 >
-> Centralize fragmented tasks, automate daily routines, and synchronize your schedule seamlessly with your project notes using a robust bi-directional sync engine. Eliminate complex Templater scripts and establish a smart PARA & Zettelkasten knowledge management system with a single click.
+> 파편화된 할 일을 중앙 통합하고, 매일의 루틴을 자동화하며, 스케줄 문서와 프로젝트 노트를 실시간 양방향으로 동기화하는 옵시디언 전용 스케줄 및 지식 관리 플러그인입니다. 복잡한 Templater 스크립트 없이 단 한 번의 클릭으로 PARA 및 Zettelkasten 지식 관리 생태계를 완성하세요.
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features (핵심 기능)
 
-*   **🔄 Bi-directional Auto-Synchronization**: Tasks created or completed in your daily schedule automatically sync back to their original project notes in the background as you type or save.
-*   **📅 Smart Priority Sorting**: Utilizing custom markdown checkbox markers (`[0]`, `[1]`, `[!]`, etc.), tasks are automatically calculated for D-Day and sorted by urgency.
-*   **🌤️ Daily Routine Automation**: Reset your daily checklists with a single click. Completed routines are archived into a master statistics table, and tasks are rolled over smoothly.
-*   **🧩 Header-Integrated Action Buttons (NEW)**: Sleek, compact action widgets seamlessly embedded right next to markdown headers (`# Todo`, `# Routine`, `# Stats`, `# Execution`). Zero HTML clutter in your notes!
-*   **🗂️ 1-Click System Setup**: Automatically generates a complete PARA (Project, Area, Resource, Archive) and Zettelkasten folder structure, along with default templates.
-*   **🚀 Perfect Multi-Window Support**: Flawless synchronization and UI rendering across multiple Obsidian popout windows.
-*   **🎨 Revamped UI/UX**: Beautifully designed Calendar widgets for date picking, an interactive Startup Sync Modal, and inline routine checklists. Fully integrated with CodeMirror 6 for seamless Live Preview and Reading View support.
-*   **⚙️ Standardized Settings**: A newly overhauled settings tab featuring togglable update notices, robust path configurations, and developer feedback links.
-
----
-
-## 🚀 Initial Setup Guide (One-time)
-
-If you have installed the plugin for the first time, please set up the framework in the following order:
-
-### Step 0. Install Required Plugins
-*   **[Required] Dataview (by blacksmithgu)**: Essential for dynamic rendering of your schedule and tasks. The plugin relies heavily on Dataview scripts to sync and display your project tasks in real-time.
-*   **[Highly Recommended] Periodic Notes & Calendar**: For seamless daily schedule creation and navigation.
-*   *(Note: Advanced URI plugin is NO LONGER required! Buttons run natively inside Obsidian headers.)*
-
-### Step 1. Enable the Plugin
-1. Go to Obsidian Settings > `Community plugins` tab and ensure **MyWorld Task Manager** is enabled.
-2. Click on **MyWorld Task Manager** in the bottom settings menu to enter the configuration page.
-
-### Step 2. Knowledge Management System (PARA & Zettelkasten)
-Navigate to the **[2. Knowledge Management System Setup Helper]** section in settings:
-*   **`[Create PARA Structure]`**: Click to instantly generate `1. Project`, `2. Area`, `3. Resource`, and `4. Archive` folders along with user manuals.
-*   **`[Create Zettelkasten Structure]`**: Click to set up a 3-level memo folder structure (`5. Zettelkasten`) to store your thoughts.
-
-### Step 3. Create Default Templates
-Navigate to the **[3. Basic Environment and File Creation Helper]** section:
-*   **`[Create Project Plan Template]`**: Generates the `01.Project Plan Template.md` and its guide note. You will be prompted to specify the destination path (e.g., `3. Resource/01.Templates`).
-*   **`[Create Schedule Management Note]`**: Creates the permanent `Schedule Management.md` (or `스케줄 관리.md`) file, which acts as your core control tower.
-
-> [!TIP] Check Default Setting Paths
-> Go to the **[1. Path Settings]** tab at the top of the settings page and ensure the specified paths match the actual folders you created.
+* **⚙️ GUI 루틴 관리자 (Routine Manager Modal)**: `# 루틴` 헤더 옆 ⚙️ 버튼 하나로 텍스트 훼손 걱정 없이 루틴 카테고리 및 세부 실행사항을 추가/삭제/순서변경(▲/▼)/개명할 수 있습니다.
+* **🔄 실시간 양방향 자동 동기화 (Bi-directional Auto-Sync)**: 스케줄 노트와 프로젝트 노트 간 할 일 상태(체크, 텍스트 수정, 삭제)가 타자 입력 시 배경에서 즉시 양방향 연동됩니다.
+* **📅 스마트 D-Day 계산 & 자동 정렬**: 체크박스 마커 및 날짜 이모지(`📅 2026-07-28`)를 기반으로 D-Day 뱃지(`[D]`, `[!]`)를 자동 계산하고 긴급도 순으로 정렬합니다.
+* **📊 체크리스트 표 무결성 & Active-First 정렬**: 
+  - 현재 매일 실행하는 **활성 루틴이 표 왼쪽(앞쪽)**에 우선 정렬됩니다.
+  - 비활성화/삭제된 과거 루틴은 **표 오른쪽(뒤쪽)**으로 자동 배치되어 과거 이력을 안전하게 보존합니다.
+  - 신규 활성 루틴의 오늘/미래 칸은 **깨끗한 작성용 빈칸(` `)**, 과거 날짜 칸과 비활성 루틴 칸은 **`-`** 표기로 깔끔하게 구분됩니다.
+* **🌤️ 일간 마감 (Daily Reset)**: 단 한 번의 클릭으로 오늘 체크한 루틴 수치를 마스터 통계 표에 적재하고, 내일 루틴을 자동 리셋하며, 완료된 할 일을 정리합니다.
+* **🗂️ 1-Click 시스템 구축 (PARA & Zettelkasten)**: 설정 탭에서 클릭 한 번으로 PARA(`0. Inbox`, `1. Project`, `2. Area`, `3. Resource`, `4. Archive`) 및 Zettelkasten(`5. Zettelkasten`) 폴더 구조와 안내 가이드 노트를 자동 생성합니다.
+* **🧩 헤더 통합 액션 버튼 (Header Action Widgets)**: 순수 마크다운 헤더(`# Todo`, `# 루틴`, `# 체크리스트`, `# 실행`) 옆에 깔끔한 클릭 위젯이 연동되어 지저분한 HTML 코드 없이 직관적으로 조작할 수 있습니다.
 
 ---
 
-## 🎛️ Core Workflow & Controls
+## 📖 사용법 종합 안내서 (User Guide)
 
-Click the sleek action buttons embedded right next to markdown headers in your Schedule and Project notes to drive your workflow.
+### 1. 초기 세팅 가이드 (처음 설치 시)
 
-### 🔄 Real-time Auto-Sync & Manual Refresh
-*   **Background Sync**: All task states (edits, completions) and D-Day calculations are automatically synced bi-directionally in the background whenever you modify a file.
-*   **Manual Refresh (Hotkey)**: You do not need to press any sync buttons anymore! However, if you ever want to force an immediate refresh of the current view, you can assign a hotkey to the `Refresh Active View Sync` command in Obsidian's hotkey settings.
+#### Step 1. 필수/권장 플러그인 설치
+1. **[필수] Dataview (by blacksmithgu)**: 프로젝트 할 일 목록을 스케줄 노트에 실시간 다이내믹 UI로 렌더링하기 위해 필수입니다.
+2. **[권장] Periodic Notes & Calendar**: 일간/주간 스케줄 노트를 손쉽게 생성하고 이동할 수 있습니다.
 
-### ✏️ Quick Task Capture (Pencil Icon)
-*   **Location**: Embedded next to `# Todo` in Schedule notes & `# Execution` in Project notes.
-*   **Action**: Opens a quick-entry modal. Type a task, press enter, and it's instantly injected under the section with automatic D-Day sorting and bi-directional sync.
+#### Step 2. 지식 관리 폴더 & 가이드 자동 생성
+* 옵시디언 설정 > `MyWorld Task Manager` 탭으로 이동합니다.
+* **`[Create PARA Structure]`** 클릭: `0. Inbox`, `1. Project`, `2. Area`, `3. Resource`, `4. Archive` 폴더 및 통합 가이드 노트를 생성합니다.
+* **`[Create Zettelkasten Structure]`** 클릭: `5. Zettelkasten` (Fleeting, Literature, Permanent) 폴더를 생성합니다.
 
-### 📋 Fleeting Memo (File Icon)
-*   **Location**: Embedded next to `# Todo` in Schedule notes.
-*   **Action**: Instantly opens a blank note (e.g., `Fleeting Memo 2026-07-27.md`) in your Zettelkasten Inbox to capture sudden ideas.
-
-### 🌤️ Daily Reset & Wrap-up (Sun Icon)
-*   **Location**: Embedded next to `# Routine` (or `# 루틴`) in Schedule notes.
-*   **Action**: Prompts for a daily review, extracts checked routines from the top table into the master `# Checklist` statistics table, unchecks routines for tomorrow, and cleans up completed tasks.
-
-### 🗂️ Monthly Archive (Archive Icon)
-*   **Location**: Embedded next to `# Stats` (or `# 통계`) in Schedule notes.
-*   **Action**: Manually aggregates the current month's routine achievement statistics and archives them neatly into your Archive folder.
+#### Step 3. 템플릿 및 스케줄 문서 생성
+* **`[Create Project Plan Template]`** 클릭: 프로젝트 노트 양식(`01.프로젝트 계획서 템플릿.md`) 및 작성 가이드를 생성합니다.
+* **`[Create Schedule Management Note]`** 클릭: 메인 스케줄 컨트롤 타워 문서(`스케줄 관리.md`)를 생성합니다.
 
 ---
 
-## 🛠️ Customization & Permissions
+### 2. 핵심 헤더 버튼 조작법 (Header Action Widgets)
 
-To maintain perfect synchronization, the plugin relies on specific document structures.
+스케줄 문서 및 프로젝트 문서의 마크다운 헤더 옆에 위치한 슬림한 위젯 버튼으로 시스템을 조작합니다.
 
-### ⛔ [Strictly Prohibited] Do not edit these signposts
-Modifying these will break the synchronization logic:
-1. **Major Headers**: `# Todo` (or `#### 할 일`), `# Project`, `# Routine` (or `# 루틴`), `# Checklist` (or `# 체크리스트`), `# Statistics` (or `# 통계`), `# Plan` (or `# 계획`), `# Execution` (or `# 실행`).
-2. **Block IDs (`^xxxxxx`)**: The unique 6-character identifiers at the end of synced tasks.
-3. **Table Skeleton Symbols (`|`)**: Deleting pipe symbols breaks the routine and statistics tables.
-4. **Date Emoji (`📅`)**: The specific calendar emoji used to parse deadlines.
-
-### ✅ [Freely Editable] Customize to your liking
-As long as signposts are intact, the content is 100% yours:
-1. **Routine Table Columns**: Rename 'Step' or 'Block' to 'Meditation' or 'Reading' as long as the top and bottom tables match identically.
-2. **Task Content**: Edit the text or the checkbox state (`x`, `-`, `/`, `>`).
-3. **Routine Callouts**: Freely edit text inside the `> [!routine]` blocks.
-4. **Task Order**: Rearrange tasks freely; as long as the `^identifier` is attached, it will sync.
-5. **Copy to Execution**: Just click the ⬆️ button next to a planned task in a project note to instantly send it to the execution list!
+| 헤더 위치 | 버튼 아이콘 | 버튼 이름 | 주요 기능 및 역할 |
+|---|:---:|---|---|
+| **`# 루틴`** | ⚙️ | **루틴 편집 모달** | 루틴 항목 추가/삭제, 순서 변경(▲/▼), 카테고리 개명, 확언 수정 (저장 시 주간/월간 아카이브 노트까지 일괄 전파 동기화) |
+| **`# 루틴`** | ☀️ | **일간 마감 (Daily Reset)** | 오늘 체크한 루틴을 마스터 표 및 주간 기록으로 이관, 내일 루틴 리셋, 완료된 할 일 아카이빙 |
+| **`# Todo`** | ✏️ | **빠른 할 일 등록** | 팝업 창에 할 일을 입력하면 `# Todo` 섹션 하단에 D-Day 자동 계산과 함께 즉시 입력 |
+| **`# Todo`** | 📋 | **임시 메모 열기** | 아이디어가 떠올랐을 때 `5. Zettelkasten/01.Fleeting` 폴더에 오늘 자 임시 메모를 즉시 생성 및 오픈 |
+| **`# 체크리스트`** | 🗂️ | **월간 아카이브 생성** | 이번 달의 루틴 달성률 통계 그래프 및 집계표를 `4. Archive` 디렉터리에 월간 리포트 파일로 자동 생성 |
+| **`# 실행`** | ✏️ | **프로젝트 할 일 추가** | 프로젝트 노트 상단에서 현재 수행할 실행 태스크를 즉시 등록 |
+| **`# 계획`** | ⬆️ | **실행 구역으로 복사** | 프로젝트 계획 태스크를 최상단 `# 실행` 구역으로 복사하여 메인 스케줄 문서에 즉시 노출 |
 
 ---
 
-## 💡 Advanced Mechanics
+### 3. 루틴 관리 & 체크리스트 조작법
 
-*   **📅 D-Day Inheritance**: If a parent task has a date emoji (e.g., `📅 2026-06-10`), indented child tasks will automatically inherit that deadline.
-*   **🗑️ Hard Deletion (`//`)**: To permanently delete a task without leaving an archived trace, append `//` to the end of the line (e.g., `- [ ] Cancelled task // ^a1b2c3`) and click the checkbox.
-*   **🔍 Multi-Window Resilience**: Whether you are editing in a popout window, Live Preview, or Reading View, the CodeMirror 6 widgets and synchronization engine track your active context perfectly.
+1. **⚙️ 루틴 편집 버튼 사용하기**:
+   - 스케줄 문서의 `# 루틴` 헤더 옆 ⚙️ 아이콘을 누릅니다.
+   - 모달 창에서 새로운 루틴 카테고리(예: `5분 명상`, `수면`)나 세부 항목을 자유롭게 추가/삭제/수정합니다.
+   - **[Save (저장)]**을 누르면 스케줄 문서의 콜아웃, 마스터 체크리스트 표, 상단 미니 표뿐만 아니라 **`4. Archive` 폴더 내의 주간/월간 아카이브 노트들까지 손실 없이 안전하게 전파 동기화**됩니다.
+
+2. **체크리스트 표 정렬 및 셀 표시 규칙**:
+   - **활성 루틴 우선 정렬 (Active-First)**: 현재 관리하는 루틴이 표 왼쪽(앞쪽)에 위치하고, 과거 삭제된 루틴은 오른쪽 끝으로 밀려 가독성이 향상됩니다.
+   - **오늘 + 미래 날짜 칸**: 오늘 작성 및 마감을 위해 **깨끗한 빈칸(` `)**으로 비워집니다.
+   - **과거 미작성 날짜 칸 & 비활성 루틴 칸**: 루틴 생성 전이거나 비활성화되었음을 나타내는 **`-`** 로 채워집니다.
+   - **부족 항목 하이라이트(`==`)**: 일간 마감 시 통계 달성률이 50% 미만인 부족한 항목(Warning)에만 루틴 헤더에 `==카테고리명==` 형광펜이 동적으로 적용됩니다.
+
+---
+
+### 4. 프로젝트 노트 & 양방향 동기화 조작법
+
+1. **프로젝트 생성**: `1. Project/01.List` 폴더에 새 프로젝트 노트를 만듭니다 (또는 템플릿 사용).
+2. **계획 ➔ 실행 복사 (⬆️ 버튼)**: `# 계획` 섹션에 할 일을 적은 후 옆의 ⬆️ 버튼을 누르면 최상단 `# 실행` 구역으로 자동 복사됩니다.
+3. **양방향 동기화**:
+   - `# 실행` 구역에 있는 태스크는 메인 스케줄 노트의 `# Project` 섹션(Dataview)에 실시간으로 표시됩니다.
+   - 스케줄 화면이나 프로젝트 노트 어느 곳에서든 체크박스를 클릭하거나 글자를 수정하면 양쪽 문서가 배경에서 자동으로 일치하게 동기화됩니다.
+4. **D-Day 계산 규칙**:
+   - 태스크 끝에 `📅 2026-08-15`와 같이 날짜 이모지를 넣으면 자동으로 D-Day 뱃지가 부여됩니다.
+   - 상위 태스크에 날짜가 있으면 하위 들여쓰기 태스크들도 자동으로 D-Day를 상속받습니다.
 
 ---
 
-## 🚨 Troubleshooting & FAQ
+## 🛠️ 수정 가능 여부 & 주의사항 (Do & Don't)
 
-*   **Q. I pressed Daily Reset but got an error!**
-    *   **A.** A required header (e.g., `# Todo`) might be missing or renamed. The plugin's **Transaction Rollback** feature safely restores the file. Fix the header and try again.
-*   **Q. Can I delete my old Templater scripts and Advanced URI plugin?**
-    *   **A.** Yes! This plugin entirely operates natively inside Obsidian headers without needing Templater or Advanced URI.
-*   **Q. I can't click checkboxes in Live Preview.**
-    *   **A.** This was fixed in version 1.0.52! Please update the plugin. The `z-index` and `pointer-events` have been optimized to bypass CodeMirror's invisible DOM layers.
+### ⛔ [주의] 수정을 금지하는 표지판 (Signposts)
+다음 표지판 텍스트를 임의로 변경하면 플러그인의 자동 파싱 및 동기화 로직이 제대로 작동하지 않을 수 있습니다:
+1. **주요 헤더명**: `# Todo`, `# 루틴` (`# Routine`), `# 체크리스트` (`# Checklist`), `# 통계` (`# Stats`), `# 프로젝트` (`# Project`), `# 계획` (`# Plan`), `# 실행` (`# Execution`)
+2. **태스크 고유 ID**: 태스크 끝에 붙는 `^a1b2c3` 형태의 6자리 식별자 (양방향 동기화의 핵심 키)
+3. **표 파이프 기호 (`|`)**: 체크리스트 표의 컬럼 구분선
+
+### ✅ [자유] 마음대로 수정 가능한 영역
+1. **루틴 내용 및 순서**: ⚙️ 루틴 편집 모달을 통해 안전하게 얼마든지 추가/삭제/변경하세요.
+2. **할 일 문구 및 체크 상태**: 체크박스 클릭, 수치 변경, 태스크 문구 수정은 100% 자유롭습니다.
+3. **노트 내 세부 서술**: `# 개요`, `# 세부 사항` 하단의 회의록, 메모, 링크 등은 자유롭게 작성하세요.
 
 ---
-*Created by KJH. For support, please check the feedback link in the plugin settings.*
+
+## 🚨 자주 묻는 질문 (FAQ)
+
+* **Q. 일간 마감(☀️)을 눌렀을 때 오류가 발생해요!**
+  * **A.** 문서 내에 `# Todo`나 `# 루틴` 같은 필수 헤더가 삭제되었거나 이름이 바뀐 경우입니다. 트랜잭션 롤백 기능이 안전하게 파일을 복구해 주므로, 헤더 이름을 확인 후 다시 실행해 주세요.
+* **Q. 모달에서 루틴을 추가했는데 아카이빙 노트에도 반영되나요?**
+  * **A.** 네! `v1.0.99` 이상부터는 루틴 모달에서 저장을 누르는 즉시 `4. Archive` 디렉터리 내의 모든 주간/월간 아카이브 노트들까지 컬럼 및 셀이 전파 동기화됩니다.
+* **Q. 기존 Templater 스크립트나 Advanced URI 플러그인이 필요한가요?**
+  * **A.** 더 이상 필요하지 않습니다! 이 플러그인은 옵시디언 헤더 위젯으로 순수하게 작동하므로 지저분한 HTML 코드나 외부 플러그인 의존성이 완전히 제거되었습니다.
+
+---
+*Created by KJH. 문의사항이나 피드백은 플러그인 설정 탭의 개발자 링크를 이용해 주세요.*

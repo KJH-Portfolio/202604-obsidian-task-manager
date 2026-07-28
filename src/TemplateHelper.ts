@@ -307,19 +307,19 @@ Freely document detailed notes, meeting minutes, reference links, and other proj
 
         const projectGuideText_ko = `# 📘 프로젝트 노트 작성 가이드
 
-이 문서는 프로젝트 노트에서 **'어떻게 태스크를 쪼개고, 어떻게 메인 스케줄과 연동시키는지'**를 알려주는 가이드입니다.
+이 문서는 프로젝트 노트에서 **'어떻게 태스크를 쪼개고, 어떻게 메인 스케줄과 연동시키는지'**를 알려주는 상세 사용법 가이드입니다.
 
 ---
 
 ## 🎯 핵심 연동 원리 (식별자 맵핑, ⬆️ 복사 & ✏️ 빠른 추가)
-1. **\`# 실행\` 헤더 ✏️ 빠른 추가 버튼**: 최상단 \`# 실행\` 헤더 옆에 위치한 **✏️(빠른 추가) 버튼**을 클릭하여 당장 쳐내야 할 태스크를 즉시 생성할 수 있습니다.
+1. **\`# 실행\` 헤더 ✏️ 빠른 추가 버튼**: 최상단 \`# 실행\` 헤더 옆에 위치한 **✏️ (빠른 추가) 버튼**을 클릭하여 당장 쳐내야 할 태스크를 즉시 생성할 수 있습니다.
 2. **\`계획(Plan)\` ⬆️ 복사 버튼**: 프로젝트 노트 하단의 **'계획(Plan)'** 구역에 체크박스를 만들고 글을 쓰면, 플러그인이 자동으로 문장 끝에 \`^abc12\` 와 같은 **고유 식별자(ID)**를 부여해 줍니다. 
-   - 작성된 계획 태스크 옆에 나타나는 **⬆️(실행 탭으로 복사) 버튼**을 클릭하면 해당 태스크가 최상단의 **\`# 실행\` 구역으로 자동 복사**되며, 메인 스케줄 노트 대시보드에 즉시 노출됩니다.
-3. **양방향 완료 동기화**: 스케줄 화면이나 프로젝트 내에서 그 할 일을 체크(완료)하는 순간, 프로젝트 노트의 원본 태스크도 **자동으로 완료 처리**되며 프로젝트의 총 **진행률(%)**이 즉시 올라갑니다!
+   - 작성된 계획 태스크 옆에 나타나는 **⬆️ (실행 탭으로 복사) 버튼**을 클릭하면 해당 태스크가 최상단의 **\`# 실행\` 구역으로 자동 복사**되며, 메인 스케줄 노트 대시보드에 즉시 노출됩니다.
+3. **양방향 완료 동기화**: 스케줄 화면이나 프로젝트 내에서 그 할 일을 체크(완료)하는 순간, 프로젝트 노트의 원본 태스크도 **자동으로 완료 처리**되며 프로젝트의 총 **진행률(%)**이 즉시 반영됩니다!
 
 ## 💡 요약: 예쁘게 쓰는 방법
-- **# 개요**: 언제부터 언제까지 할 건지, 가장 큰 목표가 뭔지 적어두세요. 날짜는 📅(달력) 아이콘을 사용합니다.
-- **# 계획**: 여기에 해야 할 일들을 쭉 나열하세요. (자동으로 식별자가 생깁니다)
+- **# 개요**: 언제부터 언제까지 할 건지, 가장 큰 목표가 뭔지 적어두세요. 날짜는 📅(달력) 아이콘을 사용합니다 (예: \`- 기한 : 📅 2026-07-01 ~ 📅 2026-12-31\`).
+- **# 계획**: 여기에 해야 할 일들을 쭉 나열하세요. (자동으로 \`^id\` 식별자가 생성됩니다)
 - **# 실행**: ✏️ 버튼을 눌러 빠른 태스크를 추가하거나, ⬆️ 버튼을 통해 '계획'에서 올려보낸 중요한 태스크들을 수집하고 관리하세요.
 - **# 세부 사항**: 관련된 메모나 링크, 긴 회의록 등을 편하게 적어두시면 됩니다.
 `;
@@ -401,26 +401,14 @@ Among the filtered information from the Inbox, items that involve **'a certain p
 - **💡 Usage Principles**
   - **Organization Targets**: Store completed projects, discarded plans, and area resources that are no longer of interest.
   - **Preservation Value**: Isolate elements that are a waste to delete but distract your attention right now to reduce cognitive overload.
-
-> **📎 10. File (Attachment Only)**
-> Setting the 'Default location for new attachments' to this folder in Obsidian settings prevents images/PDFs from cluttering the document list.
+  - **Routine & Schedule Stats**: Stores weekly/monthly routine checklist archive notes (e.g. \`2026-W31\`, \`2026-07\`) automatically created by the plugin.
 
 ---
 
-## 🧠 Stage 3: Permanent Knowledge (Zettelkasten)
-Beyond simple 'tasks' or 'others' knowledge (Resource)', the \`5. Zettelkasten\` folder is the hub that weaves fragmented knowledge together to build **your own unique ideas and knowledge network**.
-
-### 📝 01. Fleeting
-- **💡 Principle**: Write freely without formality, and periodically (within 1-2 days) review to expand into permanent notes or delete unnecessary thoughts.
-
-### 📖 02. Literature
-- **💡 Principle**: Summarize external ideas from books, videos, papers, etc. according to the author's context, and be sure to fill in the referenced source (bibliographic information).
-
-### 💎 03. Permanent
-- **💡 Principle**: Based on others' knowledge (literature) or your own intuition (fleeting), include **only one core idea completely reconstructed in your own words (one idea per note)**. These permanent notes connect to each other like a spider web through Links, forming a true 'Second Brain'.
-
----
-> 🚀 **Based on these guidelines, now start building your own knowledge ecosystem in earnest!**
+## ⚙️ Routine & Schedule Management Controls
+- **⚙️ Routine Manager Modal**: Click the ⚙️ button next to \`# Routine\` to safely manage categories and items without breaking markdown syntax.
+- **🌤️ Daily Reset**: Click ☀️ next to \`# Routine\` to archive daily progress and reset checklists for tomorrow.
+- **🗂️ Monthly Archive**: Click 🗂️ next to \`# Checklist\` to generate a monthly stats report.
 `;
 
         const guideContent_ko = `# 🧠 제2의 두뇌: 통합 지식 관리 시스템 가이드
@@ -464,27 +452,15 @@ Inbox에서 걸러진 정보 중 **'어떤 목적이나 행동'**이 수반되�
 - **정의**: 위 세 가지 폴더에서 **더 이상 활성화되지 않거나 종료된 항목**들을 보존하는 역사 기록소.
 - **💡 활용 원칙**
   - **정리 대상**: 완료된 프로젝트, 폐기된 계획, 관심사가 멀어진 영역 리소스 등을 보관합니다.
-  - **보존 가치**: 지우기는 아깝지만 당장 내 눈에 띄어 주의력을 분산시키는 요소들을 격리하여 인지 과부하를 줄입니다.
-
-> **📎 10. File (첨부파일 전용)**
-> 옵시디언 설정에서 '새 첨부파일 저장 경로'를 이 폴더로 지정해 두면, 이미지/PDF 등이 문서 목록을 어지럽히는 것을 막을 수 있습니다.
+  - **아카이브 자동 적재**: 일간 마감(☀️) 및 월간 아카이브(🗂️) 실행 시 생성되는 주간/월간 루틴 통계 노트(예: \`2026-W31.md\`, \`2026-07.md\`)가 이곳에 안전하게 자동 보관됩니다.
 
 ---
 
-## 🧠 3단계: 영구 지식화 (Zettelkasten)
-단순한 '할 일'이나 '남의 지식(Resource)'을 넘어, 파편화된 지식을 엮어 **나만의 독창적인 아이디어와 지식 네트워크**를 구축하는 허브가 바로 \`5. Zettelkasten\` 폴더입니다.
-
-### 📝 01. Fleeting (임시 메모)
-- **💡 원칙**: 격식 없이 자유롭게 적고, 주기적으로(1~2일 내) 검토하여 영구 메모(Permanent Note)로 확장하거나 불필요한 생각은 삭제합니다.
-
-### 📖 02. Literature (문헌 메모)
-- **💡 원칙**: 책, 영상, 논문 등에서 얻은 외부 아이디어를 저자의 맥락에 따라 요약하며, 반드시 참고한 출처(서지 정보)를 기입합니다.
-
-### 💎 03. Permanent (영구 메모)
-- **💡 원칙**: 타인의 지식(문헌)이나 내 직관(임시)을 바탕으로, **완전히 내 언어로 재구성한 단 하나의 핵심 아이디어(일자일의)**만 담습니다. 이 영구 메모들이 서로 링크(Link)로 거미줄처럼 연결되며 진정한 '제2의 두뇌'가 형성됩니다.
-
----
-> 🚀 **이 가이드라인을 바탕으로, 이제 본격적으로 나만의 지식 생태계를 구축해 보세요!**
+## ⚙️ 헤더 버튼 조작법 요약
+- **⚙️ 루틴 편집 모달**: \`# 루틴\` 옆 ⚙️ 버튼을 클릭하여 양식 깨짐 없이 안전하게 루틴 카테고리/항목을 관리합니다.
+- **☀️ 일간 마감 (Daily Reset)**: \`# 루틴\` 옆 ☀️ 버튼을 클릭하여 하루 기록을 마스터 표에 적재하고 내일 루틴을 리셋합니다.
+- **🗂️ 월간 아카이브**: \`# 체크리스트\` 옆 🗂️ 버튼을 클릭하여 이번 달 루틴 달성률 집계 보고서를 생성합니다.
+- **✏️ 빠른 할 일 / 📋 임시 메모**: \`# Todo\` 옆 ✏️ 버튼으로 할 일을 즉시 등록하거나 📋 버튼으로 아이디어 메모 노트를 엽니다.
 `;
 
         if (!this.app.vault.getAbstractFileByPath(guidePath_ko)) {
