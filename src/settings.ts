@@ -2,6 +2,9 @@ import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import MyWorldTaskManagerPlugin from "./main";
 import { FolderSuggest, FileSuggest } from "./suggest";
 import { t } from "./i18n";
+import { RoutineStructure } from "./types";
+import { RoutineManagerModal } from "./ui/RoutineManagerModal";
+import { RoutineSyncEngine } from "./RoutineSyncEngine";
 
 export interface PluginSettings {
     language: "en" | "ko";
@@ -16,6 +19,7 @@ export interface PluginSettings {
     customTemplates: {
         dailySchedule: string;
     };
+    routineStructure?: RoutineStructure;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -41,17 +45,12 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    // 설정 탭 새로고침 메서드 (this.display() deprecated 대체)
     private refresh(): void {
         this.renderSettings();
     }
 
     getSettingDefinitions() {
         return [];
-    }
-
-    display(): void {
-        this.renderSettings();
     }
 
     private renderSettings(): void {
@@ -72,7 +71,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                     this.plugin.settings.language = value;
                     
                     if (oldLang !== value) {
-                        // Check if current values match the old language defaults, if so update them
                         if (this.plugin.settings.mainSchedulePath === t("default_main_schedule_path", oldLang)) {
                             this.plugin.settings.mainSchedulePath = t("default_main_schedule_path", value);
                         }
@@ -95,10 +93,21 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 });
             });
 
+        new Setting(containerEl)
+            .setName(this.plugin.settings.language === "ko" ? "⚙️ 루틴 관리 및 설정" : "⚙️ Routine Manager & Structure")
+            .setDesc(this.plugin.settings.language === "ko"
+                ? "루틴 카테고리(루틴 이름)와 세부 실행 항목을 GUI 창에서 손쉽게 추가, 수정, 삭제합니다."
+                : "Add, edit, or remove routine categories and items via user-friendly GUI modal.")
+            .addButton(btn => {
+                btn.setButtonText(this.plugin.settings.language === "ko" ? "루틴 편집 모달 열기" : "Open Routine Manager")
+                   .setCta()
+                   .onClick(async () => {
+                       await this.plugin.openRoutineManagerModal();
+                   });
+            });
 
         // 1. 경로 설정 섹션
         new Setting(containerEl).setName(t("settings_header_paths", this.plugin.settings.language)).setHeading();
-
 
         new Setting(containerEl)
             .setName(t("settings_main_schedule_name", this.plugin.settings.language))
@@ -152,7 +161,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                     });
                 new FolderSuggest(this.app, text.inputEl);
             });
-
 
         new Setting(containerEl)
             .setName(t("settings_midnight_offset_name", this.plugin.settings.language))

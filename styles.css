@@ -757,3 +757,110 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     background-color: var(--background-modifier-hover);
     color: var(--interactive-accent-hover, var(--text-accent));
 }
+
+/* Align header action buttons - position daily reset sun button at the absolute rightmost edge of the line */
+.markdown-rendered h1:has(.myworld-header-action-btn),
+.markdown-rendered h2:has(.myworld-header-action-btn),
+.markdown-rendered h3:has(.myworld-header-action-btn),
+.markdown-rendered h4:has(.myworld-header-action-btn),
+.cm-line:has(.myworld-header-action-btn) {
+    position: relative !important;
+}
+
+.myworld-btn-daily-reset {
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    margin-left: 0 !important;
+}
+
+.myworld-btn-daily-reset:hover {
+    transform: translateY(-50%) scale(1.18) !important;
+    background-color: var(--background-modifier-hover);
+    color: var(--interactive-accent-hover, var(--text-accent));
+}
+
+/* Routine Manager Modal Styles */
+.myworld-routine-modal {
+    max-width: 680px;
+    width: 90vw;
+}
+
+.routine-modal-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+    margin-bottom: 12px;
+}
+
+.routine-cat-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.routine-cat-card {
+    border: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+    border-radius: 8px;
+    padding: 12px;
+    background-color: var(--background-secondary-alt, var(--background-secondary));
+}
+
+.routine-cat-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.routine-cat-name-input {
+    flex: 1;
+    font-weight: bold;
+}
+
+.routine-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 12px;
+}
+
+.routine-item-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.routine-item-bullet {
+    color: var(--text-muted);
+}
+
+.routine-item-input {
+    flex: 1;
+}
+
+.routine-item-del-btn {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.routine-add-item-btn {
+    align-self: flex-start;
+    margin-top: 4px;
+    font-size: 0.85em;
+    padding: 2px 8px;
+}
+
+.routine-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+

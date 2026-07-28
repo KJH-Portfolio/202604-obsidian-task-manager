@@ -909,12 +909,37 @@ export class TaskUtils {
             });
         }
 
-        const finalWeekRows = [];
+        // 최신 tableHeader의 컬럼 배열
+        const targetCols = tableHeader.split("|").map(c => c.trim()).filter(c => c !== "");
+        const targetHeaderLine = `| ${targetCols.join(" | ")} |`;
+        const targetSeparatorLine = `| :-: | ${targetCols.slice(1).map(() => ":--:").join(" | ")} |`;
+
+        const finalWeekRows: string[] = [];
         let sortCurr = start.clone();
         while (sortCurr.isSameOrBefore(end, 'day')) {
             const dStr = sortCurr.date().toString();
             if (existingRowsMap[dStr]) {
-                finalWeekRows.push(existingRowsMap[dStr]);
+                const origRowStr = existingRowsMap[dStr];
+                const rowCols = origRowStr.split("|").map(c => c.trim());
+                if (rowCols.length >= 3) {
+                    const dateVal = rowCols[1];
+                    const rowCatVals = rowCols.slice(2, rowCols.length - 1);
+
+                    // 기존 행의 헤더를 읽어 컬럼명 → 값 맵 구성 (인덱스 기반이 아닌 이름 기반 정렬)
+                    // 기존 행의 컬럼 개수가 targetCols와 다를 수 있으므로 안전하게 인덱스 접근
+                    const rowValMap: Record<string, string> = {};
+                    targetCols.slice(1).forEach((col, idx) => {
+                        rowValMap[col] = rowCatVals[idx] || "";
+                    });
+
+                    const alignedCatVals = targetCols.slice(1).map(colName => {
+                        const val = rowValMap[colName];
+                        return (val && val.trim() !== "") ? val : "-";
+                    });
+                    finalWeekRows.push(`| ${dateVal} | ${alignedCatVals.join(" | ")} |`);
+                } else {
+                    finalWeekRows.push(origRowStr);
+                }
             }
             sortCurr.add(1, 'day');
         }
@@ -922,47 +947,60 @@ export class TaskUtils {
         let weeklyTableStr = "";
         let weeklyStatsDashboard = "";
         if (finalWeekRows.length > 0) {
-            const colCount = Math.max(1, tableHeader.split('|').length - 2);
-            const dynamicSeparator = "|" + "---|".repeat(colCount);
-            weeklyTableStr = tableHeader + "\n" + dynamicSeparator + "\n" + finalWeekRows.join('\n');
+            weeklyTableStr = targetHeaderLine + "\n" + targetSeparatorLine + "\n" + finalWeekRows.join('\n');
             weeklyStatsDashboard = this.generateStatsDashboard(weeklyTableStr, "주간 체크리스트 통계", "info");
         }
 
         if (wFile && wFile instanceof TFile) {
+            let updatedWContent = wContent;
             if (dailyRecord) {
-                const recRange = this.getSectionRange(wContent, t("header_record", this.settings.language)) as { start: number, end: number };
-                const chkSectionRange = this.getSectionRange(wContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
-                const statsSectionRange = this.getSectionRange(wContent, t("header_stats", this.settings.language)) as { start: number, end: number };
-                let insertPos = wContent.length;
+                const recRange = this.getSectionRange(updatedWContent, t("header_record", this.settings.language)) as { start: number, end: number };
+                const chkSectionRange = this.getSectionRange(updatedWContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
+                const statsSectionRange = this.getSectionRange(updatedWContent, t("header_stats", this.settings.language)) as { start: number, end: number };
+                let insertPos = updatedWContent.length;
                 if (chkSectionRange) insertPos = Math.min(insertPos, chkSectionRange.start);
                 if (statsSectionRange) insertPos = Math.min(insertPos, statsSectionRange.start);
 
                 const archiveDayId = targetDate.format("YYYY-MM-DD");
                 const daySearchStr = `> [!quote]+ 📅 **${archiveDayId}`;
-                const existingIdx = wContent.indexOf(daySearchStr, recRange ? recRange.start : 0);
+                const existingIdx = updatedWContent.indexOf(daySearchStr, recRange ? recRange.start : 0);
                 if (existingIdx !== -1 && existingIdx < insertPos) {
-                    let cStart = wContent.lastIndexOf("> [!quote]", existingIdx);
+                    let cStart = updatedWContent.lastIndexOf("> [!quote]", existingIdx);
                     if (cStart === -1 || (recRange && cStart < recRange.start)) cStart = existingIdx;
                     let cEnd = existingIdx;
                     while (cEnd < insertPos) {
-                        const nextNewline = wContent.indexOf("\n", cEnd);
+                        const nextNewline = updatedWContent.indexOf("\n", cEnd);
                         if (nextNewline === -1 || nextNewline >= insertPos) { cEnd = insertPos; break; }
-                        const nextLineStr = wContent.substring(nextNewline + 1, nextNewline + 30);
+                        const nextLineStr = updatedWContent.substring(nextNewline + 1, nextNewline + 30);
                         if (!nextLineStr.startsWith(">") || nextLineStr.includes("📅 **")) { cEnd = nextNewline; break; }
                         cEnd = nextNewline + 1;
                     }
-                    wContent = wContent.substring(0, cStart).trimEnd() + "\n\n" + dailyRecord + "\n" + wContent.substring(cEnd).trimStart();
+                    updatedWContent = updatedWContent.substring(0, cStart).trimEnd() + "\n\n" + dailyRecord + "\n" + updatedWContent.substring(cEnd).trimStart();
                 } else {
-                    wContent = wContent.substring(0, insertPos).trimEnd() + "\n\n" + dailyRecord + "\n\n" + wContent.substring(insertPos);
+                    updatedWContent = updatedWContent.substring(0, insertPos).trimEnd() + "\n\n" + dailyRecord + "\n\n" + updatedWContent.substring(insertPos);
                 }
             }
 
+            if (weeklyTableStr) {
+                const chkRange = this.getSectionRange(updatedWContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
+                if (chkRange) {
+                    const beforeChk = updatedWContent.substring(0, chkRange.start);
+                    const afterChk = updatedWContent.substring(chkRange.end);
+                    updatedWContent = beforeChk + t("header_checklist", this.settings.language) + "\n\n" + weeklyTableStr + "\n\n" + afterChk;
+                }
+            }
+            if (weeklyStatsDashboard) {
+                const statsRange = this.getSectionRange(updatedWContent, t("header_stats", this.settings.language)) as { start: number, end: number };
+                if (statsRange) {
+                    const beforeStats = updatedWContent.substring(0, statsRange.start);
+                    const afterStats = updatedWContent.substring(statsRange.end);
+                    updatedWContent = beforeStats + t("header_stats", this.settings.language) + "\n\n" + weeklyStatsDashboard + "\n" + afterStats;
+                }
+            }
 
-            const chkSectionText = `${t("header_checklist", this.settings.language)}
-
-${weeklyTableStr}
-
-`;
+            await this.fileManager.saveIfChanged(wFile, wContent, updatedWContent);
+        } else {
+            const chkSectionText = `${t("header_checklist", this.settings.language)}\n\n${weeklyTableStr}\n\n`;
             const initialContent = `---
 작성일: "2000-01-01T00:00"
 수정일: "2000-01-01T00:00"

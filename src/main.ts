@@ -20,6 +20,8 @@ import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 import { TaskQueue } from "./TaskQueue";
 import { EventController } from "./controllers/EventController";
+import { RoutineManagerModal } from "./ui/RoutineManagerModal";
+import { RoutineSyncEngine } from "./RoutineSyncEngine";
 
 import { t, translations } from "./i18n";
 
@@ -491,6 +493,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 };
 
                 if (text === "루틴" || text === "routine") {
+                    if (!h.querySelector(".myworld-btn-routine-manager")) {
+                        addBtn("routine-manager", "settings", isKo ? "루틴 편집 및 설정" : "Edit Routine Manager");
+                    }
                     if (!h.querySelector(".myworld-btn-daily-reset")) {
                         addBtn("daily-reset", "sun", isKo ? "일간 마감 실행" : "Run Daily Reset");
                     }
@@ -501,7 +506,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     if (!h.querySelector(".myworld-btn-fleeting-memo")) {
                         addBtn("fleeting-memo", "file-text", isKo ? "임시 메모 열기" : "Open Fleeting Memo");
                     }
-                } else if (text === "통계" || text === "stats") {
+                } else if (text === "체크리스트" || text === "checklist") {
                     if (!h.querySelector(".myworld-btn-monthly-archive")) {
                         addBtn("monthly-archive", "archive", isKo ? "월간 아카이브 생성" : "Create Monthly Archive");
                     }
@@ -1606,7 +1611,67 @@ ${checklistTable}
             case "monthly-archive":
                 void this.resetManager.runManualArchive(file);
                 break;
+            case "routine-manager":
+                void this.openRoutineManagerModal();
+                break;
         }
+    }
+
+    async openRoutineManagerModal() {
+        const schedulePath = this.settings.mainSchedulePath;
+        const scheduleFile = this.app.vault.getAbstractFileByPath(schedulePath);
+        let scheduleContent = "";
+        if (scheduleFile && scheduleFile instanceof TFile) {
+            scheduleContent = await this.app.vault.read(scheduleFile);
+        }
+
+        const currentStructure = scheduleContent
+            ? RoutineSyncEngine.parseRoutineStructureFromMarkdown(scheduleContent, this.settings.language)
+            : (this.settings.routineStructure || RoutineSyncEngine.getDefaultRoutineStructure(this.settings.language));
+
+        new RoutineManagerModal(
+            this.app,
+            this.settings.language,
+            currentStructure,
+            async (newStructure, diff) => {
+                this.settings.routineStructure = newStructure;
+                await this.saveSettings();
+
+                if (scheduleFile && scheduleFile instanceof TFile) {
+                    const latestContent = await this.app.vault.read(scheduleFile);
+                    const updatedScheduleContent = RoutineSyncEngine.syncRoutineToMarkdown(
+                        latestContent,
+                        newStructure,
+                        diff,
+                        this.settings.language
+                    );
+                    if (latestContent !== updatedScheduleContent) {
+                        await this.fileManager.pluginWrite(scheduleFile, updatedScheduleContent);
+                    }
+                }
+
+                // 3. 아카이브 폴더 내의 모든 주간/월간 아카이브 마크다운 문서 일괄 동기화 전파
+                const archiveDir = this.settings.archiveDirectory;
+                if (archiveDir) {
+                    const allFiles = this.app.vault.getMarkdownFiles();
+                    for (const file of allFiles) {
+                        if (file.path.startsWith(archiveDir)) {
+                            const archiveContent = await this.app.vault.read(file);
+                            const updatedArchiveContent = RoutineSyncEngine.syncChecklistTableColumns(
+                                archiveContent,
+                                newStructure,
+                                diff
+                            );
+                            if (archiveContent !== updatedArchiveContent) {
+                                await this.fileManager.pluginWrite(file, updatedArchiveContent);
+                            }
+                        }
+                    }
+                }
+
+                new Notice(this.settings.language === "ko" ? "✅ 루틴 양식 및 아카이브 문서가 동기화되었습니다." : "✅ Routine structure and archive notes safely synced.");
+            }
+        ).open();
     }
 
     async loadSettings() {

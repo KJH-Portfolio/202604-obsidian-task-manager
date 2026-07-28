@@ -2,7 +2,7 @@ import { App, MarkdownView, TFile, setIcon } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 
-export type ScheduleHeaderActionType = "quick-capture" | "fleeting-memo" | "daily-reset" | "monthly-archive";
+export type ScheduleHeaderActionType = "quick-capture" | "fleeting-memo" | "daily-reset" | "monthly-archive" | "routine-manager";
 
 class ScheduleHeaderBtnWidget extends WidgetType {
     constructor(
@@ -109,8 +109,20 @@ export function buildScheduleHeaderButtonsExtension(
 
                     const text = line.text.trim();
 
-                    // 1. # 루틴 / # Routine ➔ 🌤️ 일간 마감
+                    // 1. # 루틴 / # Routine ➔ ⚙️ 루틴 편집 + 🌤️ 일간 마감 (가장 우측)
                     if (/^#\s+(루틴|Routine)$/i.test(text)) {
+                        builder.add(
+                            line.to, line.to,
+                            Decoration.widget({
+                                widget: new ScheduleHeaderBtnWidget(
+                                    "routine-manager",
+                                    "settings",
+                                    isKo ? "루틴 편집 및 설정" : "Edit Routine Manager",
+                                    () => onAction(activeFile, "routine-manager")
+                                ),
+                                side: 1
+                            })
+                        );
                         builder.add(
                             line.to, line.to,
                             Decoration.widget({
@@ -120,7 +132,7 @@ export function buildScheduleHeaderButtonsExtension(
                                     isKo ? "일간 마감 실행" : "Run Daily Reset",
                                     () => onAction(activeFile, "daily-reset")
                                 ),
-                                side: 1
+                                side: 2
                             })
                         );
                     }
@@ -151,8 +163,8 @@ export function buildScheduleHeaderButtonsExtension(
                             })
                         );
                     }
-                    // 3. # 통계 / # Stats ➔ 🗂️ 월간 아카이브
-                    else if (/^#\s+(통계|Stats)$/i.test(text)) {
+                    // 3. # 체크리스트 / # Checklist ➔ 🗂️ 월간 아카이브
+                    else if (/^#\s+(체크리스트|Checklist)$/i.test(text)) {
                         builder.add(
                             line.to, line.to,
                             Decoration.widget({
