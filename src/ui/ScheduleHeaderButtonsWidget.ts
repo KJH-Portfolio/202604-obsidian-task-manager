@@ -2,7 +2,7 @@ import { App, MarkdownView, TFile, setIcon } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 
-export type ScheduleHeaderActionType = "quick-capture" | "fleeting-memo" | "daily-reset" | "monthly-archive" | "routine-manager";
+export type ScheduleHeaderActionType = "quick-capture" | "todo-manager" | "daily-reset" | "monthly-archive" | "routine-manager";
 
 class ScheduleHeaderBtnWidget extends WidgetType {
     constructor(
@@ -165,30 +165,18 @@ export function buildScheduleHeaderButtonsExtension(
                             })
                         );
                     }
-                    // 2. # Todo ➔ ✏️ 빠른 추가 + 📋 임시 메모 (버튼 2개)
+                    // 2. # Todo ➔ ⚙️ Todo 관리
                     else if (/^#\s+Todo$/i.test(text)) {
                         builder.add(
                             line.to, line.to,
                             Decoration.widget({
                                 widget: new ScheduleHeaderBtnWidget(
-                                    "quick-capture",
-                                    "pencil",
-                                    isKo ? "빠른 할 일 등록" : "Quick Capture",
-                                    () => onAction(activeFile, "quick-capture")
+                                    "todo-manager",
+                                    "settings",
+                                    isKo ? "Todo 편집 및 설정" : "Edit Todo Manager",
+                                    () => onAction(activeFile, "todo-manager")
                                 ),
                                 side: 1
-                            })
-                        );
-                        builder.add(
-                            line.to, line.to,
-                            Decoration.widget({
-                                widget: new ScheduleHeaderBtnWidget(
-                                    "fleeting-memo",
-                                    "file-text",
-                                    isKo ? "임시 메모 열기" : "Open Fleeting Memo",
-                                    () => onAction(activeFile, "fleeting-memo")
-                                ),
-                                side: 2
                             })
                         );
                     }

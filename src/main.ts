@@ -22,6 +22,7 @@ import { TaskQueue } from "./TaskQueue";
 import { EventController } from "./controllers/EventController";
 import { RoutineManagerModal } from "./ui/RoutineManagerModal";
 import { RoutineSyncEngine } from "./RoutineSyncEngine";
+import { TodoManagerModal } from "./ui/TodoManagerModal";
 
 import { t, translations } from "./i18n";
 
@@ -501,11 +502,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         addBtn("daily-reset", "sun", isKo ? "일간 마감 실행" : "Run Daily Reset");
                     }
                 } else if (text === "todo") {
-                    if (!h.querySelector(".myworld-btn-quick-capture")) {
-                        addBtn("quick-capture", "pencil", isKo ? "빠른 할 일 등록" : "Quick Capture");
-                    }
-                    if (!h.querySelector(".myworld-btn-fleeting-memo")) {
-                        addBtn("fleeting-memo", "file-text", isKo ? "임시 메모 열기" : "Open Fleeting Memo");
+                    if (!h.querySelector(".myworld-btn-todo-manager")) {
+                        addBtn("todo-manager", "settings", isKo ? "Todo 편집 및 설정" : "Edit Todo Manager");
                     }
                 } else if (text === "체크리스트" || text === "checklist") {
                     if (!h.querySelector(".myworld-btn-monthly-archive")) {
@@ -1480,42 +1478,7 @@ ${checklistTable}
         }
     }
 
-    // 3. 공용 임시 메모 파일 생성 및 열기 메서드
-    async openOrCreateFleetingMemoFile(): Promise<TFile | null> {
-        try {
-            const memoPath = this.settings.fleetingMemoPath;
-            const parts = memoPath.split("/");
-            parts.pop();
-            const folderPath = parts.join("/");
 
-            // 폴더가 존재하지 않는다면 자동 생성
-            await this.utils.ensureFolder(folderPath);
-
-            let memoFile = this.app.vault.getAbstractFileByPath(memoPath);
-            if (!memoFile) {
-                // BUG-07: 미사용 now 변수 제거
-                const defaultContent = `---
-작성일: "2000-01-01T00:00"
-수정일: "2000-01-01T00:00"
----
-
-`;
-                memoFile = await this.app.vault.create(memoPath, defaultContent);
-                new Notice(t("notice_quick_memo_created", this.settings.language));
-            }
-
-            if (memoFile && memoFile instanceof TFile) {
-                const leaf = this.app.workspace.getLeaf(false);
-                await leaf.openFile(memoFile);
-                return memoFile;
-            }
-            return null;
-        } catch (err) {
-            console.error(err instanceof Error ? err.message : String(err));
-            new Notice(t("notice_quick_memo_error", this.settings.language));
-            return null;
-        }
-    }
 
     // 4. 공용 프로젝트 노트 # 실행 섹션 태스크 빠른 추가 모달 메서드
     openAddExecutionTaskModal(projectFile: TFile): void {
@@ -1562,49 +1525,8 @@ ${checklistTable}
     handleScheduleHeaderAction(file: TFile, action: ScheduleHeaderActionType): void {
         switch (action) {
             case "quick-capture":
-                new QuickCaptureModal(this.app, this.settings.language, (content) => {
-                    void (async () => {
-                        try {
-                            const original = await this.fileManager.getActiveViewOrFileText(file);
-                            let text = this.utils.preprocessContent(original);
-
-                            const todoHeader = "#### 할 일";
-                            const todoRange = this.utils.getSectionRange(text, todoHeader, 4);
-
-                            const newTaskLine = `- [ ] ${content}`;
-
-                            if (todoRange) {
-                                const startIdx = (todoRange as { start: number; end: number }).start;
-                                const before = text.substring(0, startIdx + todoHeader.length);
-                                const after = text.substring(startIdx + todoHeader.length);
-                                text = before + "\n" + newTaskLine + after;
-                            } else {
-                                const mainTodoHeader = "# Todo";
-                                const mainTodoRange = this.utils.getSectionRange(text, mainTodoHeader, 1);
-                                if (mainTodoRange) {
-                                    const startIdx = (mainTodoRange as { start: number; end: number }).start;
-                                    const before = text.substring(0, startIdx + mainTodoHeader.length);
-                                    const after = text.substring(startIdx + mainTodoHeader.length);
-                                    text = before + "\n" + newTaskLine + after;
-                                } else {
-                                    text = text.trimEnd() + "\n\n" + newTaskLine;
-                                }
-                            }
-
-                            const todayObj = this.dateManager.getTodayStart();
-                            text = this.utils.processSectionLogic(text, "# Todo", todayObj, false, true);
-
-                            await this.fileManager.saveIfChanged(file, original, text);
-                            new Notice(`${t("notice_task_added", this.settings.language)}: "${content}"`);
-                        } catch (err) {
-                            console.error(err instanceof Error ? err.message : String(err));
-                            new Notice(t("notice_add_task_error", this.settings.language));
-                        }
-                    })();
-                }).open();
-                break;
-            case "fleeting-memo":
-                void this.openOrCreateFleetingMemoFile();
+            case "todo-manager":
+                void this.openTodoManagerModal();
                 break;
             case "daily-reset":
                 void this.resetManager.runDailyReset(file);
@@ -1615,6 +1537,16 @@ ${checklistTable}
             case "routine-manager":
                 void this.openRoutineManagerModal();
                 break;
+        }
+    }
+
+    async openTodoManagerModal() {
+        const schedulePath = this.settings.mainSchedulePath;
+        const scheduleFile = this.app.vault.getAbstractFileByPath(schedulePath);
+        if (scheduleFile && scheduleFile instanceof TFile) {
+            new TodoManagerModal(this.app, this, scheduleFile).open();
+        } else {
+            new Notice(t("notice_no_schedule_path", this.settings.language, { path: schedulePath }));
         }
     }
 

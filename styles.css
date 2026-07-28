@@ -866,6 +866,113 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
 }
 
+/* Todo Manager Modal Styles */
+.myworld-todo-modal {
+    max-width: 680px;
+    width: 90vw;
+}
+
+.todo-add-container {
+    background-color: var(--background-secondary);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+}
+
+.todo-section-title {
+    margin: 0 0 8px 0;
+    font-size: 1.05em;
+}
+
+.todo-add-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.todo-add-input {
+    flex: 1;
+}
+
+.todo-add-date {
+    width: 140px;
+}
+
+.todo-list-container {
+    max-height: 440px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+}
+
+.todo-group-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.todo-group-title {
+    margin: 0 0 4px 0;
+    font-size: 0.95em;
+    color: var(--text-muted);
+}
+
+.todo-empty-text {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 4px 8px;
+}
+
+.todo-dotted-divider {
+    border-top: 1px dashed var(--border-color, rgba(128, 128, 128, 0.3));
+    margin: 4px 0;
+}
+
+.todo-item-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--border-color, rgba(128, 128, 128, 0.15));
+    border-radius: 6px;
+}
+
+.todo-item-row.is-completed {
+    opacity: 0.65;
+}
+
+.todo-item-row.is-completed .todo-item-text {
+    text-decoration: line-through;
+}
+
+.todo-item-text {
+    flex: 1;
+}
+
+.todo-item-date {
+    width: 130px;
+}
+
+.todo-item-del-btn {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+.todo-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+}

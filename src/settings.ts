@@ -9,7 +9,6 @@ export interface PluginSettings {
     language: "en" | "ko";
     mainSchedulePath: string;
     archiveDirectory: string;
-    fleetingMemoPath: string;
     templatesDirectory: string;
     statsDirectory: string;
     midnightOffsetHour: number;
@@ -25,7 +24,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     language: "en",
     mainSchedulePath: "1. Project/-Main/Schedule Management.md",
     archiveDirectory: "4. Archive/98.Schedule",
-    fleetingMemoPath: "5. Zettelkasten/01.Fleeting/Fleeting Memo.md",
     templatesDirectory: "3. Resource/01.Templates",
     statsDirectory: "4. Archive/99.Stats",
     midnightOffsetHour: 4,
@@ -138,18 +136,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                 new FolderSuggest(this.app, text.inputEl);
             });
 
-        new Setting(containerEl)
-            .setName(t("settings_fleeting_memo_name", this.plugin.settings.language))
-            .setDesc(t("settings_fleeting_memo_desc", this.plugin.settings.language))
-            .addText(text => {
-                text.setPlaceholder(t("default_fleeting_memo_path", this.plugin.settings.language))
-                    .setValue(this.plugin.settings.fleetingMemoPath)
-                    .onChange(async (value) => {
-                        this.plugin.settings.fleetingMemoPath = value.trim();
-                        await this.plugin.saveSettings();
-                    });
-                new FileSuggest(this.app, text.inputEl);
-            });
+
 
         new Setting(containerEl)
             .setName(t("settings_templates_folder_name", this.plugin.settings.language))
