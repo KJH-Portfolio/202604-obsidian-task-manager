@@ -8,6 +8,7 @@ export interface TodoItem {
     date?: string; // YYYY-MM-DD
     blockId?: string; // ^id
     rawIndent: string;
+    indentLevel: number;
 }
 
 export class TodoManagerModal extends Modal {
@@ -61,6 +62,10 @@ export class TodoManagerModal extends Modal {
                 const taskMatch = line.match(/^(\s*)-\s*\[([ xX])\]\s*(.*)$/);
                 if (taskMatch) {
                     const rawIndent = taskMatch[1] || "";
+                    // tab은 공백 4개 취급하여 indentLevel 계산
+                    const spaceCount = rawIndent.replace(/\t/g, "    ").length;
+                    const indentLevel = Math.floor(spaceCount / 2);
+
                     const completed = taskMatch[2].toLowerCase() === "x";
                     let rest = taskMatch[3].trim();
 
@@ -86,7 +91,8 @@ export class TodoManagerModal extends Modal {
                         completed,
                         date,
                         blockId,
-                        rawIndent
+                        rawIndent,
+                        indentLevel
                     });
                 }
             }
@@ -125,11 +131,13 @@ export class TodoManagerModal extends Modal {
         let newDate = todayStr;
         const dateEl = addSection.createEl("input", {
             type: "date",
-            cls: "myworld-todo-add-date"
+            cls: "myworld-todo-add-date myworld-date-picker-clickable"
         });
         dateEl.value = newDate;
-        dateEl.addEventListener("change", (e) => {
-            newDate = (e.target as HTMLInputElement).value;
+        
+        // 박스 전체 클릭 시 달력 팝업 오픈
+        this.setupDatePickerClick(dateEl, (val) => {
+            newDate = val;
         });
 
         const addBtn = addSection.createEl("button", {
@@ -149,7 +157,8 @@ export class TodoManagerModal extends Modal {
                 content: trimmed,
                 completed: false,
                 date: newDate || todayStr,
-                rawIndent: ""
+                rawIndent: "",
+                indentLevel: 0
             });
 
             inputEl.value = "";
@@ -164,34 +173,40 @@ export class TodoManagerModal extends Modal {
             }
         });
 
-        // 3. 할 일 목록 아이템 분리 및 정렬
-        // 오늘 할 일: completed === false && date === todayStr
-        const todayItems = this.items.filter(i => !i.completed && i.date === todayStr);
+        // 3. 그룹별 아이템 분리 및 정렬
+        // [오늘 할 일 그룹]
+        const todayUncompleted = this.items.filter(i => !i.completed && i.date === todayStr);
+        const todayCompleted = this.items.filter(i => i.completed && i.date === todayStr);
 
-        // 예정/기타 할 일: completed === false && date !== todayStr
-        // 정렬 규칙: 미래 마감일 항목(날짜 오름차순) -> 날짜 없는 항목 가장 뒤
-        const upcomingAndOtherItems = this.items.filter(i => !i.completed && i.date !== todayStr);
-        upcomingAndOtherItems.sort((a, b) => {
-            if (a.date && b.date) {
-                return a.date.localeCompare(b.date);
-            }
-            if (a.date && !b.date) return -1; // 미래 날짜 있는 것이 앞
-            if (!a.date && b.date) return 1;  // 날짜 없는 것이 뒤
-            return 0;
-        });
+        // [예정 할 일 / 기타 그룹]
+        // 1) 미완료: 미래 마감일 태스크(날짜 오름차순) -> 날짜 없는 태스크
+        const upcomingUncompletedWithDate = this.items.filter(i => !i.completed && i.date && i.date !== todayStr);
+        upcomingUncompletedWithDate.sort((a, b) => (a.date! > b.date! ? 1 : -1));
+        const upcomingUncompletedNoDate = this.items.filter(i => !i.completed && !i.date);
 
-        // 완료 항목: completed === true
-        const completedItems = this.items.filter(i => i.completed);
+        // 2) 완료: 미래 마감일 완료 태스크 -> 날짜 없는 완료 태스크
+        const upcomingCompletedWithDate = this.items.filter(i => i.completed && i.date && i.date !== todayStr);
+        upcomingCompletedWithDate.sort((a, b) => (a.date! > b.date! ? 1 : -1));
+        const upcomingCompletedNoDate = this.items.filter(i => i.completed && !i.date);
 
         const listContainer = contentEl.createDiv({ cls: "myworld-todo-list-container" });
 
         // --- 섹션 1: [ 오늘 할 일 ] ---
         const todaySection = listContainer.createDiv({ cls: "myworld-todo-group" });
         todaySection.createEl("h3", { text: isKo ? "📌 오늘 할 일" : "📌 Today's Tasks", cls: "myworld-todo-group-title" });
-        if (todayItems.length === 0) {
-            todaySection.createDiv({ text: isKo ? "오늘 예정된 할 일이 없습니다." : "No tasks for today.", cls: "myworld-todo-empty" });
+        
+        if (todayUncompleted.length === 0 && todayCompleted.length === 0) {
+            todaySection.createDiv({ text: isKo ? "오늘 할 일이 없습니다." : "No tasks for today.", cls: "myworld-todo-empty" });
         } else {
-            todayItems.forEach(item => this.renderTaskRow(todaySection, item, isKo));
+            // 오늘 미완료 항목들
+            todayUncompleted.forEach(item => this.renderTaskRow(todaySection, item, isKo));
+            // 오늘 완료된 항목들 (섹션 최하단)
+            if (todayCompleted.length > 0) {
+                if (todayUncompleted.length > 0) {
+                    todaySection.createDiv({ cls: "myworld-todo-sub-divider" });
+                }
+                todayCompleted.forEach(item => this.renderTaskRow(todaySection, item, isKo));
+            }
         }
 
         // 구분선 1 (점선)
@@ -200,22 +215,22 @@ export class TodoManagerModal extends Modal {
         // --- 섹션 2: [ 예정 할 일 / 기타 ] ---
         const upcomingSection = listContainer.createDiv({ cls: "myworld-todo-group" });
         upcomingSection.createEl("h3", { text: isKo ? "📅 예정 할 일 / 기타" : "📅 Upcoming & Other Tasks", cls: "myworld-todo-group-title" });
-        if (upcomingAndOtherItems.length === 0) {
+        
+        const totalUpcomingUncompleted = [...upcomingUncompletedWithDate, ...upcomingUncompletedNoDate];
+        const totalUpcomingCompleted = [...upcomingCompletedWithDate, ...upcomingCompletedNoDate];
+
+        if (totalUpcomingUncompleted.length === 0 && totalUpcomingCompleted.length === 0) {
             upcomingSection.createDiv({ text: isKo ? "예정되거나 기타 지정된 할 일이 없습니다." : "No upcoming or other tasks.", cls: "myworld-todo-empty" });
         } else {
-            upcomingAndOtherItems.forEach(item => this.renderTaskRow(upcomingSection, item, isKo));
-        }
-
-        // 구분선 2 (점선)
-        listContainer.createDiv({ cls: "myworld-todo-divider" });
-
-        // --- 섹션 3: [ 완료된 항목 ] ---
-        const completedSection = listContainer.createDiv({ cls: "myworld-todo-group" });
-        completedSection.createEl("h3", { text: isKo ? "✅ 완료된 항목" : "✅ Completed Tasks", cls: "myworld-todo-group-title" });
-        if (completedItems.length === 0) {
-            completedSection.createDiv({ text: isKo ? "완료된 항목이 없습니다." : "No completed tasks.", cls: "myworld-todo-empty" });
-        } else {
-            completedItems.forEach(item => this.renderTaskRow(completedSection, item, isKo));
+            // 예정/기타 미완료 항목들 (미래 날짜 오름차순 -> 날짜 없음)
+            totalUpcomingUncompleted.forEach(item => this.renderTaskRow(upcomingSection, item, isKo));
+            // 예정/기타 완료된 항목들 (섹션 최하단)
+            if (totalUpcomingCompleted.length > 0) {
+                if (totalUpcomingUncompleted.length > 0) {
+                    upcomingSection.createDiv({ cls: "myworld-todo-sub-divider" });
+                }
+                totalUpcomingCompleted.forEach(item => this.renderTaskRow(upcomingSection, item, isKo));
+            }
         }
 
         // 4. 하단 버튼 영역
@@ -238,8 +253,30 @@ export class TodoManagerModal extends Modal {
         window.setTimeout(() => inputEl.focus(), 50);
     }
 
+    private setupDatePickerClick(dateInput: HTMLInputElement, onChange: (val: string) => void) {
+        dateInput.addEventListener("change", (e) => {
+            onChange((e.target as HTMLInputElement).value);
+        });
+
+        dateInput.addEventListener("click", (e) => {
+            try {
+                if ("showPicker" in dateInput) {
+                    (dateInput as any).showPicker();
+                }
+            } catch (err) {
+                // Ignore if showPicker fails
+            }
+        });
+    }
+
     private renderTaskRow(container: HTMLElement, item: TodoItem, isKo: boolean) {
         const row = container.createDiv({ cls: `myworld-todo-item-row ${item.completed ? "is-completed" : ""}` });
+
+        // 자식 들여쓰기 레벨 적용
+        if (item.indentLevel > 0) {
+            row.style.marginLeft = `${Math.min(item.indentLevel, 4) * 20}px`;
+            const connector = row.createSpan({ text: "└", cls: "myworld-todo-child-connector" });
+        }
 
         // 체크박스
         const checkbox = row.createEl("input", { type: "checkbox", cls: "myworld-todo-checkbox" });
@@ -259,14 +296,14 @@ export class TodoManagerModal extends Modal {
             item.content = (e.target as HTMLInputElement).value;
         });
 
-        // 날짜 수정/표시 input
+        // 날짜 수정/표시 input (전체 클릭 시 showPicker)
         const dateInput = row.createEl("input", {
             type: "date",
             value: item.date || "",
-            cls: "myworld-todo-item-date"
+            cls: "myworld-todo-item-date myworld-date-picker-clickable"
         });
-        dateInput.addEventListener("change", (e) => {
-            const val = (e.target as HTMLInputElement).value;
+        
+        this.setupDatePickerClick(dateInput, (val) => {
             item.date = val ? val : undefined;
             this.render();
         });
