@@ -78,9 +78,7 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                         if (this.plugin.settings.archiveDirectory === t("default_archive_folder", oldLang)) {
                             this.plugin.settings.archiveDirectory = t("default_archive_folder", value);
                         }
-                        if (this.plugin.settings.fleetingMemoPath === t("default_fleeting_memo_path", oldLang)) {
-                            this.plugin.settings.fleetingMemoPath = t("default_fleeting_memo_path", value);
-                        }
+
                         if (this.plugin.settings.templatesDirectory === t("default_templates_folder", oldLang)) {
                             this.plugin.settings.templatesDirectory = t("default_templates_folder", value);
                         }

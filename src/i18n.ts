@@ -134,13 +134,12 @@ export const translations = {
     // Commands
     // ----------------------------------------------------
     cmd_sync_main: { en: "Sync Schedule (Todo Sort)", ko: "스케줄 동기화 (할 일 정렬)" },
-    cmd_quick_capture: { en: "Quick Capture", ko: "할 일 빠른 등록" },
+    cmd_quick_capture: { en: "Manage Todo Items", ko: "Todo 항목 관리" },
     cmd_daily_reset: { en: "Daily Reset", ko: "메인 스케줄 일간 마감" },
     cmd_monthly_archive: { en: "Create Monthly Archive", ko: "월간 아카이브 생성" },
     cmd_para_setup: { en: "Setup PARA System", ko: "PARA 지식 관리 시스템 구축" },
     cmd_zettelkasten_setup: { en: "Setup Zettelkasten System", ko: "제텔카스텐 지식 관리 시스템 구축" },
     cmd_monthly_stats: { en: "Extract Monthly Routine Stats to Archive", ko: "월간 루틴 달성률 아카이브 추출" },
-    cmd_quick_memo: { en: "Quick Idea Memo", ko: "빠른 아이디어 메모" },
 
     // ----------------------------------------------------
     // Quick Capture Modal

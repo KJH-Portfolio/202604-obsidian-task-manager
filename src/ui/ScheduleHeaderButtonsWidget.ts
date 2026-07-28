@@ -2,7 +2,7 @@ import { App, MarkdownView, TFile, setIcon } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 
-export type ScheduleHeaderActionType = "quick-capture" | "todo-manager" | "daily-reset" | "monthly-archive" | "routine-manager";
+export type ScheduleHeaderActionType = "todo-manager" | "daily-reset" | "monthly-archive" | "routine-manager";
 
 class ScheduleHeaderBtnWidget extends WidgetType {
     constructor(
@@ -165,7 +165,7 @@ export function buildScheduleHeaderButtonsExtension(
                             })
                         );
                     }
-                    // 2. # Todo ➔ ⚙️ Todo 관리
+                    // 2. # Todo ➔ ⚙️ Todo 항목 관리
                     else if (/^#\s+Todo$/i.test(text)) {
                         builder.add(
                             line.to, line.to,
@@ -173,7 +173,7 @@ export function buildScheduleHeaderButtonsExtension(
                                 widget: new ScheduleHeaderBtnWidget(
                                     "todo-manager",
                                     "settings",
-                                    isKo ? "Todo 편집 및 설정" : "Edit Todo Manager",
+                                    isKo ? "Todo 항목 관리" : "Manage Todo Items",
                                     () => onAction(activeFile, "todo-manager")
                                 ),
                                 side: 1

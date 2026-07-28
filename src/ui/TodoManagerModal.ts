@@ -1,34 +1,100 @@
-import { App, Modal, Notice, TFile } from "obsidian";
-import MyWorldTaskManagerPlugin from "../main";
+import { App, Modal, Setting, TFile, Notice } from "obsidian";
+import { t } from "../i18n";
 
 export interface TodoItem {
     id: string;
-    text: string;
+    content: string;
     completed: boolean;
-    date: string | null; // YYYY-MM-DD format if exists
-    blockId: string | null; // ^id if exists
-    rawLine: string;
+    date?: string; // YYYY-MM-DD
+    blockId?: string; // ^id
+    rawIndent: string;
 }
 
 export class TodoManagerModal extends Modal {
-    private plugin: MyWorldTaskManagerPlugin;
-    private scheduleFile: TFile;
+    private file: TFile;
+    private language: string;
     private items: TodoItem[] = [];
-    private newContentText: string = "";
-    private newContentDate: string = "";
-    private isKo: boolean;
+    private onSaveCallback: (updatedItems: TodoItem[]) => Promise<void>;
 
-    constructor(app: App, plugin: MyWorldTaskManagerPlugin, scheduleFile: TFile) {
+    constructor(
+        app: App,
+        language: string,
+        file: TFile,
+        initialContent: string,
+        onSave: (updatedItems: TodoItem[]) => Promise<void>
+    ) {
         super(app);
-        this.plugin = plugin;
-        this.scheduleFile = scheduleFile;
-        this.isKo = plugin.settings.language === "ko";
-        this.newContentDate = window.moment().format("YYYY-MM-DD");
+        this.language = language;
+        this.file = file;
+        this.onSaveCallback = onSave;
+        this.parseItems(initialContent);
     }
 
-    async onOpen() {
+    private parseItems(content: string): void {
+        const lines = content.split("\n");
+        let inTodoSection = false;
+        let todoLevel = 1;
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+
+            // # Todo 헤더 탐색
+            if (/^#+\s+Todo$/i.test(trimmed)) {
+                inTodoSection = true;
+                const match = trimmed.match(/^(#+)/);
+                todoLevel = match ? match[1].length : 1;
+                continue;
+            }
+
+            if (inTodoSection) {
+                // 상위/동일 레벨 헤더를 만나면 Todo 섹션 종료 (단, 서브헤더는 계속 진행)
+                if (/^#+\s+/.test(trimmed)) {
+                    const match = trimmed.match(/^(#+)/);
+                    const level = match ? match[1].length : 1;
+                    if (level <= todoLevel) {
+                        inTodoSection = false;
+                        break;
+                    }
+                }
+
+                // 체크리스트 항목 인지
+                const taskMatch = line.match(/^(\s*)-\s*\[([ xX])\]\s*(.*)$/);
+                if (taskMatch) {
+                    const rawIndent = taskMatch[1] || "";
+                    const completed = taskMatch[2].toLowerCase() === "x";
+                    let rest = taskMatch[3].trim();
+
+                    // blockId extraction (^id)
+                    let blockId: string | undefined;
+                    const idMatch = rest.match(/\s+\^([a-zA-Z0-9-]+)$/);
+                    if (idMatch) {
+                        blockId = idMatch[1];
+                        rest = rest.substring(0, rest.length - idMatch[0].length).trim();
+                    }
+
+                    // date extraction (📅 YYYY-MM-DD)
+                    let date: string | undefined;
+                    const dateMatch = rest.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                    if (dateMatch) {
+                        date = dateMatch[1];
+                        rest = rest.replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").trim();
+                    }
+
+                    this.items.push({
+                        id: "item_" + Math.random().toString(36).substring(2, 9),
+                        content: rest,
+                        completed,
+                        date,
+                        blockId,
+                        rawIndent
+                    });
+                }
+            }
+        }
+    }
+
+    onOpen() {
         this.modalEl.addClass("myworld-todo-modal");
-        await this.loadTasks();
         this.render();
     }
 
@@ -37,293 +103,183 @@ export class TodoManagerModal extends Modal {
         contentEl.empty();
     }
 
-    private async loadTasks() {
-        try {
-            const fileText = await this.app.vault.read(this.scheduleFile);
-            const todoHeader = "# Todo";
-            const todoRange = this.plugin.utils.getSectionRange(fileText, todoHeader, 1);
-
-            this.items = [];
-            if (!todoRange) return;
-
-            const startIdx = (todoRange as { start: number; end: number }).start;
-            const endIdx = (todoRange as { start: number; end: number }).end;
-            const sectionText = fileText.substring(startIdx, endIdx);
-            const lines = sectionText.split("\n");
-
-            lines.forEach((line, index) => {
-                const trimmed = line.trim();
-                const taskMatch = trimmed.match(/^[-*+]\s+\[([ xX])\]\s+(.*)$/);
-                if (taskMatch) {
-                    const completed = taskMatch[1].toLowerCase() === "x";
-                    let bodyText = taskMatch[2].trim();
-
-                    // Extract block ID (^id) if present
-                    let blockId: string | null = null;
-                    const blockIdMatch = bodyText.match(/\s+\^([a-zA-Z0-9]+)$/);
-                    if (blockIdMatch) {
-                        blockId = blockIdMatch[1];
-                        bodyText = bodyText.substring(0, bodyText.length - blockIdMatch[0].length).trim();
-                    }
-
-                    // Extract date (📅 YYYY-MM-DD) if present
-                    let date: string | null = null;
-                    const dateMatch = bodyText.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
-                    if (dateMatch) {
-                        date = dateMatch[1];
-                    }
-
-                    this.items.push({
-                        id: `task_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 6)}`,
-                        text: bodyText,
-                        completed,
-                        date,
-                        blockId,
-                        rawLine: line
-                    });
-                }
-            });
-        } catch (err) {
-            console.error("Error loading tasks for TodoManagerModal:", err);
-        }
-    }
-
     private render() {
         const { contentEl } = this;
         contentEl.empty();
 
-        // 1. 헤더 (타이틀)
-        const headerDiv = contentEl.createDiv({ cls: "todo-modal-header" });
-        headerDiv.createEl("h2", { text: this.isKo ? "⚙️ Todo 관리" : "⚙️ Todo Manager" });
-        headerDiv.createEl("p", {
-            text: this.isKo
-                ? "할 일을 직관적으로 등록하고 정리합니다. 저장 시 스케줄 노트에 자동 반영됩니다."
-                : "Manage your tasks easily. Changes will be saved directly to your schedule.",
-            cls: "setting-item-description"
-        });
+        const isKo = this.language === "ko";
+        const todayStr = window.moment ? window.moment().format("YYYY-MM-DD") : new Date().toISOString().split("T")[0];
 
-        // 2. [최상단] 새 할 일 추가 구역
-        const addSection = contentEl.createDiv({ cls: "todo-add-container" });
-        addSection.createEl("h4", { text: this.isKo ? "➕ 새 할 일 추가" : "➕ Add New Task", cls: "todo-section-title" });
+        // 1. 모달 타이틀
+        contentEl.createEl("h2", { text: isKo ? "⚙️ Todo 항목 관리" : "⚙️ Todo Manager" });
 
-        const addRow = addSection.createDiv({ cls: "todo-add-row" });
+        // 2. [최상단] 새 할 일 추가 영역
+        const addSection = contentEl.createDiv({ cls: "myworld-todo-add-section" });
 
-        // 입력 창 (자동 포커스 대상)
-        const inputEl = addRow.createEl("input", {
+        const inputEl = addSection.createEl("input", {
             type: "text",
-            placeholder: this.isKo ? "새로 할 일을 입력하세요..." : "Enter a new task...",
-            cls: "todo-add-input"
-        });
-        inputEl.value = this.newContentText;
-        inputEl.addEventListener("input", (e) => {
-            this.newContentText = (e.target as HTMLInputElement).value;
+            placeholder: isKo ? "새 할 일을 입력하세요... (Enter 키로 추가)" : "Add a new task... (Press Enter)",
+            cls: "myworld-todo-add-input"
         });
 
-        // 날짜 선택 피커 (기본 오늘 날짜)
-        const dateInput = addRow.createEl("input", {
+        let newDate = todayStr;
+        const dateEl = addSection.createEl("input", {
             type: "date",
-            cls: "todo-add-date"
+            cls: "myworld-todo-add-date"
         });
-        dateInput.value = this.newContentDate;
-        dateInput.addEventListener("change", (e) => {
-            this.newContentDate = (e.target as HTMLInputElement).value;
-        });
-
-        const submitBtn = addRow.createEl("button", {
-            text: this.isKo ? "추가" : "Add",
-            cls: "mod-cta todo-add-btn"
+        dateEl.value = newDate;
+        dateEl.addEventListener("change", (e) => {
+            newDate = (e.target as HTMLInputElement).value;
         });
 
-        const handleAddTask = () => {
-            if (!this.newContentText.trim()) {
-                new Notice(this.isKo ? "할 일 내용을 입력해주세요." : "Please enter task content.");
+        const addBtn = addSection.createEl("button", {
+            text: isKo ? "+ 추가" : "+ Add",
+            cls: "mod-cta myworld-todo-add-btn"
+        });
+
+        const submitNewTask = () => {
+            const trimmed = inputEl.value.trim();
+            if (!trimmed) {
+                new Notice(isKo ? "할 일 내용을 입력해주세요." : "Please enter task content.");
                 return;
             }
 
-            const newTask: TodoItem = {
-                id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-                text: this.newContentText.trim(),
+            this.items.push({
+                id: "item_" + Math.random().toString(36).substring(2, 9),
+                content: trimmed,
                 completed: false,
-                date: this.newContentDate ? this.newContentDate : null,
-                blockId: null,
-                rawLine: ""
-            };
+                date: newDate || todayStr,
+                rawIndent: ""
+            });
 
-            this.items.push(newTask);
-            this.newContentText = "";
+            inputEl.value = "";
             this.render();
         };
 
-        submitBtn.addEventListener("click", handleAddTask);
+        addBtn.addEventListener("click", submitNewTask);
         inputEl.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
-                handleAddTask();
+                submitNewTask();
             }
         });
 
-        // 자동 포커싱
-        window.setTimeout(() => inputEl.focus(), 50);
+        // 3. 할 일 목록 아이템 분리 및 정렬
+        // 오늘 할 일: completed === false && date === todayStr
+        const todayItems = this.items.filter(i => !i.completed && i.date === todayStr);
 
-        // 3. 할 일 목록 리스트 컨테이너
-        const listContainer = contentEl.createDiv({ cls: "todo-list-container" });
-
-        const todayStr = window.moment().format("YYYY-MM-DD");
-
-        // 항목 분류
-        const todayTasks = this.items.filter(item => !item.completed && item.date === todayStr);
-        const upcomingAndNoDateTasks = this.items.filter(item => !item.completed && item.date !== todayStr);
-
-        // [예정 할 일 / 기타] 내부 정렬: 미래 날짜 마감 항목(오름차순) -> 날짜 없는 항목 가장 뒤
-        upcomingAndNoDateTasks.sort((a, b) => {
+        // 예정/기타 할 일: completed === false && date !== todayStr
+        // 정렬 규칙: 미래 마감일 항목(날짜 오름차순) -> 날짜 없는 항목 가장 뒤
+        const upcomingAndOtherItems = this.items.filter(i => !i.completed && i.date !== todayStr);
+        upcomingAndOtherItems.sort((a, b) => {
             if (a.date && b.date) {
                 return a.date.localeCompare(b.date);
             }
-            if (a.date && !b.date) return -1; // 날짜 있는 항목 우선
-            if (!a.date && b.date) return 1;  // 날짜 없는 항목 뒤로
+            if (a.date && !b.date) return -1; // 미래 날짜 있는 것이 앞
+            if (!a.date && b.date) return 1;  // 날짜 없는 것이 뒤
             return 0;
         });
 
-        const completedTasks = this.items.filter(item => item.completed);
+        // 완료 항목: completed === true
+        const completedItems = this.items.filter(i => i.completed);
 
-        // --- 구역 1: [ 오늘 할 일 ] ---
-        const todaySection = listContainer.createDiv({ cls: "todo-group-section" });
-        todaySection.createEl("h4", { text: this.isKo ? "📌 오늘 할 일" : "📌 Today Tasks", cls: "todo-group-title" });
-        if (todayTasks.length === 0) {
-            todaySection.createDiv({ text: this.isKo ? "오늘 등록된 할 일이 없습니다." : "No tasks for today.", cls: "todo-empty-text" });
+        const listContainer = contentEl.createDiv({ cls: "myworld-todo-list-container" });
+
+        // --- 섹션 1: [ 오늘 할 일 ] ---
+        const todaySection = listContainer.createDiv({ cls: "myworld-todo-group" });
+        todaySection.createEl("h3", { text: isKo ? "📌 오늘 할 일" : "📌 Today's Tasks", cls: "myworld-todo-group-title" });
+        if (todayItems.length === 0) {
+            todaySection.createDiv({ text: isKo ? "오늘 예정된 할 일이 없습니다." : "No tasks for today.", cls: "myworld-todo-empty" });
         } else {
-            todayTasks.forEach(task => this.renderTaskRow(todaySection, task));
+            todayItems.forEach(item => this.renderTaskRow(todaySection, item, isKo));
         }
 
-        // 구분선 (점선)
-        listContainer.createDiv({ cls: "todo-dotted-divider" });
+        // 구분선 1 (점선)
+        listContainer.createDiv({ cls: "myworld-todo-divider" });
 
-        // --- 구역 2: [ 예정 할 일 / 기타 ] ---
-        const upcomingSection = listContainer.createDiv({ cls: "todo-group-section" });
-        upcomingSection.createEl("h4", { text: this.isKo ? "📅 예정 할 일 / 기타" : "📅 Upcoming & General Tasks", cls: "todo-group-title" });
-        if (upcomingAndNoDateTasks.length === 0) {
-            upcomingSection.createDiv({ text: this.isKo ? "예정되거나 일반 할 일이 없습니다." : "No upcoming or general tasks.", cls: "todo-empty-text" });
+        // --- 섹션 2: [ 예정 할 일 / 기타 ] ---
+        const upcomingSection = listContainer.createDiv({ cls: "myworld-todo-group" });
+        upcomingSection.createEl("h3", { text: isKo ? "📅 예정 할 일 / 기타" : "📅 Upcoming & Other Tasks", cls: "myworld-todo-group-title" });
+        if (upcomingAndOtherItems.length === 0) {
+            upcomingSection.createDiv({ text: isKo ? "예정되거나 기타 지정된 할 일이 없습니다." : "No upcoming or other tasks.", cls: "myworld-todo-empty" });
         } else {
-            upcomingAndNoDateTasks.forEach(task => this.renderTaskRow(upcomingSection, task));
+            upcomingAndOtherItems.forEach(item => this.renderTaskRow(upcomingSection, item, isKo));
         }
 
-        // 구분선 (점선)
-        listContainer.createDiv({ cls: "todo-dotted-divider" });
+        // 구분선 2 (점선)
+        listContainer.createDiv({ cls: "myworld-todo-divider" });
 
-        // --- 구역 3: [ 완료된 항목 ] ---
-        const completedSection = listContainer.createDiv({ cls: "todo-group-section" });
-        completedSection.createEl("h4", { text: this.isKo ? "✅ 완료된 항목" : "✅ Completed Tasks", cls: "todo-group-title" });
-        if (completedTasks.length === 0) {
-            completedSection.createDiv({ text: this.isKo ? "완료된 항목이 없습니다." : "No completed tasks.", cls: "todo-empty-text" });
+        // --- 섹션 3: [ 완료된 항목 ] ---
+        const completedSection = listContainer.createDiv({ cls: "myworld-todo-group" });
+        completedSection.createEl("h3", { text: isKo ? "✅ 완료된 항목" : "✅ Completed Tasks", cls: "myworld-todo-group-title" });
+        if (completedItems.length === 0) {
+            completedSection.createDiv({ text: isKo ? "완료된 항목이 없습니다." : "No completed tasks.", cls: "myworld-todo-empty" });
         } else {
-            completedTasks.forEach(task => this.renderTaskRow(completedSection, task));
+            completedItems.forEach(item => this.renderTaskRow(completedSection, item, isKo));
         }
 
-        // 4. 하단 저장 / 취소 버튼
-        const footerEl = contentEl.createDiv({ cls: "todo-modal-footer" });
+        // 4. 하단 버튼 영역
+        const footerEl = contentEl.createDiv({ cls: "myworld-todo-modal-footer" });
 
-        const cancelBtn = footerEl.createEl("button", { text: this.isKo ? "취소" : "Cancel" });
+        const cancelBtn = footerEl.createEl("button", { text: isKo ? "취소" : "Cancel" });
         cancelBtn.addEventListener("click", () => this.close());
 
         const saveBtn = footerEl.createEl("button", {
-            text: this.isKo ? "💾 저장 & 동기화" : "💾 Save & Sync",
+            text: isKo ? "💾 저장 및 동기화" : "💾 Save & Sync",
             cls: "mod-cta"
         });
-
         saveBtn.addEventListener("click", () => {
-            void this.saveChanges().then(() => this.close());
+            void this.onSaveCallback(this.items).then(() => {
+                this.close();
+            });
         });
+
+        // 자동 포커스 (상단 입력 창)
+        window.setTimeout(() => inputEl.focus(), 50);
     }
 
-    private renderTaskRow(container: HTMLElement, task: TodoItem) {
-        const row = container.createDiv({ cls: `todo-item-row ${task.completed ? "is-completed" : ""}` });
+    private renderTaskRow(container: HTMLElement, item: TodoItem, isKo: boolean) {
+        const row = container.createDiv({ cls: `myworld-todo-item-row ${item.completed ? "is-completed" : ""}` });
 
         // 체크박스
-        const checkbox = row.createEl("input", { type: "checkbox", cls: "todo-item-checkbox" });
-        checkbox.checked = task.completed;
+        const checkbox = row.createEl("input", { type: "checkbox", cls: "myworld-todo-checkbox" });
+        checkbox.checked = item.completed;
         checkbox.addEventListener("change", (e) => {
-            task.completed = (e.target as HTMLInputElement).checked;
+            item.completed = (e.target as HTMLInputElement).checked;
             this.render();
         });
 
-        // 할 일 텍스트 input
+        // 텍스트 수정 input
         const textInput = row.createEl("input", {
             type: "text",
-            value: task.text,
-            cls: "todo-item-text"
+            value: item.content,
+            cls: "myworld-todo-text-input"
         });
         textInput.addEventListener("input", (e) => {
-            task.text = (e.target as HTMLInputElement).value;
+            item.content = (e.target as HTMLInputElement).value;
         });
 
-        // 날짜 표시/변경 input
+        // 날짜 수정/표시 input
         const dateInput = row.createEl("input", {
             type: "date",
-            cls: "todo-item-date"
+            value: item.date || "",
+            cls: "myworld-todo-item-date"
         });
-        dateInput.value = task.date || "";
         dateInput.addEventListener("change", (e) => {
             const val = (e.target as HTMLInputElement).value;
-            task.date = val ? val : null;
+            item.date = val ? val : undefined;
             this.render();
         });
 
         // 삭제 버튼
-        const delBtn = row.createEl("button", {
+        const deleteBtn = row.createEl("button", {
             text: "✕",
-            title: this.isKo ? "삭제" : "Delete",
-            cls: "todo-item-del-btn"
+            title: isKo ? "항목 삭제" : "Delete item",
+            cls: "myworld-todo-del-btn"
         });
-        delBtn.addEventListener("click", () => {
-            this.items = this.items.filter(item => item.id !== task.id);
+        deleteBtn.addEventListener("click", () => {
+            this.items = this.items.filter(i => i.id !== item.id);
             this.render();
         });
-    }
-
-    private async saveChanges() {
-        try {
-            const originalText = await this.app.vault.read(this.scheduleFile);
-            let content = this.plugin.utils.preprocessContent(originalText);
-
-            const todoHeader = "# Todo";
-            const todoRange = this.plugin.utils.getSectionRange(content, todoHeader, 1);
-
-            // Reconstruct the tasks in markdown format
-            const newTasksLines: string[] = [];
-            this.items.forEach(item => {
-                if (!item.text.trim()) return;
-                const checkStr = item.completed ? "[x]" : "[ ]";
-                let lineStr = `- ${checkStr} ${item.text.trim()}`;
-                if (item.date) {
-                    lineStr += ` 📅 ${item.date}`;
-                }
-                if (item.blockId) {
-                    lineStr += ` ^${item.blockId}`;
-                }
-                newTasksLines.push(lineStr);
-            });
-
-            const newTodoSectionStr = `${todoHeader}\n${newTasksLines.join("\n")}\n`;
-
-            if (todoRange) {
-                const startIdx = (todoRange as { start: number; end: number }).start;
-                const endIdx = (todoRange as { start: number; end: number }).end;
-                const before = content.substring(0, startIdx);
-                const after = content.substring(endIdx);
-                content = before + newTodoSectionStr + after;
-            } else {
-                content = content.trimEnd() + "\n\n" + newTodoSectionStr;
-            }
-
-            // Apply section sorting logic
-            const todayObj = this.plugin.dateManager.getTodayStart();
-            content = this.plugin.utils.processSectionLogic(content, "# Todo", todayObj, false, true);
-
-            await this.plugin.fileManager.saveIfChanged(this.scheduleFile, originalText, content);
-            new Notice(this.isKo ? "✅ Todo 항목이 저장되었습니다." : "✅ Tasks saved successfully.");
-        } catch (err) {
-            console.error("Error saving tasks in TodoManagerModal:", err);
-            new Notice(this.isKo ? "🚨 저장 도중 오류가 발생했습니다." : "🚨 Error occurred while saving tasks.");
-        }
     }
 }
