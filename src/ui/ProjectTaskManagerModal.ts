@@ -289,11 +289,11 @@ export class ProjectTaskManagerModal extends Modal {
         // 2. 도움말 박스
         if (this.showHelp) {
             const helpBox = contentEl.createDiv({ cls: "myworld-todo-help-box" });
-            helpBox.createEl("div", { text: t("todo_modal_help_title", this.language), cls: "myworld-todo-help-title" });
-            helpBox.createEl("div", { text: t("todo_modal_help_move", this.language) });
-            helpBox.createEl("div", { text: t("todo_modal_help_indent", this.language) });
-            helpBox.createEl("div", { text: t("todo_modal_help_enter", this.language) });
-            helpBox.createEl("div", { text: t("todo_modal_help_date", this.language) });
+            helpBox.createDiv({ text: t("todo_modal_help_title", this.language), cls: "myworld-todo-help-title" });
+            helpBox.createDiv({ text: t("todo_modal_help_move", this.language) });
+            helpBox.createDiv({ text: t("todo_modal_help_indent", this.language) });
+            helpBox.createDiv({ text: t("todo_modal_help_enter", this.language) });
+            helpBox.createDiv({ text: t("todo_modal_help_date", this.language) });
         }
 
         // 3. 메인 스크롤 목록 영역

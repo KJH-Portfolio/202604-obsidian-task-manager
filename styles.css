@@ -1271,9 +1271,9 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     font-size: 0.95em;
 }
 
-.myworld-affirmation-input {
-    min-width: 320px !important;
-    width: 380px !important;
+.myworld-affirmation-input.myworld-affirmation-input {
+    min-width: 320px;
+    width: 380px;
 }
 
 .myworld-child-indicator {

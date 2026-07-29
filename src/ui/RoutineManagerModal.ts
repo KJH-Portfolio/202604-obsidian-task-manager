@@ -1,6 +1,5 @@
 import { App, Modal, Setting } from "obsidian";
 import { RoutineStructure, RoutineDiff } from "../types";
-import { t } from "../i18n";
 
 export class RoutineManagerModal extends Modal {
     private initialStructure: RoutineStructure;
@@ -97,14 +96,14 @@ export class RoutineManagerModal extends Modal {
         // 도움말 가이드 박스 (showHelp === true 일 때)
         if (this.showHelp) {
             const helpBox = contentEl.createDiv({ cls: "myworld-todo-help-box" });
-            helpBox.createEl("div", {
+            helpBox.createDiv({
                 text: isKo ? "💡 루틴 단축키 안내" : "💡 Routine Shortcuts",
                 cls: "myworld-todo-help-title"
             });
-            helpBox.createEl("div", {
+            helpBox.createDiv({
                 text: isKo ? "• Alt + ↑ / ↓ : 루틴 카테고리 및 세부 항목 순서 이동" : "• Alt + ↑ / ↓ : Move routine categories or items up/down"
             });
-            helpBox.createEl("div", {
+            helpBox.createDiv({
                 text: isKo ? "• 💾 [저장 및 양식 동기화] : 체크리스트 표 및 아카이브 일괄 동기화" : "• 💾 [Save & Sync Structure] : Sync all checklist tables and archives"
             });
         }
