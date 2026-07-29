@@ -1,6 +1,6 @@
 # Life OS Task Manager
 
-> [!NOTE] 🚨 Major Release Notice (v1.1.1) 🚨
+> [!NOTE] 🚨 Major Release Notice (v1.1.2) 🚨
 > **One-Stop ⚙️ GUI Modals & Seamless Action Widgets!**  
 > Completely eliminates markdown formatting corruption caused by manual text editing.  
 > **Supports both English and Korean natively.**  
