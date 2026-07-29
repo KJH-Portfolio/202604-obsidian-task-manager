@@ -313,14 +313,28 @@ export class TodoManagerModal extends Modal {
             onChange((e.target as HTMLInputElement).value);
         });
 
-        dateInput.addEventListener("click", () => {
-            try {
-                const inputWithPicker = dateInput as HTMLInputElement & { showPicker?: () => void };
-                if (typeof inputWithPicker.showPicker === "function") {
-                    inputWithPicker.showPicker();
+        dateInput.addEventListener("mousedown", (e) => {
+            if (!dateInput.value) {
+                e.preventDefault();
+            }
+        });
+
+        dateInput.addEventListener("click", (e) => {
+            if (!dateInput.value) {
+                e.preventDefault();
+                e.stopPropagation();
+                const todayStr = window.moment ? window.moment().format("YYYY-MM-DD") : new Date().toISOString().split("T")[0];
+                dateInput.value = todayStr;
+                onChange(todayStr);
+            } else {
+                try {
+                    const inputWithPicker = dateInput as HTMLInputElement & { showPicker?: () => void };
+                    if (typeof inputWithPicker.showPicker === "function") {
+                        inputWithPicker.showPicker();
+                    }
+                } catch {
+                    // Ignore if showPicker fails
                 }
-            } catch {
-                // Ignore if showPicker fails
             }
         });
     }
