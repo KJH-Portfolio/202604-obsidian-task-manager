@@ -151,6 +151,14 @@ export const translations = {
     modal_add_task_btn: { en: "Save (Enter)", ko: "저장하기 (Enter)" },
     modal_empty_warning: { en: "Please enter a task or text.", ko: "할 일 또는 텍스트를 입력하세요." },
 
+    // Todo Manager Modal
+    todo_modal_title: { en: "⚙️ Manage Todo Items", ko: "⚙️ Todo 항목 관리" },
+    todo_modal_help_title: { en: "💡 Keyboard Shortcuts Guide", ko: "💡 키보드 단축키 안내" },
+    todo_modal_help_move: { en: "• Alt + ↑ / ↓ : Move item order up / down", ko: "• Alt + ↑ / ↓ : 항목 순서 위/아래 이동" },
+    todo_modal_help_indent: { en: "• Tab / Shift+Tab (or Alt + → / ←) : Indent (make child) / Outdent", ko: "• Tab / Shift+Tab (또는 Alt + → / ←) : 들여쓰기(자식화) / 내어쓰기" },
+    todo_modal_help_enter: { en: "• Enter : Add new task in top input", ko: "• Enter : 상단 입력창에서 새 할 일 추가" },
+    todo_modal_help_date: { en: "• Click Date Box : Open calendar picker", ko: "• 날짜 박스 클릭 : 달력 팝업 오픈" },
+
     // ----------------------------------------------------
     // Notices / Notifications
     // ----------------------------------------------------

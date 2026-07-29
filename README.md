@@ -1,117 +1,88 @@
-# MyWorld Task Manager
+# Life OS Task Manager
 
-> [!NOTE] 🚨 Major Update Notice (v1.0.101) 🚨
-> **Dedicated GUI Routine Manager Modal & Integrated Header Action Widgets!**
-> Completely eliminates markdown formatting corruption caused by manual text editing.
-> Simply click the **⚙️ (Edit Routine) button** next to the `# Routine` header to safely add, edit, delete, or reorder routine categories and items. All changes automatically propagate seamlessly across master checklist tables, mini-tables, and weekly/monthly archive notes!
+> [!NOTE] 🚨 Major Release Notice (v1.1.0) 🚨
+> **One-Stop ⚙️ GUI Modals & Seamless Action Widgets!**  
+> Completely eliminates markdown formatting corruption caused by manual text editing.  
+> **Supports both English and Korean natively.**  
+> Easily manage your Daily Schedule, Routine Checklists, and Project Tasks through dedicated ⚙️ popup modals without manually editing raw markdown text!
 
-> **A Powerful Obsidian Plugin for Centralized Task & Schedule Management**
->
-> Centralize fragmented tasks, automate daily routines, and synchronize your schedule seamlessly with your project notes using a robust bi-directional sync engine. Eliminate complex Templater scripts and establish a smart PARA & Zettelkasten knowledge management system with a single click.
+---
+
+## 📸 Showcase & Overview
+
+![Routine & Todo Control Tower](assets/routine_todo_dashboard.png)
+
+*Sleek routine callout, instant header action widgets, and D-Day urgency-colored task lists.*
 
 ---
 
 ## ✨ Key Features
 
-* **⚙️ GUI Routine Manager (Routine Manager Modal)**: Edit your routines via a sleek modal window without touching raw markdown text. Easily add, delete, rename, or reorder (▲/▼) categories and items.
-* **🔄 Real-time Bi-directional Auto-Sync**: Tasks created or completed in your daily schedule automatically sync back to their original project notes in real-time as you type or save.
-* **📅 Smart Priority & D-Day Sorting**: Automatically calculates D-Day badges (`[D]`, `[!]`) from custom markdown checkboxes and date emojis (`📅 2026-07-28`), sorting tasks by urgency.
-* **📊 Active-First Table Alignment & Strict Cell Rules**: 
-  - **Active Routines First**: Currently active routine columns are sorted to the left (front) of checklist tables for high visibility.
-  - **Inactive Routines Last**: Discontinued/deleted routines are automatically moved to the far right to preserve historical data integrity.
-  - **Cell Value Rules**: Today & future cells of active routines remain **clean empty spaces (` `)** for active input; past unrecorded cells and inactive routine cells are filled with **`-`**.
-* **🌤️ One-Click Daily Reset**: Archives checked routine counts into master statistics tables, resets routines for tomorrow, and cleans up completed tasks automatically.
-* **🗂️ 1-Click System Setup (PARA & Zettelkasten)**: Instantly generates complete PARA (`0. Inbox`, `1. Project`, `2. Area`, `3. Resource`, `4. Archive`) and Zettelkasten (`5. Zettelkasten`) folder structures along with built-in user guides.
-* **🧩 Header-Integrated Action Widgets**: Sleek action buttons embedded right next to markdown headers (`# Todo`, `# Routine`, `# Checklist`, `# Execution`). Zero HTML clutter in your notes!
+* **⚙️ One-Stop GUI Modals**: Edit Todo items, Routines, and Project Execution tasks via dedicated modal windows (`# Todo ⚙️`, `# Routine ⚙️`, `# Project ⚙️`).
+* **🔄 Real-time Bi-directional Auto-Sync**: Tasks created or updated in your daily schedule or project modals automatically sync back to original project notes in real-time.
+* **🎨 Clean D-Day Urgency Borders & Date Inheritance**: Clean border visualization (🔴 Today/Overdue, 🟡 D-1, 🟢 D-2, 🔵 D-3) without text badge clutter. Indented child tasks automatically inherit parent deadlines.
+* **📝 Freely Editable `# Plan` Section**: Outline your project roadmaps and analysis freely under `# Plan`. Click the **`⬆️` (Copy to Execution) button** to promote planned tasks to top `# Execution` section instantly.
+* **🌤️ One-Click Daily Reset & Monthly Archive**: Archives checked routine counts, resets checklists for tomorrow, and generates monthly performance report notes with a single click.
+
+---
+
+## 📊 Project Dashboard & Checklist Matrix
+
+![Project Dashboard & Active Checklist Table](assets/project_checklist_dashboard.png)
+
+*Dynamic project progress tracking bar, callouts, and active-first routine checklist tables.*
 
 ---
 
 ## 📖 Complete User Guide
 
-### 1. Initial Setup (First-time Users)
-
-#### Step 1. Required & Recommended Plugins
-1. **[Required] Dataview (by blacksmithgu)**: Essential for dynamic real-time rendering of project tasks inside your schedule notes.
-2. **[Recommended] Periodic Notes & Calendar**: For seamless creation and navigation of daily and weekly schedule notes.
-
-#### Step 2. Generate Folder Structure & Guides
-* Navigate to Obsidian Settings > `MyWorld Task Manager`.
-* Click **`[Create PARA Structure]`**: Creates `0. Inbox`, `1. Project`, `2. Area`, `3. Resource`, `4. Archive` folders and user manuals.
-* Click **`[Create Zettelkasten Structure]`**: Creates `5. Zettelkasten` (`01.Fleeting`, `02.Literature`, `03.Permanent`) folders.
-
-#### Step 3. Generate Templates & Schedule Note
-* Click **`[Create Project Plan Template]`**: Generates `01.Project Plan Template.md` and its guide note inside your templates directory.
-* Click **`[Create Schedule Management Note]`**: Creates your main control tower document (`Schedule Management.md` or `스케줄 관리.md`).
+### 1. Daily Schedule Management (Control Tower)
+* **Todo Manager (`# Todo ⚙️`)**: Click the ⚙️ icon to open popup modal. Edit task text freely, set deadlines (`📅 YYYY-MM-DD`), reorder tasks via `Alt + Up/Down`, and indent child tasks via `Tab / Shift+Tab`.
+* **Routine Manager (`# Routine ⚙️`)**: Click the ⚙️ icon to add/delete/reorder routine categories and items safely across all archive notes.
+* **Daily Reset (`☀️`) & Monthly Archive (`🗂️`)**: Archive today's progress and generate monthly performance report notes with one click.
 
 ---
 
-### 2. Header Action Widgets & Controls
-
-Access system commands directly via the sleek action widgets embedded next to markdown headers in your notes:
-
-| Header Location | Icon | Action Button Name | Primary Function & Role |
-|---|:---:|---|---|
-| **`# Routine`** (`# 루틴`) | ⚙️ | **Routine Manager** | Opens GUI modal to add/delete/reorder routine categories & items. Syncs across all archive notes upon saving. |
-| **`# Routine`** (`# 루틴`) | ☀️ | **Daily Reset** | Archives today's routine checks into master stats, resets checklists for tomorrow, and archives completed tasks. |
-| **`# Todo`** | ✏️ | **Quick Capture** | Opens popup to quickly enter new tasks, injected under `# Todo` with automatic D-Day sorting. |
-| **`# Todo`** | 📋 | **Fleeting Memo** | Instantly creates and opens a blank idea memo note under `5. Zettelkasten/01.Fleeting`. |
-| **`# Checklist`** (`# 체크리스트`) | 🗂️ | **Monthly Archive** | Aggregates the current month's routine achievement stats into an archive report note under `4. Archive`. |
-| **`# Execution`** (`# 실행`) | ✏️ | **Quick Add Task** | Injects an immediate execution task inside a project note's `# Execution` section. |
-| **`# Plan`** (`# 계획`) | ⬆️ | **Copy to Execution** | Copies a planned task up to the top `# Execution` section, exposing it instantly to the main schedule dashboard. |
+### 2. Project Notes Workflow
+* **Project Task Manager (`# Project ⚙️`)**: Click the ⚙️ icon next to `# Project` on your schedule note. View all active project execution tasks ordered by urgency level (🔥 > 🚨 > ⚠️ ...), edit tasks, and perform one-click batch save & bi-directional sync.
+* **`# Plan` Section**: Freely write roadmap steps, technical analysis, and notes. Click the **`⬆️` (Copy to Execution) button** next to any uncompleted task to copy it up to the `# Execution` section for main schedule visibility.
+* **`# Execution` Section**: Holds active tasks, synced bi-directionally in real-time with main schedule notes.
 
 ---
 
-### 3. Routine Management & Checklist Rules
+### 3. Routine Analytics & Performance Graphs
 
-1. **Using the ⚙️ Routine Manager Modal**:
-   - Click the ⚙️ icon next to `# Routine` (or `# 루틴`).
-   - Add new categories (e.g., `Meditation`, `Sleep`), add items, delete unused ones, change order via ▲/▼ buttons, or update your affirmation text.
-   - Click **[Save]**: All changes safely update the routine callout, master checklist table, top mini-table, and **all weekly/monthly archive notes under `4. Archive`** without data loss.
+![Routine Analytics & Performance Summary](assets/stats_analytics_dashboard.png)
 
-2. **Checklist Table Alignment & Cell Filling Rules**:
-   - **Active-First Column Alignment**: Active routines are placed on the left side of the table; discontinued routines are moved to the far right (`| Date | Active 1 | Active 2 | ... | Inactive 1 | Inactive 2 |`).
-   - **Today & Future Cells**: Left as **clean empty spaces (` `)** for user input.
-   - **Past Unrecorded & Inactive Cells**: Filled with **`-`** to indicate unstarted or discontinued states.
-   - **Deficient Item Highlighting (`==`)**: During Daily Reset, category headers with achievement rates below 50% automatically receive `==Category Name==` warning highlights.
+*Period-based achievement progress bars and monthly performance summaries.*
 
 ---
 
-### 4. Project Notes & Bi-directional Sync Workflow
-
-1. **Create a Project Note**: Place a new project note in `1. Project/01.List` (or use the built-in template).
-2. **Plan to Execution (⬆️ Button)**: Write tasks under `# Plan`. Click the ⬆️ button next to a task to copy it up to `# Execution`.
-3. **Bi-directional Auto-Sync**:
-   - Tasks under `# Execution` automatically appear on the main Schedule note's Dataview dashboard.
-   - Checking off or modifying a task anywhere (Schedule note or Project note) updates the original note in real-time.
-4. **D-Day Inheritance**:
-   - Add a date emoji (e.g., `📅 2026-08-15`) to a task for D-Day calculation.
-   - Indented child tasks automatically inherit their parent's target deadline.
+### 4. D-Day Urgency & Inheritance Rules
+* **Border Visualization**: Clean border colors based on target deadline diff (🔴 Today/Overdue, 🟡 D-1, 🟢 D-2, 🔵 D-3, ⚪ Default).
+* **Date Inheritance**: Indented child tasks automatically inherit target deadlines from their direct parent tasks for consistent urgency border colors.
 
 ---
 
 ## 🛠️ Customization & Signpost Rules (Do & Don't)
 
 ### ⛔ [Strictly Prohibited] Do not alter these signposts
-Modifying these will break automatic parsing and synchronization:
+Modifying these headers will break automatic parsing and synchronization:
 1. **Major Section Headers**: `# Todo`, `# Routine` (`# 루틴`), `# Checklist` (`# 체크리스트`), `# Stats` (`# 통계`), `# Project` (`# 프로젝트`), `# Plan` (`# 계획`), `# Execution` (`# 실행`).
 2. **Task Block IDs**: The 6-character identifier at the end of synced lines (e.g., `^a1b2c3`).
-3. **Table Pipe Symbols (`|`)**: Table skeleton structure delimiters.
 
 ### ✅ [Freely Editable] Feel free to customize
-1. **Routine Structure**: Add, remove, rename, or reorder freely via the ⚙️ Routine Manager Modal.
-2. **Task Text & Checkbox States**: Edit task text or toggle states (`[ ]`, `[x]`, `[-]`, `[/]`) freely.
-3. **Project Details & Notes**: Add meeting notes, references, or details under `# Details` or `# Overview`.
+1. **Routine & Task Lists**: Add, remove, rename, or reorder freely via dedicated ⚙️ GUI Modals.
+2. **Project Plans**: Write detailed meeting notes, technical analysis, and roadmaps under `# Plan` or `# Details`.
 
 ---
 
 ## 🚨 Frequently Asked Questions (FAQ)
 
-* **Q. Daily Reset (☀️) threw an error!**
-  * **A.** A required signpost header (like `# Todo` or `# Routine`) might be missing or renamed. The built-in **Transaction Rollback** feature safely restores your file. Fix the header name and try again.
+* **Q. Does this plugin support Korean?**
+  * **A.** Yes! It natively supports both **English** and **Korean** based on your Obsidian language settings.
 * **Q. Do routine updates propagate to past archive notes?**
-  * **A.** Yes! From version `1.0.99` onwards, saving in the Routine Manager Modal automatically propagates column alignment and new categories across all weekly and monthly archive files under `4. Archive`.
-* **Q. Do I still need Templater or Advanced URI?**
-  * **A.** No! This plugin operates 100% natively via CodeMirror 6 header widgets. No external URI dependencies or HTML clutter required.
+  * **A.** Yes! Saving in the Routine Manager Modal automatically propagates column alignment and new categories across all weekly and monthly archive files under `4. Archive`.
 
 ---
 *Created by KJH. For questions or support, please visit the developer feedback link in the plugin settings.*

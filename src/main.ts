@@ -23,6 +23,7 @@ import { EventController } from "./controllers/EventController";
 import { RoutineManagerModal } from "./ui/RoutineManagerModal";
 import { RoutineSyncEngine } from "./RoutineSyncEngine";
 import { TodoManagerModal, TodoItem } from "./ui/TodoManagerModal";
+import { ProjectTaskManagerModal } from "./ui/ProjectTaskManagerModal";
 
 import { t, translations } from "./i18n";
 
@@ -1528,7 +1529,26 @@ ${checklistTable}
             case "routine-manager":
                 void this.openRoutineManagerModal();
                 break;
+            case "project-manager":
+                this.openProjectTaskManagerModal();
+                break;
         }
+    }
+
+    // 6. 프로젝트 실행 항목 ⚙️ 관리 모달 메서드
+    openProjectTaskManagerModal(): void {
+        new ProjectTaskManagerModal(
+            this.app,
+            this.settings.language,
+            this.utils,
+            this.synchronizer,
+            async () => {
+                const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
+                if (scheduleFile && scheduleFile instanceof TFile) {
+                    await this.synchronizer.syncMainScheduleNote(scheduleFile, true);
+                }
+            }
+        ).open();
     }
 
     async openRoutineManagerModal() {

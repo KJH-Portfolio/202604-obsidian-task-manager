@@ -2,7 +2,7 @@ import { App, MarkdownView, TFile, setIcon } from "obsidian";
 import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 
-export type ScheduleHeaderActionType = "todo-manager" | "daily-reset" | "monthly-archive" | "routine-manager";
+export type ScheduleHeaderActionType = "todo-manager" | "daily-reset" | "monthly-archive" | "routine-manager" | "project-manager";
 
 class ScheduleHeaderBtnWidget extends WidgetType {
     constructor(
@@ -190,6 +190,21 @@ export function buildScheduleHeaderButtonsExtension(
                                     "archive",
                                     isKo ? "월간 아카이브 생성" : "Create Monthly Archive",
                                     () => onAction(activeFile, "monthly-archive")
+                                ),
+                                side: 1
+                            })
+                        );
+                    }
+                    // 4. # Project / # 프로젝트 ➔ ⚙️ 프로젝트 실행 항목 관리
+                    else if (/^#\s+(Project|프로젝트)$/i.test(text)) {
+                        builder.add(
+                            line.to, line.to,
+                            Decoration.widget({
+                                widget: new ScheduleHeaderBtnWidget(
+                                    "project-manager",
+                                    "settings",
+                                    isKo ? "프로젝트 실행 항목 관리" : "Manage Project Tasks",
+                                    () => onAction(activeFile, "project-manager")
                                 ),
                                 side: 1
                             })

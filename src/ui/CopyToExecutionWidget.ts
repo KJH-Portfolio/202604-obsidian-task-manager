@@ -153,14 +153,21 @@ export function buildCopyToExecutionButtonExtension(app: App, getPlugin: () => {
                     const match = text.match(/^(?:\s*>\s*)*\s*[-*+]\s+\[(.)\]/);
                     
                     if (match && match[1] === " ") {
-                        let header = "";
+                        let isInPlanSection = false;
+                        // 현재 라인부터 1번 라인까지 위로 역추적하며 가장 가까운 # (H1) 헤더 탐색
                         for (let i = line.number; i > 0; i--) {
-                            const l = view.state.doc.line(i).text;
-                            const m = l.match(/^#\s+(.*)$/);
-                            if (m) { header = m[1].trim().toLowerCase(); break; }
+                            const l = view.state.doc.line(i).text.trim();
+                            const m = l.match(/^#\s+(.*)$/); // H1 (# ) 탐색
+                            if (m) {
+                                const h1Title = m[1].trim().toLowerCase();
+                                if (h1Title === "계획" || h1Title === "plan") {
+                                    isInPlanSection = true;
+                                }
+                                break; // 최상위 H1을 만나면 탐색 종료
+                            }
                         }
                         
-                        if (header === "계획" || header === "plan") {
+                        if (isInPlanSection) {
                             builder.add(
                                 line.to, line.to,
                                 Decoration.widget({

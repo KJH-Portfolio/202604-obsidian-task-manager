@@ -174,11 +174,8 @@ export class RoutineManagerModal extends Modal {
             });
         });
 
-        // 4. 하단 저장 / 취소 버튼
+        // 4. 하단 저장 버튼
         const footerEl = contentEl.createDiv({ cls: "routine-modal-footer" });
-
-        const cancelBtn = footerEl.createEl("button", { text: isKo ? "취소" : "Cancel" });
-        cancelBtn.addEventListener("click", () => this.close());
 
         const saveBtn = footerEl.createEl("button", {
             text: isKo ? "💾 저장 및 양식 동기화" : "💾 Save & Sync Structure",

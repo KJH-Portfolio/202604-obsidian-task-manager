@@ -1,32 +1,26 @@
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 import { PluginSettings } from "./settings";
 import { TaskUtils } from "./TaskUtils";
-import { DateManager } from "./DateManager";
-import { FileManager } from "./FileManager";
 import { t } from "./i18n";
 
 export class TemplateHelper {
-    app: App;
-    settings: PluginSettings;
-    utils: TaskUtils;
-    dateManager: DateManager;
-    fileManager: FileManager;
+    private app: App;
+    private settings: PluginSettings;
+    private utils: TaskUtils;
 
-    constructor(app: App, settings: PluginSettings, utils: TaskUtils, dateManager: DateManager, fileManager: FileManager) {
+    constructor(app: App, settings: PluginSettings, utils: TaskUtils) {
         this.app = app;
         this.settings = settings;
         this.utils = utils;
-        this.dateManager = dateManager;
-        this.fileManager = fileManager;
     }
 
+    public updateSettings(settings: PluginSettings) {
+        this.settings = settings;
+    }
 
-    replacePlaceholder(templateText: string, replacements: Record<string, string>): string {
-        let content = templateText;
-        for (const key of Object.keys(replacements)) {
-            const value = replacements[key];
-            content = content.replace(new RegExp(`\\{\\{(?:\\s*)${key}(?:\\s*)\\}\\}`, 'g'), String(value));
-        }
+    public getScheduleTemplateContent(isKo: boolean): string {
+        let content = isKo ? defaultScheduleText_ko : defaultScheduleText_en;
+        content = content.replace("{{YEAR}}", new Date().getFullYear().toString());
         return content;
     }
 
@@ -125,8 +119,6 @@ for (let p of pages) {
 
         if (badge !== "") {
             badgeMap.set(t.line, { badge, color });
-            // t.text를 수정하면 원본 파일 매칭에 실패하여 클릭 시 업데이트가 안되는 버그 발생
-            // 따라서 시각적 렌더링에만 관여하는 t.visual 속성을 사용합니다.
             t.visual = \`<span><span class="dday-virtual-badge" style="color: \${color};">\${badge}</span>\` + t.text + \`</span>\`;
         }
     });
@@ -191,7 +183,7 @@ if (projects.length > 0) {
     html += \`</div>\`;
     dv.span(html);
 
-    // 4. 상호작용 가능한 태스크 리스트 UI 생성 (콜아웃 디자인 + Dataview TaskList)
+    // 4. 상호작용 가능한 태스크 리스트 UI 생성
     projects.forEach(p => {
         if (p.planTasksTotal === 0 && p.execTasks.length === 0) return;
         
@@ -201,7 +193,6 @@ if (projects.length > 0) {
         else if (p.sortPri === 2) { calloutType = "warning"; icon = "⚠️"; }
         else if (p.sortPri === 100) { calloutType = "success"; icon = "🏁"; }
         
-        // 옵시디언 네이티브 콜아웃 스타일로 헤더 생성 (제목 클릭 시 해당 노트로 이동)
         let linkHtml = \`<a data-href="\${p.link.path}" href="\${p.link.path}" class="internal-link" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">\${p.noteName}</a>\`;
         let headerHtml = \`<div class="callout" data-callout="\${calloutType}" style="margin-top: 20px; margin-bottom: 10px;">
   <div class="callout-title" dir="auto">
@@ -211,9 +202,7 @@ if (projects.length > 0) {
         dv.span(headerHtml);
         
         if (p.execTasks.length > 0) {
-            // dv.taskList를 사용하여 렌더링하면 체크박스 클릭(상호작용)이 작동합니다.
             dv.taskList(p.execTasks, false);
-            // 들여쓰기를 위해 방금 렌더링된 <ul> 태그에 스타일 적용
             if (dv.container.lastElementChild) {
                 dv.container.lastElementChild.style.marginLeft = "25px";
                 dv.container.lastElementChild.style.marginBottom = "15px";
@@ -223,7 +212,6 @@ if (projects.length > 0) {
         }
     });
 
-    // 태스크 글자를 클릭해도 체크박스가 토글되도록 이벤트 리스너와 스타일 주입
     setTimeout(() => {
         if (!dv.container.dataset.clickBound) {
             dv.container.dataset.clickBound = "true";
@@ -260,8 +248,7 @@ if (projects.length > 0) {
 수정일: "2000-01-01T00:00"
 ---
 # 실행
-- [ ] \`# 실행\` 헤더 옆의 ✏️ 버튼을 누르거나 이곳에 임시 작업 및 아이디어를 즉시 입력하세요. 📅
-- [ ] 혹은 하단의 '계획(Plan)' 구역에서 ⬆️ 버튼을 눌러 핵심 중요 태스크를 이곳으로 보내면 메인 스케줄에 즉시 연동됩니다. 📅
+- [ ] 메인 스케줄의 \`# Project ⚙️\` 버튼 팝업을 열거나, 하단의 '계획' 구역에서 ⬆️ 버튼을 눌러 중요한 핵심 태스크를 이곳으로 전달하세요. 📅
 
 # 개요
 - 기한 : 📅 2099-12-31 ~ 📅 2099-12-31
@@ -269,12 +256,11 @@ if (projects.length > 0) {
 
 # 계획
 > **${t("progress_label", this.settings.language)}**: **${t("progress_need_write", this.settings.language)}**
-- [ ] 프로젝트의 구체적인 실행 계획을 행동(Task) 단위로 쪼개어 이곳에 작성하세요. 📅 2026-07-14 ^step1
-- [ ] 작성한 태스크 옆에 나타나는 ⬆️(실행 복사) 버튼을 클릭하면 최상단 \`# 실행\` 영역으로 쉽게 올려보낼 수 있습니다. ^step2
-- [ ] 태스크 끝에 생성되는 고유 ID(\`^step3\`)를 통해 흩어진 태스크들의 진행률이 이 프로젝트 노트로 실시간 통합됩니다. ^step3
+- [ ] 이곳은 프로젝트의 세부 로드맵, 분석 항목, 백엔드/프론트엔드 태스크를 자유롭게 수립하고 수정하는 공간입니다. 📅 2026-07-14 ^step1
+- [ ] 항목 우측의 ⬆️(복사) 버튼을 클릭하면 상단 \`# 실행\` 영역으로 빠르게 올려보내 메인 스케줄 노트에 즉시 노출됩니다. ^step2
 
 # 세부 사항
-이곳에는 프로젝트의 세부적인 메모, 회의록, 참고 자료 링크 등을 자유롭게 서술하세요.
+이곳에는 프로젝트의 세부 메모, 회의록, 아키텍처 분석 자료, 참고 링크 등을 자유롭게 서술하세요.
 `;
 
         const defaultProjectText_en = `---
@@ -282,21 +268,19 @@ Created: "2000-01-01T00:00"
 Modified: "2000-01-01T00:00"
 ---
 # Execution
-- [ ] Click the ✏️ button next to the \`# Execution\` header or jot down immediate tasks here. 📅
-- [ ] Or, click the ⬆️ button in the 'Plan' section below to send critical tasks here. These tasks will also instantly sync to your main schedule. 📅
+- [ ] Open the \`# Project ⚙️\` popup on your main schedule, or click the ⬆️ button under 'Plan' below to send tasks here. 📅
 
 # Overview
 - Deadline : 📅 2099-12-31 ~ 📅 2099-12-31
-- Goal : Write a clear, one-line objective that this project ultimately aims to achieve.
+- Goal : Write a clear, one-line objective that this project aims to achieve.
 
 # Plan
 > **Progress**: **🚨 Needs writing!**
-- [ ] Break down your specific execution plans into actionable tasks here. 📅 2026-07-14 ^step1
-- [ ] Click the ⬆️ (Copy to Execution) button that appears next to the task to easily send it to the \`# Execution\` section at the top. ^step2
-- [ ] The unique ID (\`^step3\`) at the end of each task ensures that progress from scattered tasks is integrated back here in real-time. ^step3
+- [ ] Freely document and edit your roadmap, analysis tasks, and milestones here. 📅 2026-07-14 ^step1
+- [ ] Click the ⬆️ (Copy to Execution) button next to a task to send it to \`# Execution\` for main schedule visibility. ^step2
 
 # Details
-Freely document detailed notes, meeting minutes, reference links, and other project-related information here.
+Freely write notes, reference materials, architecture docs, and meeting minutes here.
 `;
 
         if (!this.app.vault.getAbstractFileByPath(projectPath_ko)) await this.app.vault.create(projectPath_ko, defaultProjectText_ko);
@@ -305,42 +289,62 @@ Freely document detailed notes, meeting minutes, reference links, and other proj
         const projectGuidePath_ko = `${templatesDir}/02.프로젝트_노트_작성_가이드.md`;
         const projectGuidePath_en = `${templatesDir}/02.Project_Note_Guide.md`;
 
-        const projectGuideText_ko = `# 📘 프로젝트 노트 작성 가이드
+        const projectGuideText_ko = `# 📘 프로젝트 노트 작성 및 관리 가이드 (v1.0.101)
 
-이 문서는 프로젝트 노트에서 **'어떻게 태스크를 쪼개고, 어떻게 메인 스케줄과 연동시키는지'**를 알려주는 상세 사용법 가이드입니다.
+이 문서는 프로젝트 노트에서 **'어떻게 자유롭게 계획을 수립하고, 모달 팝업으로 메인 스케줄과 손쉽게 연동하는지'**를 알려주는 가이드입니다.
 
 ---
 
-## 🎯 핵심 연동 원리 (식별자 맵핑, ⬆️ 복사 & ✏️ 빠른 추가)
-1. **\`# 실행\` 헤더 ✏️ 빠른 추가 버튼**: 최상단 \`# 실행\` 헤더 옆에 위치한 **✏️ (빠른 추가) 버튼**을 클릭하여 당장 쳐내야 할 태스크를 즉시 생성할 수 있습니다.
-2. **\`계획(Plan)\` ⬆️ 복사 버튼**: 프로젝트 노트 하단의 **'계획(Plan)'** 구역에 체크박스를 만들고 글을 쓰면, 플러그인이 자동으로 문장 끝에 \`^abc12\` 와 같은 **고유 식별자(ID)**를 부여해 줍니다. 
-   - 작성된 계획 태스크 옆에 나타나는 **⬆️ (실행 탭으로 복사) 버튼**을 클릭하면 해당 태스크가 최상단의 **\`# 실행\` 구역으로 자동 복사**되며, 메인 스케줄 노트 대시보드에 즉시 노출됩니다.
-3. **양방향 완료 동기화**: 스케줄 화면이나 프로젝트 내에서 그 할 일을 체크(완료)하는 순간, 프로젝트 노트의 원본 태스크도 **자동으로 완료 처리**되며 프로젝트의 총 **진행률(%)**이 즉시 반영됩니다!
+## 🎯 핵심 사용 방법 (원스톱 ⚙️ 모달 & ⬆️ 계획 복사)
 
-## 💡 요약: 예쁘게 쓰는 방법
-- **# 개요**: 언제부터 언제까지 할 건지, 가장 큰 목표가 뭔지 적어두세요. 날짜는 📅(달력) 아이콘을 사용합니다 (예: \`- 기한 : 📅 2026-07-01 ~ 📅 2026-12-31\`).
-- **# 계획**: 여기에 해야 할 일들을 쭉 나열하세요. (자동으로 \`^id\` 식별자가 생성됩니다)
-- **# 실행**: ✏️ 버튼을 눌러 빠른 태스크를 추가하거나, ⬆️ 버튼을 통해 '계획'에서 올려보낸 중요한 태스크들을 수집하고 관리하세요.
-- **# 세부 사항**: 관련된 메모나 링크, 긴 회의록 등을 편하게 적어두시면 됩니다.
+1. **스케줄 문서는 팝업 모달로 100% 원스톱 수정**:
+   - 스케줄 문서의 마크다운을 직접 고칠 필요 없이, 메인 스케줄의 **\`# Project ⚙️\` 버튼**을 누르면 모든 활성 프로젝트의 실행 항목이 한눈에 세로로 나열됩니다.
+   - 팝업에서 실행 항목을 손쉽게 추가/수정/삭제/순서 이동하고 **\`[💾 프로젝트 저장 및 동기화]\`** 버튼 하나로 일괄 반영합니다.
+
+2. **\`# 계획\` (Plan) 구역 — 자유로운 로드맵 수립**:
+   - 프로젝트 하단의 **\`# 계획\`** 영역은 사용자가 세부 분석 항목, 개발 단계, 백엔드/프론트엔드 작업 등을 **자유롭게 수립하고 고치는 전용 공간**입니다.
+   - 계획 항목 우측에 붙은 **⬆️ (실행 탭 복사) 버튼**을 누르면 최상단 **\`# 실행\` 탭으로 자동 복사**되어 메인 스케줄 노트에 즉시 노출됩니다.
+
+3. **D-Day 테두리 시각화 & 부모 마감일 상속**:
+   - 지저분한 문구 없이 **텍스트 박스 테두리 색상만** exact D-Day 색상(🔴 오늘/지연, 🟡 D-1, 🟢 D-2, 🔵 D-3 등)으로 깔끔하게 연동됩니다.
+   - 자식 태스크는 **직계 부모 태스크의 마감일을 자동으로 역추적 상속**받아 동일한 긴급도 테두리가 적용됩니다.
+
+---
+
+## 💡 요약: 영역별 역할
+- **# 개요**: 기한(\`- 기한 : 📅 2026-07-01 ~ 📅 2026-12-31\`) 및 핵심 목표를 적는 곳입니다.
+- **# 계획**: 로드맵과 세부 작업을 자유롭게 나열하고 수정하는 공간입니다. (⬆️ 버튼으로 실행 탭 복사)
+- **# 실행**: 메인 스케줄의 **\`# Project ⚙️\` 모달**을 통해 원스톱으로 관리되는 실천 작업 구역입니다.
+- **# 세부 사항**: 회의록, 아키텍처 분석, 참고 링크 등을 편하게 적어두시면 됩니다.
 `;
 
-        const projectGuideText_en = `# 📘 Project Note Guide
+        const projectGuideText_en = `# 📘 Project Note & Task Management Guide (v1.0.101)
 
-This document explains **how to break down tasks and sync them with your main schedule** in a Project Note.
+This document explains **how to freely plan roadmap tasks and manage execution via GUI popups**.
 
 ---
 
-## 🎯 Core Sync Principle (ID Mapping, ⬆️ Copy & ✏️ Quick Add)
-1. **\`# Execution\` ✏️ Quick Add Button**: Click the **✏️ (Quick Add) button** next to the top \`# Execution\` header to instantly create immediate tasks.
-2. **\`Plan\` ⬆️ Copy Button**: When you create a checkbox in the **'Plan'** section at the bottom of a project note, the plugin automatically assigns a **unique ID** like \`^abc12\` at the end.
-   - Click the **⬆️ (Copy to Execution) button** next to the planned task to copy it to the \`# Execution\` section at the top, which will instantly appear on your main schedule dashboard.
-3. **Bi-directional Sync**: Checking off that task on your schedule or project note **automatically completes the original task** and updates the total **progress (%)** instantly!
+## 🎯 Core Principles (One-stop ⚙️ Modal & ⬆️ Plan Copy)
 
-## 💡 Summary: Best Practices
-- **# Overview**: Write down the start/end dates and your main goal. Use the 📅 (calendar) icon for dates.
-- **# Plan**: List everything you need to do here. (IDs will generate automatically).
-- **# Execution**: Click the ✏️ button to add immediate tasks, or manage critical tasks sent up from 'Plan' via the ⬆️ button.
-- **# Details**: Freely write related notes, links, or long meeting minutes here.
+1. **One-stop GUI Schedule Management**:
+   - No need to edit raw markdown text manually. Click the **\`# Project ⚙️\` button** on your schedule note to manage all active project execution tasks in a single popup window.
+   - Easily add, edit, delete, or reorder tasks, and click **\`[Save & Sync]\`** to update all notes instantly.
+
+2. **\`# Plan\` Section — Freely Editable Roadmap**:
+   - The **\`# Plan\`** area is your personal space to freely outline milestones, technical analysis, and roadmap steps.
+   - Click the **⬆️ (Copy to Execution) button** next to any planned task to copy it up to the **\`# Execution\`** section for main schedule visibility.
+
+3. **D-Day Border Visualization & Date Inheritance**:
+   - Clear urgency border colors (🔴 Today/Overdue, 🟡 D-1, 🟢 D-2, 🔵 D-3) without clutter.
+   - Indented child tasks automatically inherit their parent's deadline for consistent border colors.
+
+---
+
+## 💡 Summary: Section Roles
+- **# Overview**: Write target deadlines and main objectives here.
+- **# Plan**: Freely outline and edit detailed roadmaps here (click ⬆️ to copy to Execution).
+- **# Execution**: Managed seamlessly via the **\`# Project ⚙️\` modal** on your main schedule.
+- **# Details**: Document meeting notes, links, and reference materials freely.
 `;
 
         if (!this.app.vault.getAbstractFileByPath(projectGuidePath_ko)) await this.app.vault.create(projectGuidePath_ko, projectGuideText_ko);
@@ -386,29 +390,19 @@ Among the filtered information from the Inbox, items that involve **'a certain p
 
 ### 2️⃣ 2. Area
 - **Definition**: Areas with no deadlines, but which require **continuous maintenance and management of standards** in life or work.
-- **💡 Usage Principles**
-  - **Continuity**: Handles areas without a clear end point, such as health management, financial planning, personal study routines, and relationships.
-  - **Check Management**: Write notes to set baselines to periodically check and prevent life balance and routines from collapsing.
 
 ### 3️⃣ 3. Resource
 - **Definition**: Interests or external knowledge databases that are not immediately needed for current tasks, but **may be useful in the future**.
-- **💡 Usage Principles**
-  - **Reference Materials**: Collect book summaries, lecture notes, development code snippets, template forms, etc.
-  - **Knowledge Exploration**: Use as a knowledge search warehouse when researching or developing specific topics later.
 
 ### 4️⃣ 4. Archive
 - **Definition**: A historical repository preserving items from the above three folders that are **no longer active or have been completed**.
-- **💡 Usage Principles**
-  - **Organization Targets**: Store completed projects, discarded plans, and area resources that are no longer of interest.
-  - **Preservation Value**: Isolate elements that are a waste to delete but distract your attention right now to reduce cognitive overload.
-  - **Routine & Schedule Stats**: Stores weekly/monthly routine checklist archive notes (e.g. \`2026-W31\`, \`2026-07\`) automatically created by the plugin.
 
 ---
 
-## ⚙️ Routine & Schedule Management Controls
-- **⚙️ Routine Manager Modal**: Click the ⚙️ button next to \`# Routine\` to safely manage categories and items without breaking markdown syntax.
-- **🌤️ Daily Reset**: Click ☀️ next to \`# Routine\` to archive daily progress and reset checklists for tomorrow.
-- **🗂️ Monthly Archive**: Click 🗂️ next to \`# Checklist\` to generate a monthly stats report.
+## ⚙️ One-Stop ⚙️ Modal Controls
+- **⚙️ Todo Modal**: Click ⚙️ next to \`# Todo\` to manage tasks, order, dates, and indents without touching raw markdown.
+- **⚙️ Routine Modal**: Click ⚙️ next to \`# Routine\` to safely manage routine categories and items.
+- **⚙️ Project Modal**: Click ⚙️ next to \`# Project\` to view all active project tasks at a glance, edit them, and sync instantly.
 `;
 
         const guideContent_ko = `# 🧠 제2의 두뇌: 통합 지식 관리 시스템 가이드
@@ -422,45 +416,25 @@ Among the filtered information from the Inbox, items that involve **'a certain p
 지금 이 문서를 보고 계신 \`0. Inbox\` 폴더는 **모든 날것의 생각과 메모들이 가장 먼저 거쳐가는 대기소(정거장)**입니다.
 - **💡 활용 원칙**
   - **빠른 수집**: 형식을 따지지 않고 생각나는 메모, 웹 클리핑 자료 등을 무조건 여기에 수집합니다.
-  - **주기적 비우기**: 하루에 한 번 또는 일주일에 한 번씩 이 폴더의 노트들을 검토하여 적절한 폴더(Project, Area, Resource, Zettelkasten 등)로 이동시키고 이 폴더는 비워진 상태를 유지합니다.
+  - **주기적 비우기**: 하루에 한 번 또는 일주일에 한 번씩 이 폴더의 노트들을 검토하여 적절한 폴더로 이동시킵니다.
 
 ---
 
 ## 🏗️ 2단계: 분류 및 행동 (PARA 시스템)
-Inbox에서 걸러진 정보 중 **'어떤 목적이나 행동'**이 수반되는 항목들은 Tiago Forte의 PARA 프레임워크에 따라 4가지로 분류됩니다.
 
 ### 1️⃣ 1. Project (프로젝트)
 - **정의**: 명확한 목표와 **데드라인(마감일)**이 있는 단기적인 작업들.
 - **💡 활용 원칙**
-  - **단기적 집중**: 구체적인 완성 일정이 있는 프로젝트들을 독립 노드로 만들어 관리합니다.
-  - **연동 관리**: 할 일 목록 및 D-Day 마커를 연동하여 적극적으로 마감을 추적합니다.
-  - **아카이브 이관**: 프로젝트가 완료되거나 중단되면 즉시 \`4. Archive\` 폴더로 이동시킵니다.
-
-### 2️⃣ 2. Area (책임 영역)
-- **정의**: 데드라인은 없지만, 내 삶이나 업무에서 **지속적으로 기준을 유지하고 관리해야 하는** 영역들.
-- **💡 활용 원칙**
-  - **지속성**: 건강 관리, 재정 계획, 개인 공부 루틴, 인간관계 등 명확한 종결 시점이 없는 영역을 다룹니다.
-  - **체크 관리**: 주기적으로 확인하여 삶의 밸런스와 루틴이 무너지지 않도록 기준선을 잡는 노트를 작성합니다.
-
-### 3️⃣ 3. Resource (자원/지식)
-- **정의**: 현재 진행 중인 작업에 당장 필요하진 않지만, **미래에 유용하게 쓰일 수 있는** 관심사나 외부 지식 데이터베이스.
-- **💡 활용 원칙**
-  - **참고 자료**: 책 요약, 강의 정리 노트, 개발 소스코드 스니펫, 템플릿 양식 등을 모아둡니다.
-  - **지식 탐색**: 나중에 특정 주제를 연구하거나 개발할 때 지식 검색 창고로 활용합니다.
-
-### 4️⃣ 4. Archive (보관소)
-- **정의**: 위 세 가지 폴더에서 **더 이상 활성화되지 않거나 종료된 항목**들을 보존하는 역사 기록소.
-- **💡 활용 원칙**
-  - **정리 대상**: 완료된 프로젝트, 폐기된 계획, 관심사가 멀어진 영역 리소스 등을 보관합니다.
-  - **아카이브 자동 적재**: 일간 마감(☀️) 및 월간 아카이브(🗂️) 실행 시 생성되는 주간/월간 루틴 통계 노트(예: \`2026-W31.md\`, \`2026-07.md\`)가 이곳에 안전하게 자동 보관됩니다.
+  - 메인 스케줄의 **\`# Project ⚙️\` 버튼 팝업**을 이용하여 100% 원스톱으로 실행 항목을 파악하고 일괄 동기화합니다.
+  - 프로젝트 노트 하단의 **\`# 계획\`** 구역은 로드맵과 세부 분석 내용을 **자유롭게 수립하고 수정**하며, **\`⬆️\` 복사 버튼**으로 실행 탭에 빠르게 전송합니다.
 
 ---
 
-## ⚙️ 헤더 버튼 조작법 요약
-- **⚙️ 루틴 편집 모달**: \`# 루틴\` 옆 ⚙️ 버튼을 클릭하여 양식 깨짐 없이 안전하게 루틴 카테고리/항목을 관리합니다.
-- **☀️ 일간 마감 (Daily Reset)**: \`# 루틴\` 옆 ☀️ 버튼을 클릭하여 하루 기록을 마스터 표에 적재하고 내일 루틴을 리셋합니다.
-- **🗂️ 월간 아카이브**: \`# 체크리스트\` 옆 🗂️ 버튼을 클릭하여 이번 달 루틴 달성률 집계 보고서를 생성합니다.
-- **✏️ 빠른 할 일 / 📋 임시 메모**: \`# Todo\` 옆 ✏️ 버튼으로 할 일을 즉시 등록하거나 📋 버튼으로 아이디어 메모 노트를 엽니다.
+## ⚙️ 헤더 버튼 팝업 조작법 요약
+- **⚙️ Todo 관리**: \`# Todo\` 옆 ⚙️ 버튼을 클릭하여 할 일, 마감일, 순서(\`Alt+↑/↓\`), 들여쓰기를 원스톱으로 관리합니다.
+- **⚙️ 루틴 관리**: \`# 루틴\` 옆 ⚙️ 버튼을 클릭하여 루틴 카테고리/항목을 안전하게 관리합니다.
+- **⚙️ 프로젝트 관리**: \`# Project\` 옆 ⚙️ 버튼을 클릭하여 모든 활성 프로젝트의 실행 항목을 한눈에 일괄 편집하고 저장합니다.
+- **☀️ 일간 마감 (Daily Reset)**: 하루 기록을 마스터 표에 적재하고 내일 루틴을 리셋합니다.
 `;
 
         if (!this.app.vault.getAbstractFileByPath(guidePath_ko)) {
@@ -493,3 +467,30 @@ Inbox에서 걸러진 정보 중 **'어떤 목적이나 행동'**이 수반되�
 
 }
 
+const defaultScheduleText_ko = `---
+작성일: "{{YEAR}}-01-01T00:00"
+수정일: "{{YEAR}}-01-01T00:00"
+---
+# Todo
+
+# 루틴
+> **[루틴 체크리스트]**
+
+# 프로젝트
+
+# 체크리스트
+`;
+
+const defaultScheduleText_en = `---
+Created: "{{YEAR}}-01-01T00:00"
+Modified: "{{YEAR}}-01-01T00:00"
+---
+# Todo
+
+# Routine
+> **[Routine Checklist]**
+
+# Project
+
+# Checklist
+`;
