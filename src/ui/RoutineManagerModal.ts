@@ -1,11 +1,13 @@
 import { App, Modal, Setting } from "obsidian";
 import { RoutineStructure, RoutineDiff } from "../types";
+import { t } from "../i18n";
 
 export class RoutineManagerModal extends Modal {
     private initialStructure: RoutineStructure;
     private currentStructure: RoutineStructure;
     private language: "en" | "ko";
     private onSaveCallback: (newStructure: RoutineStructure, diff: RoutineDiff) => Promise<void>;
+    private showHelp: boolean = false;
 
     // 개명 및 삭제 추적을 위한 맵
     private originalCategoryNamesById: Map<string, string> = new Map();
@@ -44,6 +46,29 @@ export class RoutineManagerModal extends Modal {
         return listContainer ? listContainer.scrollTop : 0;
     }
 
+    private moveCategory(index: number, direction: -1 | 1) {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= this.currentStructure.categories.length) return;
+        const scrollTop = this.getCurrentScrollTop();
+        const targetCat = this.currentStructure.categories[index];
+        const temp = this.currentStructure.categories[index];
+        this.currentStructure.categories[index] = this.currentStructure.categories[newIndex];
+        this.currentStructure.categories[newIndex] = temp;
+        this.render(`input-cat-name-${targetCat.id}`, scrollTop);
+    }
+
+    private moveCategoryItem(catIndex: number, itemIndex: number, direction: -1 | 1) {
+        const cat = this.currentStructure.categories[catIndex];
+        if (!cat) return;
+        const newIndex = itemIndex + direction;
+        if (newIndex < 0 || newIndex >= cat.items.length) return;
+        const scrollTop = this.getCurrentScrollTop();
+        const temp = cat.items[itemIndex];
+        cat.items[itemIndex] = cat.items[newIndex];
+        cat.items[newIndex] = temp;
+        this.render(`input-item-${cat.id}-${newIndex}`, scrollTop);
+    }
+
     private render(focusedTargetId?: string, savedScrollTop?: number) {
         const currentScroll = savedScrollTop !== undefined ? savedScrollTop : this.getCurrentScrollTop();
         const { contentEl } = this;
@@ -51,8 +76,39 @@ export class RoutineManagerModal extends Modal {
 
         const isKo = this.language === "ko";
 
-        // Title
-        contentEl.createEl("h2", { text: isKo ? "⚙️ 루틴 설정 및 관리" : "⚙️ Routine Manager" });
+        // 1. Title & 도움말 버튼 헤더
+        const headerEl = contentEl.createDiv({ cls: "myworld-todo-modal-header-flex" });
+        headerEl.createEl("h2", {
+            text: isKo ? "⚙️ 루틴 설정 및 관리" : "⚙️ Routine Manager",
+            cls: "myworld-todo-modal-title-flex"
+        });
+
+        const helpBtn = headerEl.createEl("button", {
+            text: "?",
+            title: isKo ? "단축키 사용 설명서" : "Keyboard Shortcuts Help",
+            cls: "myworld-todo-help-btn-flex"
+        });
+
+        helpBtn.addEventListener("click", () => {
+            this.showHelp = !this.showHelp;
+            this.render(focusedTargetId, currentScroll);
+        });
+
+        // 도움말 가이드 박스 (showHelp === true 일 때)
+        if (this.showHelp) {
+            const helpBox = contentEl.createDiv({ cls: "myworld-todo-help-box" });
+            helpBox.createEl("div", {
+                text: isKo ? "💡 루틴 단축키 안내" : "💡 Routine Shortcuts",
+                cls: "myworld-todo-help-title"
+            });
+            helpBox.createEl("div", {
+                text: isKo ? "• Alt + ↑ / ↓ : 루틴 카테고리 및 세부 항목 순서 이동" : "• Alt + ↑ / ↓ : Move routine categories or items up/down"
+            });
+            helpBox.createEl("div", {
+                text: isKo ? "• 💾 [저장 및 양식 동기화] : 체크리스트 표 및 아카이브 일괄 동기화" : "• 💾 [Save & Sync Structure] : Sync all checklist tables and archives"
+            });
+        }
+
         contentEl.createEl("p", {
             text: isKo
                 ? "루틴 카테고리와 세부 실행 항목을 수정합니다. 저장 시 체크리스트 및 통계 양식이 자동으로 안전하게 재구성됩니다."
@@ -60,11 +116,12 @@ export class RoutineManagerModal extends Modal {
             cls: "setting-item-description"
         });
 
-        // 1. 확언 설정
+        // 2. 확언 설정 (입력창 폭 대폭 확장)
         new Setting(contentEl)
             .setName(isKo ? "오늘의 확언 / 다짐" : "Daily Affirmation")
             .setDesc(isKo ? "루틴 콜아웃 상단에 표시될 확언 문구를 입력하세요." : "Enter affirmation text displayed at the top of the routine callout.")
             .addText(text => {
+                text.inputEl.addClass("myworld-affirmation-input");
                 text.setPlaceholder(isKo ? "예: 시작이 반 이다." : "e.g., Well begun is half done.")
                     .setValue(this.currentStructure.affirmation || "")
                     .onChange(val => {
@@ -72,7 +129,7 @@ export class RoutineManagerModal extends Modal {
                     });
             });
 
-        // 2. 카테고리 및 세부 항목 리스트 헤더
+        // 3. 카테고리 및 세부 항목 리스트 헤더
         const catSectionHeader = contentEl.createDiv({ cls: "routine-modal-section-header" });
         catSectionHeader.createEl("h3", { text: isKo ? "📋 루틴 카테고리 및 실행 항목" : "📋 Routine Categories & Items" });
 
@@ -92,46 +149,34 @@ export class RoutineManagerModal extends Modal {
             this.render(`input-cat-name-${newId}`, scrollTop);
         });
 
-        // 3. 카테고리 목록 카드 렌더링
+        // 4. 카테고리 목록 카드 렌더링
         const catListContainer = contentEl.createDiv({ cls: "routine-cat-list-container" });
 
         this.currentStructure.categories.forEach((cat, index) => {
             const catCard = catListContainer.createDiv({ cls: "routine-cat-card" });
             
-            // 카테고리 카드 헤더
+            // 카테고리 카드 헤더 (▲/▼ 버튼 제거, Alt + ↑/↓ 단축키 전용)
             const cardHeader = catCard.createDiv({ cls: "routine-cat-card-header" });
 
-            // 순서 이동 버튼
-            const moveUpBtn = cardHeader.createEl("button", { text: "▲", title: isKo ? "위로 이동" : "Move Up" });
-            moveUpBtn.disabled = index === 0;
-            moveUpBtn.addEventListener("click", () => {
-                const scrollTop = this.getCurrentScrollTop();
-                const temp = this.currentStructure.categories[index - 1];
-                this.currentStructure.categories[index - 1] = this.currentStructure.categories[index];
-                this.currentStructure.categories[index] = temp;
-                this.render(`input-cat-name-${cat.id}`, scrollTop);
-            });
-
-            const moveDownBtn = cardHeader.createEl("button", { text: "▼", title: isKo ? "아래로 이동" : "Move Down" });
-            moveDownBtn.disabled = index === this.currentStructure.categories.length - 1;
-            moveDownBtn.addEventListener("click", () => {
-                const scrollTop = this.getCurrentScrollTop();
-                const temp = this.currentStructure.categories[index + 1];
-                this.currentStructure.categories[index + 1] = this.currentStructure.categories[index];
-                this.currentStructure.categories[index] = temp;
-                this.render(`input-cat-name-${cat.id}`, scrollTop);
-            });
-
-            // 카테고리 이름 입력 input
+            // 카테고리 이름 입력 input (Alt + ↑/↓ 단축키 지원)
             const nameInput = cardHeader.createEl("input", {
                 type: "text",
                 value: cat.name,
                 placeholder: isKo ? "카테고리 이름" : "Category Name",
                 cls: "routine-cat-name-input"
             });
-            nameInput.dataset.focusId = `input-cat-name-${cat.id}`;
+            const catFocusId = `input-cat-name-${cat.id}`;
+            nameInput.dataset.focusId = catFocusId;
+
             nameInput.addEventListener("input", (e) => {
                 cat.name = (e.target as HTMLInputElement).value;
+            });
+
+            nameInput.addEventListener("keydown", (e: KeyboardEvent) => {
+                if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+                    e.preventDefault();
+                    this.moveCategory(index, e.key === "ArrowUp" ? -1 : 1);
+                }
             });
 
             // 카테고리 삭제 버튼
@@ -160,8 +205,16 @@ export class RoutineManagerModal extends Modal {
                 });
                 const itemFocusId = `input-item-${cat.id}-${itemIdx}`;
                 itemInput.dataset.focusId = itemFocusId;
+
                 itemInput.addEventListener("input", (e) => {
                     cat.items[itemIdx] = (e.target as HTMLInputElement).value;
+                });
+
+                itemInput.addEventListener("keydown", (e: KeyboardEvent) => {
+                    if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+                        e.preventDefault();
+                        this.moveCategoryItem(index, itemIdx, e.key === "ArrowUp" ? -1 : 1);
+                    }
                 });
 
                 const delItemBtn = itemRow.createEl("button", {
@@ -189,7 +242,7 @@ export class RoutineManagerModal extends Modal {
             });
         });
 
-        // 4. 하단 저장 버튼
+        // 5. 하단 저장 버튼
         const footerEl = contentEl.createDiv({ cls: "routine-modal-footer" });
 
         const saveBtn = footerEl.createEl("button", {
@@ -203,7 +256,7 @@ export class RoutineManagerModal extends Modal {
             });
         });
 
-        // 5. 스크롤 위치 및 포커스 복원 제어
+        // 6. 스크롤 위치 및 포커스 복원 제어
         window.setTimeout(() => {
             if (catListContainer) {
                 catListContainer.scrollTop = currentScroll;

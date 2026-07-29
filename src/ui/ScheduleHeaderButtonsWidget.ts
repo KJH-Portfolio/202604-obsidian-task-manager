@@ -113,24 +113,10 @@ export function buildScheduleHeaderButtonsExtension(
             const lang = plugin.settings.language || "en";
             const isKo = lang === "ko";
 
-            // 활성 줄 제외
-            const activeLines = new Set<number>();
-            for (const range of view.state.selection.ranges) {
-                activeLines.add(view.state.doc.lineAt(range.head).number);
-                if (!range.empty) {
-                    activeLines.add(view.state.doc.lineAt(range.anchor).number);
-                }
-            }
-
             for (const { from, to } of view.visibleRanges) {
                 let pos = from;
                 while (pos <= to) {
                     const line = view.state.doc.lineAt(pos);
-                    if (activeLines.has(line.number)) {
-                        pos = line.to + 1;
-                        continue;
-                    }
-
                     const text = line.text.trim();
 
                     // 1. # 루틴 / # Routine ➔ ⚙️ 루틴 편집 + 🌤️ 일간 마감 (가장 우측)

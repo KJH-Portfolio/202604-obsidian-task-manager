@@ -85,25 +85,10 @@ export function buildAddExecutionTaskButtonExtension(
 
             const lang = plugin.settings.language || "en";
 
-            // 현재 커서가 위치한 활성 줄 번호 수집
-            const activeLines = new Set<number>();
-            for (const range of view.state.selection.ranges) {
-                activeLines.add(view.state.doc.lineAt(range.head).number);
-                if (!range.empty) {
-                    activeLines.add(view.state.doc.lineAt(range.anchor).number);
-                }
-            }
-
             for (const { from, to } of view.visibleRanges) {
                 let pos = from;
                 while (pos <= to) {
                     const line = view.state.doc.lineAt(pos);
-                    // 활성 줄이면 렌더링 스킵 (타자 방해 및 IME 충돌 차단)
-                    if (activeLines.has(line.number)) {
-                        pos = line.to + 1;
-                        continue;
-                    }
-
                     const text = line.text.trim();
                     const isExecHeader = /^#\s+(실행|Execution)$/i.test(text);
 

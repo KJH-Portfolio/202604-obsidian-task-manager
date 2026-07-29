@@ -459,8 +459,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // CM6: 라이브 프리뷰용 계획->실행 복사 버튼
         this.registerEditorExtension(buildCopyToExecutionButtonExtension(this.app, () => this));
 
-        // CM6: 라이브 프리뷰용 # 실행 헤더 ✏️ 빠른 Task 추가 버튼
-        this.registerEditorExtension(buildAddExecutionTaskButtonExtension(this.app, () => this, (file) => this.openAddExecutionTaskModal(file)));
+        // CM6: 라이브 프리뷰용 # 실행 헤더 ✏️ 빠른 Task 추가 버튼 (통합 모달 연동)
+        this.registerEditorExtension(buildAddExecutionTaskButtonExtension(this.app, () => this, (file) => this.openProjectTaskManagerModal(file)));
 
         // CM6: 라이브 프리뷰용 스케줄 헤더 버튼들 (루틴->일간마감, Todo->빠른추가+임시메모, 통계->월간아카이브)
         this.registerEditorExtension(buildScheduleHeaderButtonsExtension(this.app, () => this, (file, action) => this.handleScheduleHeaderAction(file, action)));
@@ -533,7 +533,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             e.stopPropagation();
                             const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
                             if (file && file instanceof TFile) {
-                                this.openAddExecutionTaskModal(file);
+                                this.openProjectTaskManagerModal(file);
                             }
                         });
                         h.appendChild(btn);
@@ -1536,7 +1536,7 @@ ${checklistTable}
     }
 
     // 6. 프로젝트 실행 항목 ⚙️ 관리 모달 메서드
-    openProjectTaskManagerModal(): void {
+    openProjectTaskManagerModal(targetFile?: TFile): void {
         new ProjectTaskManagerModal(
             this.app,
             this.settings.language,
@@ -1547,7 +1547,8 @@ ${checklistTable}
                 if (scheduleFile && scheduleFile instanceof TFile) {
                     await this.synchronizer.syncMainScheduleNote(scheduleFile, true);
                 }
-            }
+            },
+            targetFile
         ).open();
     }
 

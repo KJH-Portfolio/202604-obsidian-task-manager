@@ -259,20 +259,20 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     justify-content: flex-end;
     margin-top: 6px;
 }
-.myworld-copy-btn {
-    cursor: pointer !important;
-    margin-left: 8px !important;
-    font-size: 0.95em !important;
-    user-select: none !important;
-    opacity: 0.8 !important;
-    transition: opacity 0.15s ease, transform 0.15s ease !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
+.myworld-copy-btn.myworld-copy-btn {
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 0.95em;
+    user-select: none;
+    opacity: 0.8;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    display: inline-block;
+    vertical-align: middle;
 }
 
-.myworld-copy-btn:hover {
-    opacity: 1 !important;
-    transform: scale(1.25) !important;
+.myworld-copy-btn.myworld-copy-btn:hover {
+    opacity: 1;
+    transform: scale(1.25);
 }
 
 /* 루틴 콜아웃 및 테이블 카테고리 제목 줄바꿈 및 겹침 방지 보정 */
@@ -280,15 +280,15 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .callout[data-callout="routine"] div,
 .markdown-rendered table th,
 .markdown-rendered table td {
-    white-space: nowrap !important;
-    word-break: keep-all !important;
+    white-space: nowrap;
+    word-break: keep-all;
 }
 
-.callout[data-callout="routine"] h2 {
-    min-width: 100px !important;
-    width: max-content !important;
-    text-align: left !important;
-    margin-right: 12px !important;
+.callout[data-callout="routine"].callout[data-callout="routine"] h2 {
+    min-width: 100px;
+    width: max-content;
+    text-align: left;
+    margin-right: 12px;
 }
 .myworld-startup-btn-skip {
     padding: 8px 18px;
@@ -1271,6 +1271,19 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     font-size: 0.95em;
 }
 
+.myworld-affirmation-input {
+    min-width: 320px !important;
+    width: 380px !important;
+}
+
+.myworld-child-indicator {
+    font-weight: bold;
+    color: var(--text-accent, #70a1ff);
+    margin-right: 6px;
+    font-size: 1.1em;
+    user-select: none;
+}
+
 .markdown-rendered h1.myworld-header-with-btn,
 .markdown-rendered h2.myworld-header-with-btn,
 .markdown-rendered h3.myworld-header-with-btn,
@@ -1490,81 +1503,81 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     opacity: 0.4;
 }
 
-.myworld-todo-modal-content {
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 480px !important;
-    box-sizing: border-box !important;
+.myworld-todo-modal-content.myworld-todo-modal-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;
+    box-sizing: border-box;
 }
 
-.myworld-todo-modal-header {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    margin-bottom: 12px !important;
+.myworld-todo-modal-header.myworld-todo-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
-.myworld-todo-modal-title {
-    margin: 0 !important;
-    display: inline-block !important;
+.myworld-todo-modal-title.myworld-todo-modal-title {
+    margin: 0;
+    display: inline-block;
 }
 
-.myworld-todo-help-btn {
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
-    min-height: 22px !important;
-    border-radius: 50% !important;
-    font-size: 13px !important;
-    font-weight: bold !important;
-    color: var(--text-muted) !important;
-    background-color: var(--background-secondary-alt, var(--background-secondary)) !important;
-    border: 1px solid var(--border-color, rgba(128, 128, 128, 0.3)) !important;
-    cursor: pointer !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0 !important;
-    line-height: 1 !important;
-    transition: all 0.2s ease !important;
-    user-select: none !important;
+.myworld-todo-help-btn.myworld-todo-help-btn {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-muted);
+    background-color: var(--background-secondary-alt, var(--background-secondary));
+    border: 1px solid var(--border-color, rgba(128, 128, 128, 0.3));
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    transition: all 0.2s ease;
+    user-select: none;
 }
 
-.myworld-todo-help-btn:hover {
-    color: var(--text-accent) !important;
-    border-color: var(--text-accent) !important;
-    background-color: var(--background-modifier-hover) !important;
-    transform: scale(1.1) !important;
+.myworld-todo-help-btn.myworld-todo-help-btn:hover {
+    color: var(--text-accent);
+    border-color: var(--text-accent);
+    background-color: var(--background-modifier-hover);
+    transform: scale(1.1);
 }
 
-.myworld-todo-list-container {
-    flex: 1 1 auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
-    max-height: 380px !important;
-    overflow-y: auto !important;
-    padding-right: 4px !important;
-    margin-bottom: 12px !important;
+.myworld-todo-list-container.myworld-todo-list-container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 12px;
 }
 
-.routine-modal-footer,
-.myworld-todo-modal-footer {
-    margin-top: auto !important;
-    padding-top: 16px !important;
-    border-top: 1px solid var(--border-color, rgba(128, 128, 128, 0.25)) !important;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 100% !important;
+.routine-modal-footer.routine-modal-footer,
+.myworld-todo-modal-footer.myworld-todo-modal-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color, rgba(128, 128, 128, 0.25));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
-.routine-modal-footer .mod-cta,
-.myworld-todo-save-btn {
-    min-width: 180px !important;
-    font-weight: 600 !important;
-    padding: 8px 24px !important;
-    font-size: 0.95em !important;
+.routine-modal-footer.routine-modal-footer .mod-cta,
+.myworld-todo-save-btn.myworld-todo-save-btn {
+    min-width: 180px;
+    font-weight: 600;
+    padding: 8px 24px;
+    font-size: 0.95em;
 }
 
 .myworld-todo-help-box {

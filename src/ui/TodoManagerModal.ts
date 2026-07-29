@@ -40,10 +40,12 @@ export class TodoManagerModal extends Modal {
         const parsedItems: TodoItem[] = [];
 
         todoLines.forEach((line, idx) => {
-            const taskMatch = line.match(/^(\s*)-\s*\[([ xX\-\/])\]\s*(.*)$/);
+            const taskMatch = line.match(/^(\s*)-\s*\[([ xX\-/])\]\s*(.*)$/);
             if (taskMatch) {
                 const rawIndent = taskMatch[1] || "";
-                const indentLevel = Math.floor(rawIndent.length / 2);
+                const tabs = (rawIndent.match(/\t/g) || []).length;
+                const spaces = rawIndent.replace(/\t/g, "").length;
+                const indentLevel = tabs > 0 ? tabs : (spaces >= 4 ? Math.floor(spaces / 4) : Math.floor(spaces / 2));
                 const completed = taskMatch[2] === "x" || taskMatch[2] === "X";
                 let rest = taskMatch[3];
 
@@ -141,7 +143,7 @@ export class TodoManagerModal extends Modal {
         if (!item) return;
         const newIndent = Math.max(0, Math.min(4, item.indentLevel + direction));
         item.indentLevel = newIndent;
-        item.rawIndent = "  ".repeat(newIndent);
+        item.rawIndent = "\t".repeat(newIndent);
         this.render(item.id);
     }
 
@@ -324,13 +326,14 @@ export class TodoManagerModal extends Modal {
     }
 
     private renderTaskRow(container: HTMLElement, item: TodoItem, idx: number, isKo: boolean) {
+        const isChild = item.indentLevel > 0;
         const row = container.createDiv({
-            cls: `myworld-todo-item-row ${item.completed ? "is-completed" : ""}`
+            cls: `myworld-todo-item-row ${item.completed ? "is-completed" : ""} ${isChild ? "is-child-task" : ""}`
         });
 
         const borderColor = this.getItemBorderColor(idx);
         row.setCssStyles({
-            paddingLeft: `${12 + item.indentLevel * 24}px`,
+            marginLeft: `${item.indentLevel * 24}px`,
             borderLeft: `5px solid ${borderColor}`
         });
 
@@ -359,9 +362,12 @@ export class TodoManagerModal extends Modal {
             if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
                 e.preventDefault();
                 this.moveItem(idx, e.key === "ArrowUp" ? -1 : 1);
-            } else if (e.key === "Tab") {
+            } else if ((e.altKey && e.key === "ArrowRight") || (e.key === "Tab" && !e.shiftKey)) {
                 e.preventDefault();
-                this.changeIndent(idx, e.shiftKey ? -1 : 1);
+                this.changeIndent(idx, 1);
+            } else if ((e.altKey && e.key === "ArrowLeft") || (e.key === "Tab" && e.shiftKey)) {
+                e.preventDefault();
+                this.changeIndent(idx, -1);
             }
         });
 
