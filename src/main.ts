@@ -510,6 +510,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     if (!h.querySelector(".myworld-btn-monthly-archive")) {
                         addBtn("monthly-archive", "archive", isKo ? "월간 아카이브 생성" : "Create Monthly Archive");
                     }
+                } else if (text === "project" || text === "프로젝트") {
+                    if (!h.querySelector(".myworld-btn-project-manager")) {
+                        addBtn("project-manager", "settings", isKo ? "프로젝트 실행 항목 관리" : "Manage Project Tasks");
+                    }
                 }
             });
         });

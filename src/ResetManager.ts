@@ -152,7 +152,7 @@ export class ResetManager {
                         const headerPart = miniMatch[1];
                         const dataLine = miniMatch[2];
 
-                        // [추가] 상단 미니 표의 헤더와 데이터 매핑
+                        // 상단 미니 표의 헤더와 데이터 매핑
                         const topHeaderLine = headerPart.split('\n')[0];
                         const topHeaders = topHeaderLine.trim().replace(/^\||\|$/g, '').split('|').map(s => s.trim());
 
@@ -174,27 +174,78 @@ export class ResetManager {
                             let chkSection = resetContent.substring(chkRange.start, chkRange.end);
                             const afterChk = resetContent.substring(chkRange.end);
 
-                            // [추가] 하단 마스터 표의 헤더를 읽어와 동적으로 데이터 행 생성
-                            const botTableRegex = /(\|.*\|\n\|(?:\s*[:-]+[ -]*\|)+\n)/;
-                            const botMatch = chkSection.match(botTableRegex);
-                            let newChecklistRow = "";
+                            // 하단 마스터 표 헤더 및 기존 데이터 행 파싱 (완전 보장 방식)
+                            const chkLines = chkSection.split('\n');
+                            let tableStart = -1;
+                            let tableEnd = -1;
+                            let existingBotHeaders: string[] = [];
+                            const dataRowMap: Record<string, Record<string, string>> = {};
 
-                            if (botMatch) {
-                                const botHeaderLine = botMatch[1].split('\n')[0];
-                                const botHeaders = botHeaderLine.trim().replace(/^\||\|$/g, '').split('|').map(s => s.trim());
+                            for (let i = 0; i < chkLines.length; i++) {
+                                const lineTrim = chkLines[i].trim();
+                                if (lineTrim.startsWith('|')) {
+                                    if (tableStart === -1) {
+                                        tableStart = i;
+                                        existingBotHeaders = lineTrim.replace(/^\||\|$/g, '').split('|').map(s => s.trim());
+                                    }
+                                    tableEnd = i;
 
-                                const botRowCols = botHeaders.map(h => {
-                                    if (h === '날짜' || h === 'Date') return ` ${dateStr.padEnd(3, ' ')} `;
-                                    return topDataMap.has(h) ? topDataMap.get(h) : '      ';
-                                });
-                                newChecklistRow = `|${botRowCols.join('|')}|`;
-                            } else {
-                                newChecklistRow = `| ${dateStr.padEnd(3, ' ')} |${rowCols.slice(1).join('|')}|`;
+                                    // 데이터 행 파싱
+                                    const cols = lineTrim.split('|').map(s => s.trim());
+                                    if (cols.length > 2 && !isNaN(parseInt(cols[1]))) {
+                                        const d = parseInt(cols[1]).toString();
+                                        const rowValMap: Record<string, string> = {};
+                                        existingBotHeaders.slice(1).forEach((h, idx) => {
+                                            if (h) rowValMap[h] = cols[idx + 2] || '      ';
+                                        });
+                                        dataRowMap[d] = rowValMap;
+                                    }
+                                } else if (tableStart !== -1 && lineTrim !== '' && !lineTrim.startsWith('#')) {
+                                    break;
+                                }
                             }
 
-                            const rowToReplaceRegex = new RegExp(`\\|\\s*${dateStr}\\s*\\|.*\\|`);
-                            if (rowToReplaceRegex.test(chkSection)) {
-                                chkSection = chkSection.replace(rowToReplaceRegex, newChecklistRow);
+                            // targetBotHeaders: topHeaders를 무조건 기본 헤더로 사용하고, 기존 데이터가 남아있는 구 컬럼만 추가 보존
+                            const targetBotHeaders = [...topHeaders];
+                            existingBotHeaders.forEach(h => {
+                                if (h && !targetBotHeaders.includes(h)) {
+                                    targetBotHeaders.push(h);
+                                }
+                            });
+
+                            // 당일(dateStr) 데이터 업데이트 (상단 미니표 값 주입)
+                            const cleanDateStr = parseInt(dateStr).toString();
+                            if (!dataRowMap[cleanDateStr]) dataRowMap[cleanDateStr] = {};
+                            topHeaders.forEach((h, idx) => {
+                                if (h !== '날짜' && h !== 'Date') {
+                                    const rawVal = rowCols[idx] ? rowCols[idx].trim() : '      ';
+                                    dataRowMap[cleanDateStr][h] = rawVal || '      ';
+                                }
+                            });
+
+                            // 새 마스터 표 생성
+                            const newHeaderLine = `| ${targetBotHeaders.join(" | ")} |`;
+                            const newSepLine = `| :-: | ${targetBotHeaders.slice(1).map(() => ":--:").join(" | ")} |`;
+
+                            // 1~31일 데이터 행 재구성
+                            const newRows: string[] = [];
+                            for (let d = 1; d <= 31; d++) {
+                                const dKey = d.toString();
+                                const rowVals = dataRowMap[dKey] || {};
+                                const catVals = targetBotHeaders.slice(1).map(h => {
+                                    const val = rowVals[h];
+                                    return (val !== undefined && val.trim() !== '') ? val : '      ';
+                                });
+                                newRows.push(`| ${dKey.padEnd(2, ' ')} | ${catVals.join(" | ")} |`);
+                            }
+
+                            const newMasterTableStr = `${newHeaderLine}\n${newSepLine}\n${newRows.join('\n')}`;
+
+                            if (tableStart !== -1 && tableEnd !== -1) {
+                                chkLines.splice(tableStart, tableEnd - tableStart + 1, newMasterTableStr);
+                                chkSection = chkLines.join('\n');
+                            } else {
+                                chkSection = `${t("header_checklist", this.settings.language)}\n\n${newMasterTableStr}\n`;
                             }
 
                             const nextDateNum = todayObj.getDate();
@@ -363,6 +414,9 @@ export class ResetManager {
                     if (archiveStatsDashboard) {
                         await this.utils.updateMonthlyArchiveStats(this.app, now, archiveStatsDashboard);
                     }
+
+                    // 빈 컬럼 제거 (루틴에서 삭제된 항목 정리 - 일간 리셋 시)
+                    mainContent = this.utils.formatChecklistTable(mainContent);
 
                     // 최종 파일 저장
                     const newContent = mainContent + statsSection + tailContent;

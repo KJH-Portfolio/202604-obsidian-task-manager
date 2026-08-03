@@ -791,10 +791,41 @@ export class TaskUtils {
         if (tableLines.length < 3) return content; // Header, Separator, and at least 1 data row
 
         let header = tableLines[0];
-        const separator = tableLines[1];
+        let separator = tableLines[1];
         let dataRows = tableLines.slice(2);
 
+        // 데이터가 없는 컬럼 자동 삭제 (루틴에서 제거된 항목 정리)
+        // 단, 헤더에 있는 모든 컬럼 중 적어도 날짜 외 1개 이상은 유지
+        const headerCols = header.split('|').map(s => s.trim()).filter(s => s !== '');
+        const keepIndices: number[] = [];
+        headerCols.forEach((_, i) => {
+            if (i === 0) { keepIndices.push(i); return; } // 날짜 컬럼 항상 유지
+            const hasData = dataRows.some(row => {
+                const rawCols = row.split('|');
+                const val = (rawCols[i + 1] || '').trim();
+                return val !== '' && val !== '-';
+            });
+            // 데이터가 있거나 헤더 컬럼수가 적은 경우 보존
+            if (hasData || headerCols.length <= 2) keepIndices.push(i);
+        });
 
+        // 만약 모든 데이터 컬럼이 비어있어 keepIndices가 [0]만 남은 경우, 헤더의 모든 컬럼을 강제 유지 (표 파괴 방지)
+        if (keepIndices.length === 1 && headerCols.length > 1) {
+            headerCols.forEach((_, i) => {
+                if (i !== 0) keepIndices.push(i);
+            });
+        }
+
+        if (keepIndices.length < headerCols.length) {
+            const keptCols = keepIndices.map(i => headerCols[i]);
+            header = `| ${keptCols.join(' | ')} |`;
+            separator = `| :-: | ${keptCols.slice(1).map(() => ':--:').join(' | ')} |`;
+            dataRows = dataRows.map(row => {
+                const rawCols = row.split('|');
+                const keptVals = keepIndices.map(i => (rawCols[i + 1] || '').trim());
+                return `| ${keptVals.join(' | ')} |`;
+            });
+        }
 
         let newTableContent = [header, separator, ...dataRows].join('\n');
         newTableContent = this.convertTableMarkers(newTableContent);
@@ -874,8 +905,12 @@ export class TaskUtils {
             curr.add(1, 'day');
         }
 
-        let existingRowsMap: Record<string, string> = {};
+        // 출처(archive/new)를 태깅하여 두 종류 행 구분
+        let existingRowsMap: Record<string, { row: string; source: 'archive' | 'new' }> = {};
         let wContent = "";
+
+        // 기존 아카이브 헤더 컬럼 저장 (이름 기반 매핑에 사용)
+        let existingArchiveCols: string[] = [];
 
         if (wFile && wFile instanceof TFile) {
             wContent = await this.fileManager.getActiveViewOrFileText(wFile);
@@ -883,13 +918,25 @@ export class TaskUtils {
             if (chkRange) {
                 const chkSection = wContent.substring(chkRange.start, chkRange.end);
                 const lines = chkSection.split('\n');
+
+                // 기존 아카이브 헤더 추출
+                const archiveHeaderLine = lines.find(l =>
+                    l.trim().startsWith('|') && !l.includes('---') &&
+                    (l.includes('날짜') || l.includes('Date'))
+                );
+                if (archiveHeaderLine) {
+                    existingArchiveCols = archiveHeaderLine
+                        .replace(/^\||\|$/g, '').split('|')
+                        .map(s => s.trim()).filter(s => s !== '');
+                }
+
                 lines.forEach(l => {
                     if (l.trim().startsWith("|")) {
                         const cols = l.split("|");
                         if (cols.length > 2) {
                             const d = cols[1].trim();
                             if (!isNaN(parseInt(d)) && weekDaysMap[d]) {
-                                existingRowsMap[d] = l;
+                                existingRowsMap[d] = { row: l, source: 'archive' };
                             }
                         }
                     }
@@ -903,46 +950,67 @@ export class TaskUtils {
                 if (cols.length > 2) {
                     const d = cols[1].trim();
                     if (!isNaN(parseInt(d)) && weekDaysMap[d]) {
-                        existingRowsMap[d] = row;
+                        existingRowsMap[d] = { row: row, source: 'new' };
                     }
                 }
             });
         }
 
-        // 최신 tableHeader의 컬럼 배열
-        const targetCols = tableHeader.split("|").map(c => c.trim()).filter(c => c !== "");
-        const targetHeaderLine = `| ${targetCols.join(" | ")} |`;
-        const targetSeparatorLine = `| :-: | ${targetCols.slice(1).map(() => ":--:").join(" | ")} |`;
+        // 현재 스케줄 헤더 컬럼
+        const currentScheduleCols = tableHeader.split("|").map(c => c.trim()).filter(c => c !== "");
 
-        const finalWeekRows: string[] = [];
+        // 합집합 헤더: 기존 아카이브 컬럼 우선, 신규 스케줄 전용 컬럼 추가
+        const seenCols = new Set<string>();
+        const mergedCols: string[] = [];
+        const baseCols = existingArchiveCols.length > 0 ? existingArchiveCols : currentScheduleCols;
+        for (const col of [...baseCols, ...currentScheduleCols]) {
+            if (!seenCols.has(col)) { mergedCols.push(col); seenCols.add(col); }
+        }
+
+        const rawFinalWeekRows: { dateVal: string; rowValMap: Record<string, string> }[] = [];
         let sortCurr = start.clone();
         while (sortCurr.isSameOrBefore(end, 'day')) {
             const dStr = sortCurr.date().toString();
-            if (existingRowsMap[dStr]) {
-                const origRowStr = existingRowsMap[dStr];
-                const rowCols = origRowStr.split("|").map(c => c.trim());
-                if (rowCols.length >= 3) {
-                    const dateVal = rowCols[1];
-                    const rowCatVals = rowCols.slice(2, rowCols.length - 1);
+            const entry = existingRowsMap[dStr];
+            if (entry) {
+                const { row: origRowStr, source } = entry;
+                const rawCols = origRowStr.split("|").map(c => c.trim());
+                if (rawCols.length >= 3) {
+                    const dateVal = rawCols[1];
+                    const rowCatVals = rawCols.slice(2, rawCols.length - 1);
 
-                    // 기존 행의 헤더를 읽어 컬럼명 → 값 맵 구성 (인덱스 기반이 아닌 이름 기반 정렬)
-                    // 기존 행의 컬럼 개수가 targetCols와 다를 수 있으므로 안전하게 인덱스 접근
+                    // 출처에 따라 참조 헤더 선택 → 이름 기반 매핑
+                    const refCols = source === 'archive' ? existingArchiveCols : currentScheduleCols;
                     const rowValMap: Record<string, string> = {};
-                    targetCols.slice(1).forEach((col, idx) => {
-                        rowValMap[col] = rowCatVals[idx] || "";
+                    refCols.slice(1).forEach((colName, idx) => {
+                        rowValMap[colName] = rowCatVals[idx] || "";
                     });
-
-                    const alignedCatVals = targetCols.slice(1).map(colName => {
-                        const val = rowValMap[colName];
-                        return (val && val.trim() !== "") ? val : "-";
-                    });
-                    finalWeekRows.push(`| ${dateVal} | ${alignedCatVals.join(" | ")} |`);
-                } else {
-                    finalWeekRows.push(origRowStr);
+                    rawFinalWeekRows.push({ dateVal, rowValMap });
                 }
             }
             sortCurr.add(1, 'day');
         }
+
+        // 주간 아카이브 표에서 7일간 모든 셀이 - 또는 공백인 의미없는 컬럼 필터링
+        const activeCatCols = mergedCols.slice(1).filter(colName => {
+            return rawFinalWeekRows.some(item => {
+                const val = (item.rowValMap[colName] || "").trim();
+                return val !== "" && val !== "-";
+            });
+        });
+
+        // 7일간 모든 루틴이 비어있다면 최소한 currentScheduleCols 활성 루틴은 표시
+        const finalHeaderCols = ["날짜", ...(activeCatCols.length > 0 ? activeCatCols : currentScheduleCols.slice(1))];
+        const targetHeaderLine = `| ${finalHeaderCols.join(" | ")} |`;
+        const targetSeparatorLine = `| :-: | ${finalHeaderCols.slice(1).map(() => ":--:").join(" | ")} |`;
+
+        const finalWeekRows: string[] = rawFinalWeekRows.map(item => {
+            const alignedCatVals = finalHeaderCols.slice(1).map(colName => {
+                const val = item.rowValMap[colName];
+                return (val && val.trim() !== "") ? val : "-";
+            });
+            return `| ${item.dateVal} | ${alignedCatVals.join(" | ")} |`;
+        });
 
         let weeklyTableStr = "";
         let weeklyStatsDashboard = "";
@@ -985,8 +1053,8 @@ export class TaskUtils {
                 const chkRange = this.getSectionRange(updatedWContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
                 if (chkRange) {
                     const beforeChk = updatedWContent.substring(0, chkRange.start);
-                    const afterChk = updatedWContent.substring(chkRange.end);
-                    updatedWContent = beforeChk + t("header_checklist", this.settings.language) + "\n\n" + weeklyTableStr + "\n\n" + afterChk;
+                    const afterChk = updatedWContent.substring(chkRange.end).trimStart();
+                    updatedWContent = beforeChk + t("header_checklist", this.settings.language) + "\n\n" + weeklyTableStr.trim() + "\n\n" + afterChk;
                 }
             }
             if (weeklyStatsDashboard) {
@@ -994,13 +1062,13 @@ export class TaskUtils {
                 if (statsRange) {
                     const beforeStats = updatedWContent.substring(0, statsRange.start);
                     const afterStats = updatedWContent.substring(statsRange.end);
-                    updatedWContent = beforeStats + t("header_stats", this.settings.language) + "\n\n" + weeklyStatsDashboard + "\n" + afterStats;
+                    updatedWContent = beforeStats + t("header_stats", this.settings.language) + "\n\n" + weeklyStatsDashboard.trim() + "\n\n" + afterStats.trimStart();
                 }
             }
 
             await this.fileManager.saveIfChanged(wFile, wContent, updatedWContent);
         } else {
-            const chkSectionText = `${t("header_checklist", this.settings.language)}\n\n${weeklyTableStr}\n\n`;
+            const chkSectionText = `${t("header_checklist", this.settings.language)}\n\n${weeklyTableStr.trim()}\n\n`;
             const initialContent = `---
 작성일: "2000-01-01T00:00"
 수정일: "2000-01-01T00:00"
@@ -1009,8 +1077,8 @@ export class TaskUtils {
 
 ${t("header_record", this.settings.language)}
 
-${dailyRecord ? dailyRecord + '\n\n' : ''}${chkSectionText}${t("header_stats", this.settings.language)}
-${weeklyStatsDashboard}
+${dailyRecord ? dailyRecord.trim() + '\n\n' : ''}${chkSectionText}${t("header_stats", this.settings.language)}
+${weeklyStatsDashboard.trim()}
 `;
             try {
                 await app.vault.create(weeklyInfo.path, initialContent);
