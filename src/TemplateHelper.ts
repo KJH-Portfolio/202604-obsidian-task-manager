@@ -76,8 +76,8 @@ for (let p of pages) {
     let pMinDiff = Infinity;
     let pSortPri = 99;
     
-    // 부모의 뱃지를 자식에게 하향 전파하기 위해 줄번호 순 정렬 및 맵 사용
-    let sortedExecTasks = execTasks.sort(t => t.line);
+    // 미완료 항목 우선(false), 완료 항목 하단(true) 배치를 포함하여 정렬 및 맵 사용
+    let sortedExecTasks = execTasks.sort(t => [t.completed, t.line]);
     let badgeMap = new Map();
     
     sortedExecTasks.forEach(t => {
@@ -117,9 +117,12 @@ for (let p of pages) {
             color = inheritedBadge.color;
         }
 
+        const displayText = t.text.replace(/\\s*\\^[a-zA-Z0-9]+$/, "");
         if (badge !== "") {
             badgeMap.set(t.line, { badge, color });
-            t.visual = \`<span><span class="dday-virtual-badge" style="color: \${color};">\${badge}</span>\` + t.text + \`</span>\`;
+            t.visual = \`<span><span class="dday-virtual-badge" style="color: \${color};">\${badge}</span>\` + displayText + \`</span>\`;
+        } else {
+            t.visual = displayText;
         }
     });
 
@@ -187,16 +190,21 @@ if (projects.length > 0) {
     projects.forEach(p => {
         if (p.planTasksTotal === 0 && p.execTasks.length === 0) return;
         
-        let calloutType = "info";
+        let calloutType = "note";
         let icon = "📝";
-        if (p.sortPri === 0 || p.sortPri === 1) { calloutType = "error"; icon = (p.sortPri === 0) ? "🔥" : "🚨"; }
-        else if (p.sortPri === 2) { calloutType = "warning"; icon = "⚠️"; }
-        else if (p.sortPri === 100) { calloutType = "success"; icon = "🏁"; }
+        let color = "#969696";
+
+        if (p.sortPri === 0) { calloutType = "error"; color = "#8c0028"; icon = "🔥"; }
+        else if (p.sortPri === 1) { calloutType = "error"; color = "#e93147"; icon = "🚨"; }
+        else if (p.sortPri === 2) { calloutType = "warning"; color = "#ffd200"; icon = "⚠️"; }
+        else if (p.sortPri === 3) { calloutType = "success"; color = "#44cf6e"; icon = "✅"; }
+        else if (p.sortPri === 4) { calloutType = "info"; color = "#086ddd"; icon = "ℹ️"; }
+        else if (p.sortPri === 100) { calloutType = "done"; color = "#10b981"; icon = "🏁"; }
         
         let linkHtml = \`<a data-href="\${p.link.path}" href="\${p.link.path}" class="internal-link" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">\${p.noteName}</a>\`;
-        let headerHtml = \`<div class="callout" data-callout="\${calloutType}" style="margin-top: 20px; margin-bottom: 10px;">
+        let headerHtml = \`<div class="callout" data-callout="\${calloutType}" style="--callout-color: \${color}; background-color: \${color}22; border: 1px solid \${color}66; border-left: 5px solid \${color}; margin-top: 20px; margin-bottom: 10px;">
   <div class="callout-title" dir="auto">
-    <div class="callout-title-inner">\${icon} \${linkHtml} <span style="font-weight:normal; font-size:0.9em; opacity:0.8;">(\${p.pct}%)</span></div>
+    <div class="callout-title-inner" style="color: \${color}; font-weight: 700;">\${icon} \${linkHtml} <span style="font-weight:normal; font-size:0.9em; opacity:0.8; color: var(--text-muted);">(\${p.pct}%)</span></div>
   </div>
 </div>\`;
         dv.span(headerHtml);

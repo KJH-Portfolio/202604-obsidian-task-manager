@@ -771,13 +771,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     let foundHeader = "";
                     if (isProject || isSchedule) {
                         const cache = this.app.metadataCache.getCache(context.sourcePath);
-                        let lineNum = -1;
-                        if (taskEl.dataset.line) {
-                            lineNum = parseInt(taskEl.dataset.line, 10);
-                        } else {
-                            const parent = taskEl.closest("[data-line]");
-                            if (parent) lineNum = parseInt((parent as HTMLElement).dataset.line!, 10);
-                        }
+                        const sectionInfo = context.getSectionInfo(element);
+                        const lineNum = sectionInfo ? sectionInfo.lineStart : -1;
 
                         if (lineNum !== -1 && cache && cache.headings) {
                             let nearestHeading = null;
@@ -791,16 +786,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 }
                             }
                             if (nearestHeading) foundHeader = nearestHeading.heading.trim().toLowerCase();
-                        } else {
-                            const sectionInfo = context.getSectionInfo(element);
-                            if (sectionInfo) {
-                                const sourceLines = sectionInfo.text.split('\n');
-                                for (let i = sectionInfo.lineStart; i >= 0; i--) {
-                                    const m = sourceLines[i]?.match(/^#\s+(.+)$/);
-                                    if (m) {
-                                        foundHeader = m[1].trim().toLowerCase();
-                                        break;
-                                    }
+                        } else if (sectionInfo) {
+                            const sourceLines = sectionInfo.text.split('\n');
+                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                const m = sourceLines[i]?.match(/^#\s+(.+)$/);
+                                if (m) {
+                                    foundHeader = m[1].trim().toLowerCase();
+                                    break;
                                 }
                             }
                         }
@@ -820,7 +812,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             
                             const taskClone = taskEl.cloneNode(true) as HTMLElement;
                             taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
                             if (!cleanText) return;
 
                             const container = taskEl.closest(".markdown-reading-view") || doc.body;
@@ -829,7 +821,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             for (const t of allTasks) {
                                 const tCloned = t.cloneNode(true) as HTMLElement;
                                 (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
-                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
                                 if (tClean === cleanText) {
                                     if (t === taskEl) break;
                                     occurrenceIndex++;
@@ -842,29 +834,17 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 
                                 let taskText = "";
                                 let taskLineNum = -1;
-                                
-                                const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
-                                if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
-                                    const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
-                                    if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[lineNum])) {
-                                        taskLineNum = lineNum;
-                                        taskText = lines[lineNum];
-                                    }
-                                }
-
-                                if (taskLineNum === -1) {
-                                    let matchCount = 0;
-                                    for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
-                                            const lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
-                                            if (lineClean === cleanText) {
-                                                if (matchCount === occurrenceIndex) {
-                                                    taskText = lines[i];
-                                                    taskLineNum = i;
-                                                    break;
-                                                }
-                                                matchCount++;
+                                let matchCount = 0;
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                                        const lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                        if (lineClean === cleanText) {
+                                            if (matchCount === occurrenceIndex) {
+                                                taskText = lines[i];
+                                                taskLineNum = i;
+                                                break;
                                             }
+                                            matchCount++;
                                         }
                                     }
                                 }
@@ -876,16 +856,26 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     if (!m) return 0;
                                     return m[1].replace(/\t/g, "    ").length;
                                 }
+                                const baseIndentMatch = taskText.match(/^([\s\t]*)/);
+                                const baseIndentStr = baseIndentMatch ? baseIndentMatch[1] : "";
                                 const baseIndent = getIndent(taskText);
+                                
+                                if (baseIndentStr) {
+                                    taskText = taskText.substring(baseIndentStr.length);
+                                }
+
                                 let nextLine = taskLineNum + 1;
                                 while (nextLine < lines.length) {
-                                    const nextText = lines[nextLine];
+                                    let nextText = lines[nextLine];
                                     if (nextText.trim() === "") {
                                         nextLine++;
                                         continue;
                                     }
                                     if (getIndent(nextText) <= baseIndent) {
                                         break;
+                                    }
+                                    if (nextText.startsWith(baseIndentStr)) {
+                                        nextText = nextText.substring(baseIndentStr.length);
                                     }
                                     taskText += "\n" + nextText;
                                     nextLine++;
@@ -977,7 +967,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
                             const taskClone = taskEl.cloneNode(true) as HTMLElement;
                             taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
                             if (!cleanText) return;
 
                             const container = taskEl.closest(".markdown-reading-view") || doc.body;
@@ -986,7 +976,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             for (const t of allTasks) {
                                 const tCloned = t.cloneNode(true) as HTMLElement;
                                 (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
-                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
                                 if (tClean === cleanText) {
                                     if (t === taskEl) break;
                                     occurrenceIndex++;
@@ -1001,26 +991,16 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                 let modified = false;
 
                                 let targetLineIndex = -1;
-                                const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
-                                if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
-                                    const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
-                                    if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+/.test(lines[lineNum])) {
-                                        targetLineIndex = lineNum;
-                                    }
-                                }
-
-                                if (targetLineIndex === -1) {
-                                    let matchCount = 0;
-                                    for (let i = 0; i < lines.length; i++) {
-                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && !/\d{4}-\d{2}-\d{2}/.test(lines[i])) {
-                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").trim();
-                                            if (lineClean === cleanText) {
-                                                if (matchCount === occurrenceIndex) {
-                                                    targetLineIndex = i;
-                                                    break;
-                                                }
-                                                matchCount++;
+                                let matchCount = 0;
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                                        let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                        if (lineClean === cleanText) {
+                                            if (matchCount === occurrenceIndex) {
+                                                targetLineIndex = i;
+                                                break;
                                             }
+                                            matchCount++;
                                         }
                                     }
                                 }
@@ -1185,14 +1165,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             }
         });
 
-        // 명령어 G: 임시 메모 파일 열기 및 생성 (open-memo)
-        this.addCommand({
-            id: "open-memo",
-            name: t("cmd_quick_memo", this.settings.language),
-            callback: async () => {
-                await this.openOrCreateFleetingMemoFile();
-            }
-        });
+
 
 
         // 명령어 I: 오늘의 스케줄 관리 노트 생성 (create-today-schedule)
