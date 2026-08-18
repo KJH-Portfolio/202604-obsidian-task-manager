@@ -1,6 +1,5 @@
-import { App, TFile, Notice } from "obsidian";
+import { App, TFile } from "obsidian";
 import { PluginSettings } from "./settings";
-import { t } from "./i18n";
 import { TaskUtils } from "./TaskUtils";
 import { REGEX } from "./Constants";
 import { DateManager } from "./DateManager";
