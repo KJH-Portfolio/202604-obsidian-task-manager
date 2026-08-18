@@ -401,9 +401,7 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     user-select: none;
     pointer-events: none;
 }
-
-/* 諭껋? ?고듃 援듦린 ?뚮Ц???닿툔??泥댄겕諛뺤뒪???믪씠瑜??띿뒪??以묒븰??留욎텛湲??꾪빐 蹂댁젙 */
-
+/* 뱃지 폰트 높이 보정 */
 
 /* ========================================================
    2. 가로형 클릭 버튼 UI (inline-routine.css)
@@ -535,75 +533,139 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     font-weight: 800;
 }
 
-/* 2.8. 공간 압축 스페이스 (헤더 우측에 태스크 나열) */
-/* --- 읽기 모드 --- */
+/* 2.8. 모던 루틴 블록: [헤더] -> [가이드 바] -> [가로 알약 체크박스] */
+/* ========================================================================== */
+/* 2.8. 초미니멀 고밀도(High-Density) 루틴 대시보드 (오밀조밀 알약 + 제목 툴팁) */
+/* ========================================================================== */
+
+/* 1. 콜아웃 외곽 테두리 투명화 & 타이틀 바 숨김 (순수 본문 일체화) */
+.callout[data-callout="routine"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 6px 0 16px 0 !important;
+}
+
+.callout[data-callout="routine"] .callout-title {
+    display: none !important;
+}
+
+.callout[data-callout="routine"] .callout-content {
+    padding: 0 !important;
+}
+
+/* 2. 확언(Affirmation) 라인: 담백한 1줄 텍스트 */
+.callout[data-callout="routine"] p:first-of-type,
+.callout[data-callout="routine"] .callout-content > p:first-child,
+.callout[data-callout="routine"] .cm-line:not(.HyperMD-header):not(.HyperMD-task-line):not(.HyperMD-list-line):first-of-type {
+    border-left: none !important;
+    background: transparent !important;
+    padding: 0 0 6px 0 !important;
+    margin: 0 0 10px 0 !important;
+    font-size: 0.88em !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    border-bottom: 1px dashed var(--background-modifier-border) !important;
+    box-shadow: none !important;
+}
+
+/* 3. 카테고리 헤더: 제목과 버튼이 다닥다닥 붙도록 마진 최소화 */
 .callout[data-callout="routine"] h1,
 .callout[data-callout="routine"] h2,
 .callout[data-callout="routine"] h3,
-.callout[data-callout="routine"] h4 {
-    float: left;
-    clear: both;
-    width: 60px;
-    text-align: right;
-    margin: 4px 15px 4px 0;
-    padding: 2px 0;
-    font-size: 1.0em;
-    border: none;
-    background: transparent;
-}
-
-.callout[data-callout="routine"] ul {
-    overflow: hidden;
-    margin: 2px 0 6px 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] ul>li.task-list-item {
-    order: 1;
-}
-
-.callout[data-callout="routine"] ul>li:not(.task-list-item) {
-    order: 2;
-    flex-basis: 100%;
-    display: inline-block;
-    margin: 4px 10px 4px 4px;
-    color: var(--text-muted);
-    font-size: 0.85em;
-    font-weight: 500;
-}
-
-/* --- 라이브 프리뷰 --- */
 .callout[data-callout="routine"] .cm-line.HyperMD-header {
-    display: block;
-    float: left;
-    clear: both;
-    width: 60px;
-    text-align: right;
-    margin: 4px 15px 4px 0;
-    padding: 0;
-    border: none;
-    background: transparent;
-    font-size: 1.0em;
+    display: block !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+    margin-bottom: 2px !important;
+    margin-left: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    font-size: 0.94em !important;
+    font-weight: 700 !important;
+    color: var(--text-normal) !important;
+    text-align: left !important;
+    line-height: 1.2 !important;
 }
 
-.callout[data-callout="routine"] .cm-line.HyperMD-list-line,
+/* 제목에 툴팁(aria-label)이 있는 경우 은은한 힌트 표시 */
+.callout[data-callout="routine"] h2 span[aria-label],
+.callout[data-callout="routine"] .cm-line span[aria-label] {
+    cursor: help;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--text-faint);
+}
+
+/* 4. 체크박스 목록 컨테이너 (읽기모드 & 라이브뷰 공통) */
+.callout[data-callout="routine"] ul {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 0 0 6px 0 !important;
+    margin: 3px 0 8px 0 !important;
+    margin-left: 0 !important;
+    list-style: none !important;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.12) !important;
+}
+
+/* 라이브 프리뷰 라인 여백 초기화 */
 .callout[data-callout="routine"] .cm-line.HyperMD-task-line {
-    display: inline-flex;
-    margin-top: 0;
-    margin-bottom: 0;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
 }
 
-.callout[data-callout="routine"] .cm-line:not(.HyperMD-task-line)>.cm-list-1 {
-    color: var(--text-muted);
-    font-weight: 500;
+/* 5. 알약 버튼: 클릭하기 편안한 컴팩트 사이즈 */
+.callout[data-callout="routine"] ul>li.task-list-item,
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: var(--background-secondary-alt) !important;
+    border: 1px solid var(--background-modifier-border) !important;
+    border-radius: 14px !important;
+    padding: 4px 14px !important;
+    margin: 2px 4px 4px 0 !important;
+    font-size: 0.88em !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    user-select: none !important;
+    height: 28px !important;
+    box-sizing: border-box !important;
 }
 
-.callout[data-callout="routine"] .cm-line:empty {
-    display: none;
+/* 호버 시 */
+.callout[data-callout="routine"] ul>li.task-list-item:hover,
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line:hover {
+    background-color: var(--background-modifier-hover) !important;
+    border-color: var(--interactive-accent) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* 네모 체크박스 숨김 */
+.callout[data-callout="routine"] input[type="checkbox"],
+.callout[data-callout="routine"] .cm-line input[type="checkbox"] {
+    display: none !important;
+}
+
+/* 6. 체크 완료 시 (Active 토글) - 보라/블루 불 들어옴 */
+.callout[data-callout="routine"] ul>li.task-list-item.is-checked,
+.callout[data-callout="routine"] ul>li.task-list-item[data-task="x"],
+.callout[data-callout="routine"] ul>li.task-list-item[data-task="X"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
+.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.45), rgba(96, 165, 250, 0.35)) !important;
+    border-color: #a78bfa !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 1px 5px rgba(124, 58, 237, 0.25) !important;
+    opacity: 1 !important;
+    text-decoration: none !important;
 }
 
 .myworld-padding-20-10 {
@@ -1596,3 +1658,119 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     margin-bottom: 6px;
     color: var(--text-accent);
 }
+
+/* ---------------------------------------------------- */
+/* Routine Manager Modal & Description Styles           */
+/* ---------------------------------------------------- */
+.routine-cat-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-bottom: 12px;
+}
+
+.routine-cat-card {
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s ease;
+}
+
+.routine-cat-card:hover {
+    border-color: var(--interactive-accent);
+}
+
+.routine-cat-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.routine-cat-name-input {
+    flex: 1;
+    font-weight: 700;
+    font-size: 1.02em;
+}
+
+.routine-cat-desc-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--background-primary);
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 4px 8px;
+}
+
+.routine-cat-desc-icon {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+
+.routine-cat-desc-input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    font-size: 0.88em;
+    color: var(--text-muted);
+    padding: 2px 4px;
+}
+
+.routine-cat-desc-input:focus {
+    color: var(--text-normal);
+    box-shadow: none !important;
+}
+
+.routine-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+    padding-left: 4px;
+}
+
+.routine-item-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.routine-item-bullet {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.routine-item-input {
+    flex: 1;
+    font-size: 0.92em;
+}
+
+.routine-item-del-btn {
+    padding: 2px 8px;
+    font-size: 0.8em;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.routine-item-del-btn:hover {
+    background-color: rgba(255, 82, 82, 0.15);
+    color: #ff5252;
+}
+
+.routine-add-item-btn {
+    align-self: flex-start;
+    font-size: 0.85em;
+    margin-top: 4px;
+}
+
+

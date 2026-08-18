@@ -121,19 +121,10 @@ export const translations = {
     btn_confirm: { en: "Confirm", ko: "확인" },
     notice_empty_path: { en: "🚨 Please enter the folder path to create.", ko: "🚨 생성할 폴더 경로를 입력해 주세요." },
 
-    btn_skip: { en: "Skip", ko: "건너뛰기" },
-    btn_sync_now: { en: "Sync Now", ko: "지금 동기화" },
-    btn_syncing: { en: "Syncing...", ko: "동기화 중..." },
-
-    // Startup sync modal
-    modal_startup_title: { en: "Sync Schedule", ko: "스케줄 동기화" },
-    modal_startup_desc: { en: "Would you like to sync the main schedule note now?", ko: "메인 스케줄 노트를 지금 동기화할까요?" },
-    modal_startup_notice: { en: "This will sort tasks and apply due date markers.", ko: "할 일 정렬 및 마감일 마커가 적용됩니다." },
-
     // ----------------------------------------------------
     // Commands
     // ----------------------------------------------------
-    cmd_sync_main: { en: "Sync Schedule (Todo Sort)", ko: "스케줄 동기화 (할 일 정렬)" },
+    cmd_sync_main: { en: "Sync Project Identifiers", ko: "프로젝트 식별자 동기화" },
     cmd_quick_capture: { en: "Manage Todo Items", ko: "Todo 항목 관리" },
     cmd_daily_reset: { en: "Daily Reset", ko: "메인 스케줄 일간 마감" },
     cmd_monthly_archive: { en: "Create Monthly Archive", ko: "월간 아카이브 생성" },

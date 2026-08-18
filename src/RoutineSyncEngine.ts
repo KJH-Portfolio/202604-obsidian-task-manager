@@ -10,26 +10,26 @@ export class RoutineSyncEngine {
             return {
                 affirmation: "Well begun is half done.",
                 categories: [
-                    { id: "step", name: "Step", items: ["Write", "Execute"] },
-                    { id: "block", name: "Block", items: ["1", "2", "3", "4", "5", "6"] },
-                    { id: "mental", name: "Mental", items: ["Read affirmation", "10 min meditation"] },
-                    { id: "diet", name: "Diet", items: ["Breakfast", "Lunch", "Dinner"] },
-                    { id: "exercise", name: "Exercise", items: ["Squat 60, Pushup 20"] },
-                    { id: "sleep", name: "Sleep", items: ["Quiet time from 11"] },
-                    { id: "detox", name: "Detox", items: ["1 time", "3 times", "5 times+"] }
+                    { id: "step", name: "Step", description: "Execute 1st Priority Task", items: ["Write", "Execute"] },
+                    { id: "block", name: "Block", description: "Focus Time Blocks", items: ["1", "2", "3", "4", "5", "6"] },
+                    { id: "mental", name: "Mental", description: "5 min meditation", items: ["Read affirmation", "10 min meditation"] },
+                    { id: "diet", name: "Diet", description: "Healthy eating", items: ["Breakfast", "Lunch", "Dinner"] },
+                    { id: "exercise", name: "Exercise", description: "Stretching & Workout", items: ["Squat 60, Pushup 20"] },
+                    { id: "sleep", name: "Sleep", description: "Rest before 12", items: ["Quiet time from 11"] },
+                    { id: "detox", name: "Detox", description: "25 min Pomodoro", items: ["1 time", "3 times", "5 times+"] }
                 ]
             };
         }
         return {
             affirmation: "시작이 반 이다.",
             categories: [
-                { id: "step", name: "Step", items: ["작성", "실행"] },
-                { id: "block", name: "Block", items: ["1", "2", "3", "4", "5", "6"] },
-                { id: "mental", name: "멘탈", items: ["확언 읽기", "10분 명상"] },
-                { id: "diet", name: "식단", items: ["아침", "점심", "저녁"] },
-                { id: "exercise", name: "운동", items: ["스쿼트 60, 팔굽 20"] },
-                { id: "sleep", name: "취침", items: ["11시부터 정적 활동"] },
-                { id: "detox", name: "디톡스", items: ["1회", "3회", "5회+"] }
+                { id: "step", name: "Step", description: "핵심 1순위 실행", items: ["작성", "실행"] },
+                { id: "block", name: "Block", description: "집중 블록 달성", items: ["1", "2", "3", "4", "5", "6"] },
+                { id: "mental", name: "멘탈", description: "5분 확언 및 명상", items: ["확언 읽기", "10분 명상"] },
+                { id: "diet", name: "식단", description: "건강한 3끼 식사", items: ["아침", "점심", "저녁"] },
+                { id: "exercise", name: "운동", description: "스트레칭 5분 + 운동", items: ["스쿼트 60, 팔굽 20"] },
+                { id: "sleep", name: "취침", description: "12시 이전 취침 준비", items: ["11시부터 정적 활동"] },
+                { id: "detox", name: "디톡스", description: "25분 타이머 집중", items: ["1회", "3회", "5회+"] }
             ]
         };
     }
@@ -72,20 +72,34 @@ export class RoutineSyncEngine {
                     continue;
                 }
 
-                // 카테고리 헤더 (예: > ## ==멘탈== 또는 > ## 멘탈)
-                const catMatch = l.match(/^>\s*##\s+(?:==)?(.*?)(?:==)?$/);
+                // 카테고리 헤더 (예: > ## <span aria-label="설명">==멘탈==</span> 또는 > ## ==멘탈== 또는 > ## 멘탈)
+                const catMatch = l.match(/^>\s*##\s+(.*)$/);
                 if (catMatch) {
                     if (currentCat) {
                         categories.push(currentCat);
                     }
-                    const catName = catMatch[1].trim();
+                    const rawHeader = catMatch[1].trim();
+                    let desc = "";
+                    const descMatch = rawHeader.match(/(?:aria-label|title)="([^"]+)"/i);
+                    if (descMatch) {
+                        desc = descMatch[1].trim();
+                    }
+
+                    // HTML 태그 및 == 하이라이트 제거하여 순수 이름 추출
+                    const catName = rawHeader
+                        .replace(/<[^>]+>/g, "")
+                        .replace(/==/g, "")
+                        .trim();
+
                     currentCat = {
                         id: catName.toLowerCase().replace(/\s+/g, "-") + "_" + Math.random().toString(36).substring(2, 7),
                         name: catName,
+                        description: desc,
                         items: []
                     };
                     continue;
                 }
+
 
                 // 체크리스트 항목 (예: > - [ ] 항목)
                 const itemMatch = l.match(/^>\s*[-*+]\s+\[.\]\s+(.*)$/);
@@ -111,7 +125,7 @@ export class RoutineSyncEngine {
 
     /**
      * RoutineStructure 데이터를 마크다운 Callout 텍스트로 생성
-     * (기본 생성 시 하이라이트 == 없이 생성, 달성률 50% 미만 부족 항목만 TaskUtils가 하이라이트 적용)
+     * (설명이 있을 경우 제목의 aria-label 툴팁 속성으로 삽입하여 본문이 초깔끔하게 유지됨)
      */
     static generateRoutineCalloutMarkdown(structure: RoutineStructure, lang: "en" | "ko" = "ko"): string {
         const affLabel = lang === "en" ? "Affirmation" : "확언";
@@ -121,13 +135,130 @@ export class RoutineSyncEngine {
         lines.push(`> ${affLabel} : ${structure.affirmation || ""}`);
 
         for (const cat of structure.categories) {
-            lines.push(`> ## ${cat.name}`);
+            const cleanDesc = cat.description ? cat.description.replace(/^(?:💡|\uD83D\uDCA1|\uFFFD|\?|\s)+/u, "").trim() : "";
+            if (cleanDesc) {
+                // 옵시디언 네이티브 툴팁 속성 적용
+                const safeDesc = cleanDesc.replace(/"/g, "&quot;");
+                lines.push(`> ## <span aria-label="${safeDesc}">${cat.name}</span>`);
+            } else {
+                lines.push(`> ## ${cat.name}`);
+            }
             for (const item of cat.items) {
                 lines.push(`> - [ ] ${item}`);
             }
         }
 
         return lines.join("\n");
+    }
+
+    /**
+     * 루틴 콜아웃 내부의 체크박스 상태를 분석하여 각 카테고리별 이모지 매핑 맵 생성
+     * - 100% 완료: 🟦
+     * - 50% 이상 완료: 🟩
+     * - 1개 이상 완료: 🟨
+     * - 0% 미달성: 🟥
+     */
+    static calculateRoutineEmojiMap(content: string): Map<string, string> {
+        const emojiMap = new Map<string, string>();
+        if (!content) return emojiMap;
+
+        const lines = content.split('\n');
+        let inRoutine = false;
+        let currentCatName = "";
+        let totalCount = 0;
+        let checkedCount = 0;
+
+        const flushCategory = () => {
+            if (currentCatName) {
+                let emoji = "🟥";
+                if (totalCount > 0) {
+                    if (checkedCount === totalCount) {
+                        emoji = "🟦";
+                    } else if (checkedCount >= Math.ceil(totalCount / 2) && checkedCount > 0) {
+                        emoji = "🟩";
+                    } else if (checkedCount > 0) {
+                        emoji = "🟨";
+                    } else {
+                        emoji = "🟥";
+                    }
+                }
+                emojiMap.set(currentCatName, emoji);
+            }
+            currentCatName = "";
+            totalCount = 0;
+            checkedCount = 0;
+        };
+
+        for (const line of lines) {
+            if (/^>\s*\[!routine\]/i.test(line)) {
+                inRoutine = true;
+                continue;
+            }
+
+            if (inRoutine) {
+                if (!line.startsWith('>') && line.trim() !== '') {
+                    inRoutine = false;
+                    flushCategory();
+                    break;
+                }
+
+                // 카테고리 헤더 감지
+                const catMatch = line.match(/^>\s*##\s+(.*)$/);
+                if (catMatch) {
+                    flushCategory();
+                    const rawHeader = catMatch[1].trim();
+                    currentCatName = rawHeader
+                        .replace(/<[^>]+>/g, "")
+                        .replace(/==/g, "")
+                        .trim();
+                    continue;
+                }
+
+                // 체크리스트 항목 감지
+                const itemMatch = line.match(/^>\s*[-*+]\s+\[(.)\]/);
+                if (itemMatch && currentCatName) {
+                    totalCount++;
+                    const checkChar = itemMatch[1].trim();
+                    if (checkChar.toLowerCase() === 'x') {
+                        checkedCount++;
+                    }
+                }
+            }
+        }
+
+        flushCategory();
+        return emojiMap;
+    }
+
+    /**
+     * 상단 루틴 콜아웃 내부의 모든 체크박스를 [ ] (미체크)로 초기화
+     */
+    static resetRoutineCalloutCheckboxes(content: string): string {
+        if (!content) return content;
+        const lines = content.split('\n');
+        let inRoutine = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^>\s*\[!routine\]/i.test(line)) {
+                inRoutine = true;
+                continue;
+            }
+
+            if (inRoutine) {
+                if (!line.startsWith('>') && line.trim() !== '') {
+                    inRoutine = false;
+                    continue;
+                }
+
+                // 체크박스 항목을 [ ] 로 초기화
+                if (/^>\s*[-*+]\s+\[.\]/.test(line)) {
+                    lines[i] = line.replace(/^((?:>\s*)*[-*+]\s+\[).(\])/, '$1 $2');
+                }
+            }
+        }
+
+        return lines.join('\n');
     }
 
     /**

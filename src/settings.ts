@@ -13,7 +13,6 @@ export interface PluginSettings {
     statsDirectory: string;
     midnightOffsetHour: number;
     projectDirectory: string;
-    syncOnStartup: boolean;
     customTemplates: {
         dailySchedule: string;
     };
@@ -28,7 +27,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     statsDirectory: "4. Archive/99.Stats",
     midnightOffsetHour: 4,
     projectDirectory: "1. Project/01.List",
-    syncOnStartup: true,
     customTemplates: {
         dailySchedule: ""
     }
@@ -476,65 +474,6 @@ export class ConfirmModal extends Modal {
                     this.close();
                 })
             );
-    }
-
-    onClose() {
-        const { contentEl } = this;
-        contentEl.empty();
-    }
-}
-
-// 부팅 시 동기화 확인 팝업
-export class StartupSyncModal extends Modal {
-    language: string;
-    onSync: () => Promise<void>;
-
-    constructor(app: App, language: string, onSync: () => Promise<void>) {
-        super(app);
-        this.language = language;
-        this.onSync = onSync;
-    }
-
-    onOpen() {
-        const { contentEl, modalEl } = this;
-        contentEl.empty();
-        modalEl.addClass("myworld-startup-modal");
-
-        // 아이콘 + 타이틀
-        const header = contentEl.createDiv({ cls: "myworld-startup-header" });
-        header.createDiv({ text: "🔄", cls: "myworld-startup-icon" });
-        header.createEl("h2", { text: t("modal_startup_title", this.language), cls: "myworld-startup-title" });
-
-        // 안내 메시지
-        const desc = contentEl.createDiv({ cls: "myworld-startup-desc" });
-        desc.createEl("p", { text: t("modal_startup_desc", this.language) });
-
-        // 오늘 날짜 표시
-        const today = window.moment().format("YYYY년 MM월 DD일 (ddd)");
-        const dateEl = contentEl.createDiv({ cls: "myworld-startup-date" });
-        dateEl.createSpan({ text: "📅 " + today });
-
-        // 안내 문구
-        const notice = contentEl.createDiv({ cls: "myworld-startup-notice" });
-        notice.createSpan({ text: t("modal_startup_notice", this.language) });
-
-        // 버튼 영역
-        const btnArea = contentEl.createDiv({ cls: "myworld-startup-btn-area" });
-
-        const skipBtn = btnArea.createEl("button", { text: t("btn_skip", this.language), cls: "myworld-startup-btn-skip" });
-        skipBtn.addEventListener("click", () => {
-            this.close();
-        });
-
-        const syncBtn = btnArea.createEl("button", { text: t("btn_sync_now", this.language), cls: "myworld-startup-btn-sync" });
-        syncBtn.addEventListener("click", () => {
-            void (async () => {
-                syncBtn.disabled = true;
-                syncBtn.textContent = t("btn_syncing", this.language);
-                this.close();
-                await this.onSync();
-            })();
-        });
     }
 
     onClose() {

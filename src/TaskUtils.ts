@@ -221,8 +221,6 @@ export class TaskUtils {
             console.warn('[generateBlockId] 100회 시도에도 고유 ID 생성 실패, 중복 가능성 있음:', id);
         }
 
-        // issuedIds 누적 방지: 1000개 초과 시 세션 내 최소 목록 면저 지우기
-
         // issuedIds 크기 제한: 1000개 초과 시 가장 오래된 것 삭제
         if (this.issuedIds.size >= 1000) {
             const firstKey = this.issuedIds.values().next().value;
@@ -293,34 +291,11 @@ export class TaskUtils {
             }
         }
 
-        // Downward 완료 상태 전파
-        for (let i = 0; i < lineInfos.length; i++) {
-            if (lineInfos[i].isTask && lineInfos[i].isCompleted) {
-                for (let j = i + 1; j < lineInfos.length; j++) {
-                    if (lineInfos[j].ind <= lineInfos[i].ind) break;
-                    if (lineInfos[j].isTask) {
-                        if (!lineInfos[j].isCompleted) {
-                            lineInfos[j].isCompleted = true;
-                            const pStatus = (lineInfos[i].line.match(REGEX.STATUS_MATCH) || ["", "x"])[1];
-                            (lineInfos[j] as { propStatus?: string }).propStatus = pStatus;
-                        }
-                    }
-                }
-            }
-        }
-
         return lineInfos.map((d) => {
             if (!d.isTask) return d.line;
             let l = d.line;
 
-            // Clean legacy #D- and #Past tags to completely migrate to new markers
-            l = l.replace(/\s*#(?:D-\d+|Past)\s*/ig, ' ');
-
-            // Clean accidentally injected [[D]] or [D] text corruption from previous bug
-            l = l.replace(/^(\s*(?:>\s*)*[-*+]\s+)(?:\[\[[^\]]+\]\]|\[[D!]\])\s*/g, '$1[ ] ');
-
-            let status = (d as { propStatus?: string }).propStatus || (d.line.match(REGEX.STATUS_MATCH) || ["", " "])[1];
-
+            let status = (d.line.match(REGEX.STATUS_MATCH) || ["", " "])[1];
             if (!d.isCompleted) {
                 // 미완료 태스크의 체크박스 상태는 언제나 표준 공백(" ") 유지
                 status = " ";
@@ -347,14 +322,9 @@ export class TaskUtils {
             }
 
             if (REGEX.MATCH_TASK.test(l)) {
-                let isDeleted = false;
-                const match = l.match(REGEX.TASK_LINE);
-                if (match) {
-                    const textWithId = match[3];
-                    isDeleted = /;;(\s*\^[a-zA-Z0-9]+)?$/.test(textWithId.trim());
-                }
-                if (REGEX.MATCH_TASK_COMPLETED.test(l) || isDeleted) {
-                    skipIndent = currentIndent; continue;
+                if (REGEX.MATCH_TASK_COMPLETED.test(l)) {
+                    skipIndent = currentIndent;
+                    continue;
                 }
                 filtered.push(l);
             } else {
@@ -741,12 +711,29 @@ export class TaskUtils {
             let m = l.match(/^((?:>\s*)*)##\s+(.*)$/);
             if (inRoutine && m) {
                 let prefix = m[1] + "## ";
-                let cleanText = m[2].replace(/[*=]+/g, '').trim();
+                let rawText = m[2].trim();
 
-                if (deficientItems.has(cleanText)) {
-                    l = prefix + `==${cleanText}==`;
+                // aria-label 또는 title 툴팁 속성 추출
+                let desc = "";
+                const descMatch = rawText.match(/(?:aria-label|title)="([^"]+)"/i);
+                if (descMatch) {
+                    desc = descMatch[1].trim();
+                }
+
+                // 순수 카테고리 이름 추출
+                let pureCatName = rawText
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/[*=]+/g, '')
+                    .trim();
+
+                const isDeficient = deficientItems.has(pureCatName);
+                const displayCatName = isDeficient ? `==${pureCatName}==` : pureCatName;
+
+                if (desc) {
+                    const safeDesc = desc.replace(/"/g, '&quot;');
+                    l = prefix + `<span aria-label="${safeDesc}">${displayCatName}</span>`;
                 } else {
-                    l = prefix + cleanText;
+                    l = prefix + displayCatName;
                 }
                 lines[i] = l;
             }
@@ -854,11 +841,11 @@ export class TaskUtils {
 
     extractDailyMetadata(content: string): DailyMeta {
         let step = "미작성", review = "미작성";
-        const stepMatch = content.match(/^((?:>|\s*[-*+])\s*.*?(?:[Ss]tep|도전)\s*:\s*)(.*)$/m);
-        if (stepMatch && stepMatch[2].trim()) step = stepMatch[2].trim();
+        const stepMatch = content.match(/^(?:>|\s*[-*+]|\s*)*.*?(?:[Ss]tep|도전)\s*:\s*(.*)$/im);
+        if (stepMatch && stepMatch[1].trim()) step = stepMatch[1].trim();
 
-        const reviewMatch = content.match(/^((?:>|\s*[-*+])\s*.*?(?:회고|Review)\s*:\s*)(.*)$/m);
-        if (reviewMatch && reviewMatch[2].trim()) review = reviewMatch[2].trim();
+        const reviewMatch = content.match(/^(?:>|\s*[-*+]|\s*)*.*?(?:회고|Review)\s*:\s*(.*)$/im);
+        if (reviewMatch && reviewMatch[1].trim()) review = reviewMatch[1].trim();
 
         return { step, review };
     }
@@ -1000,7 +987,8 @@ export class TaskUtils {
         });
 
         // 7일간 모든 루틴이 비어있다면 최소한 currentScheduleCols 활성 루틴은 표시
-        const finalHeaderCols = ["날짜", ...(activeCatCols.length > 0 ? activeCatCols : currentScheduleCols.slice(1))];
+        const dateColLabel = this.settings.language === 'ko' ? "날짜" : "Date";
+        const finalHeaderCols = [dateColLabel, ...(activeCatCols.length > 0 ? activeCatCols : currentScheduleCols.slice(1))];
         const targetHeaderLine = `| ${finalHeaderCols.join(" | ")} |`;
         const targetSeparatorLine = `| :-: | ${finalHeaderCols.slice(1).map(() => ":--:").join(" | ")} |`;
 
@@ -1016,7 +1004,7 @@ export class TaskUtils {
         let weeklyStatsDashboard = "";
         if (finalWeekRows.length > 0) {
             weeklyTableStr = targetHeaderLine + "\n" + targetSeparatorLine + "\n" + finalWeekRows.join('\n');
-            weeklyStatsDashboard = this.generateStatsDashboard(weeklyTableStr, "주간 체크리스트 통계", "info");
+            weeklyStatsDashboard = this.generateStatsDashboard(weeklyTableStr, t("stats_title", this.settings.language), "info");
         }
 
         if (wFile && wFile instanceof TFile) {

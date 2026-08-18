@@ -50,9 +50,8 @@ export class RoutineManagerModal extends Modal {
         if (newIndex < 0 || newIndex >= this.currentStructure.categories.length) return;
         const scrollTop = this.getCurrentScrollTop();
         const targetCat = this.currentStructure.categories[index];
-        const temp = this.currentStructure.categories[index];
         this.currentStructure.categories[index] = this.currentStructure.categories[newIndex];
-        this.currentStructure.categories[newIndex] = temp;
+        this.currentStructure.categories[newIndex] = targetCat;
         this.render(`input-cat-name-${targetCat.id}`, scrollTop);
     }
 
@@ -187,6 +186,19 @@ export class RoutineManagerModal extends Modal {
                 const scrollTop = this.getCurrentScrollTop();
                 this.currentStructure.categories.splice(index, 1);
                 this.render(undefined, scrollTop);
+            });
+
+            // 세부 계획/가이드 입력란 (표 헤더와 분리된 설명란)
+            const descRow = catCard.createDiv({ cls: "routine-cat-desc-row" });
+            descRow.createSpan({ text: "💡", cls: "routine-cat-desc-icon" });
+            const descInput = descRow.createEl("input", {
+                type: "text",
+                value: cat.description || "",
+                placeholder: isKo ? "세부 계획 / 가이드 (예: 5분 호흡 집중, 25분 타이머)" : "Detailed Plan / Guide (e.g. 5 min breathing, 25 min timer)",
+                cls: "routine-cat-desc-input"
+            });
+            descInput.addEventListener("input", (e) => {
+                cat.description = (e.target as HTMLInputElement).value;
             });
 
             // 세부 항목(Items) 영역

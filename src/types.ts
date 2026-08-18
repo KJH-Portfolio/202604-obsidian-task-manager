@@ -7,6 +7,7 @@ export interface DailyMeta {
 export interface RoutineCategory {
     id: string;
     name: string;
+    description?: string;
     items: string[];
 }
 

@@ -11,6 +11,7 @@ import { TaskUtils } from "./TaskUtils";
 import { DateManager } from "./DateManager";
 import { FileManager } from "./FileManager";
 import { REGEX } from "./Constants";
+import { RoutineSyncEngine } from "./RoutineSyncEngine";
 // 1. 일간 마감 입력 팝업 모달 정의
 export class DailyResetModal extends Modal {
     review: string;
@@ -143,120 +144,99 @@ export class ResetManager {
                     // BUG-G: 외부 스코프의 content(dailyMeta 파싱용)와 섀도잉 방지
                     let resetContent = this.utils.preprocessContent(originalContent);
 
-                    // --- [Step 1] 미니 테이블 데이터 추출 및 체크리스트 본 표 이관 ---
-                    const miniTableRegex = /(\|.*\|\n\|(?:\s*[:-]+[ -]*\|)+\n)([^\n]+)/;
-                    const miniMatch = resetContent.match(miniTableRegex);
+                    // --- [Step 1] 루틴 콜아웃 체크박스 분석 및 하단 마스터 표 자동 이관 ---
+                    const routineEmojiMap = RoutineSyncEngine.calculateRoutineEmojiMap(resetContent);
+                    const cleanDateStr = now.date().toString();
 
-                    if (miniMatch) {
-                        const fullMatch = miniMatch[0];
-                        const headerPart = miniMatch[1];
-                        const dataLine = miniMatch[2];
+                    const chkRange = this.utils.getSectionRange(resetContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
+                    if (chkRange) {
+                        let beforeChk = resetContent.substring(0, chkRange.start);
+                        let chkSection = resetContent.substring(chkRange.start, chkRange.end);
+                        const afterChk = resetContent.substring(chkRange.end);
 
-                        // 상단 미니 표의 헤더와 데이터 매핑
-                        const topHeaderLine = headerPart.split('\n')[0];
-                        const topHeaders = topHeaderLine.trim().replace(/^\||\|$/g, '').split('|').map(s => s.trim());
+                        // 하단 마스터 표 헤더 및 기존 데이터 행 파싱
+                        const chkLines = chkSection.split('\n');
+                        let tableStart = -1;
+                        let tableEnd = -1;
+                        let existingBotHeaders: string[] = [];
+                        const dataRowMap: Record<string, Record<string, string>> = {};
 
-                        const innerData = dataLine.trim().replace(/^\||\|$/g, '');
-                        const rowCols = innerData.split('|');
+                        for (let i = 0; i < chkLines.length; i++) {
+                            const lineTrim = chkLines[i].trim();
+                            if (lineTrim.startsWith('|')) {
+                                if (tableStart === -1) {
+                                    tableStart = i;
+                                    existingBotHeaders = lineTrim.replace(/^\||\|$/g, '').split('|').map(s => s.trim());
+                                }
+                                tableEnd = i;
 
-                        const topDataMap = new Map<string, string>();
-                        topHeaders.forEach((h, i) => {
-                            topDataMap.set(h, rowCols[i] || '      ');
+                                // 데이터 행 파싱
+                                const cols = lineTrim.split('|').map(s => s.trim());
+                                if (cols.length > 2 && !isNaN(parseInt(cols[1]))) {
+                                    const d = parseInt(cols[1]).toString();
+                                    const rowValMap: Record<string, string> = {};
+                                    existingBotHeaders.slice(1).forEach((h, idx) => {
+                                        if (h) rowValMap[h] = cols[idx + 2] || '      ';
+                                    });
+                                    dataRowMap[d] = rowValMap;
+                                }
+                            } else if (tableStart !== -1 && lineTrim !== '' && !lineTrim.startsWith('#')) {
+                                break;
+                            }
+                        }
+
+                        // targetBotHeaders 구성: 기존 첫 번째 컬럼(날짜/Date)을 존중하고 루틴 카테고리 동기화
+                        const firstColName = (existingBotHeaders.length > 0 && (existingBotHeaders[0] === '날짜' || existingBotHeaders[0] === 'Date'))
+                            ? existingBotHeaders[0]
+                            : (this.settings.language === 'ko' ? '날짜' : 'Date');
+
+                        const targetBotHeaders = [firstColName];
+                        routineEmojiMap.forEach((_, catName) => {
+                            if (!targetBotHeaders.includes(catName)) {
+                                targetBotHeaders.push(catName);
+                            }
                         });
 
-                        const currentDateStr = (rowCols[0] || "").trim();
-                        const todayDateNum = now.date();
-                        const dateStr = currentDateStr || todayDateNum.toString();
-
-                        const chkRange = this.utils.getSectionRange(resetContent, t("header_checklist", this.settings.language)) as { start: number, end: number };
-                        if (chkRange) {
-                            let beforeChk = resetContent.substring(0, chkRange.start);
-                            let chkSection = resetContent.substring(chkRange.start, chkRange.end);
-                            const afterChk = resetContent.substring(chkRange.end);
-
-                            // 하단 마스터 표 헤더 및 기존 데이터 행 파싱 (완전 보장 방식)
-                            const chkLines = chkSection.split('\n');
-                            let tableStart = -1;
-                            let tableEnd = -1;
-                            let existingBotHeaders: string[] = [];
-                            const dataRowMap: Record<string, Record<string, string>> = {};
-
-                            for (let i = 0; i < chkLines.length; i++) {
-                                const lineTrim = chkLines[i].trim();
-                                if (lineTrim.startsWith('|')) {
-                                    if (tableStart === -1) {
-                                        tableStart = i;
-                                        existingBotHeaders = lineTrim.replace(/^\||\|$/g, '').split('|').map(s => s.trim());
-                                    }
-                                    tableEnd = i;
-
-                                    // 데이터 행 파싱
-                                    const cols = lineTrim.split('|').map(s => s.trim());
-                                    if (cols.length > 2 && !isNaN(parseInt(cols[1]))) {
-                                        const d = parseInt(cols[1]).toString();
-                                        const rowValMap: Record<string, string> = {};
-                                        existingBotHeaders.slice(1).forEach((h, idx) => {
-                                            if (h) rowValMap[h] = cols[idx + 2] || '      ';
-                                        });
-                                        dataRowMap[d] = rowValMap;
-                                    }
-                                } else if (tableStart !== -1 && lineTrim !== '' && !lineTrim.startsWith('#')) {
-                                    break;
-                                }
+                        existingBotHeaders.forEach((h, idx) => {
+                            if (idx > 0 && h && !targetBotHeaders.includes(h)) {
+                                targetBotHeaders.push(h);
                             }
+                        });
 
-                            // targetBotHeaders: topHeaders를 무조건 기본 헤더로 사용하고, 기존 데이터가 남아있는 구 컬럼만 추가 보존
-                            const targetBotHeaders = [...topHeaders];
-                            existingBotHeaders.forEach(h => {
-                                if (h && !targetBotHeaders.includes(h)) {
-                                    targetBotHeaders.push(h);
-                                }
-                            });
+                        // 당일(cleanDateStr) 데이터 업데이트 (루틴 콜아웃 이모지 자동 주입)
+                        if (!dataRowMap[cleanDateStr]) dataRowMap[cleanDateStr] = {};
+                        routineEmojiMap.forEach((emoji, catName) => {
+                            dataRowMap[cleanDateStr][catName] = emoji;
+                        });
 
-                            // 당일(dateStr) 데이터 업데이트 (상단 미니표 값 주입)
-                            const cleanDateStr = parseInt(dateStr).toString();
-                            if (!dataRowMap[cleanDateStr]) dataRowMap[cleanDateStr] = {};
-                            topHeaders.forEach((h, idx) => {
-                                if (h !== '날짜' && h !== 'Date') {
-                                    const rawVal = rowCols[idx] ? rowCols[idx].trim() : '      ';
-                                    dataRowMap[cleanDateStr][h] = rawVal || '      ';
-                                }
-                            });
+                        // 새 마스터 표 생성
+                        const newHeaderLine = `| ${targetBotHeaders.join(" | ")} |`;
+                        const newSepLine = `| :-: | ${targetBotHeaders.slice(1).map(() => ":--:").join(" | ")} |`;
 
-                            // 새 마스터 표 생성
-                            const newHeaderLine = `| ${targetBotHeaders.join(" | ")} |`;
-                            const newSepLine = `| :-: | ${targetBotHeaders.slice(1).map(() => ":--:").join(" | ")} |`;
-
-                            // 1~31일 데이터 행 재구성
-                            const newRows: string[] = [];
-                            for (let d = 1; d <= 31; d++) {
-                                const dKey = d.toString();
-                                const rowVals = dataRowMap[dKey] || {};
-                                const catVals = targetBotHeaders.slice(1).map(h => {
-                                    const val = rowVals[h];
-                                    return (val !== undefined && val.trim() !== '') ? val : '      ';
-                                });
-                                newRows.push(`| ${dKey.padEnd(2, ' ')} | ${catVals.join(" | ")} |`);
-                            }
-
-                            const newMasterTableStr = `${newHeaderLine}\n${newSepLine}\n${newRows.join('\n')}`;
-
-                            if (tableStart !== -1 && tableEnd !== -1) {
-                                chkLines.splice(tableStart, tableEnd - tableStart + 1, newMasterTableStr);
-                                chkSection = chkLines.join('\n');
-                            } else {
-                                chkSection = `${t("header_checklist", this.settings.language)}\n\n${newMasterTableStr}\n`;
-                            }
-
-                            const nextDateNum = todayObj.getDate();
-                            const emptyRowCols = [` ${nextDateNum.toString().padEnd(3, ' ')} `].concat(Array(Math.max(0, rowCols.length - 1)).fill('      '));
-                            const newMiniTableRow = `|${emptyRowCols.join('|')}|`;
-
-                            beforeChk = beforeChk.replace(fullMatch, headerPart + newMiniTableRow);
-
-                            resetContent = beforeChk + chkSection + afterChk;
+                        // 1~31일 데이터 행 재구성
+                        const newRows: string[] = [];
+                        const maxDays = now.daysInMonth();
+                        for (let d = 1; d <= maxDays; d++) {
+                            const dStr = d.toString();
+                            const rowData = dataRowMap[dStr] || {};
+                            const rowVals = targetBotHeaders.slice(1).map(h => rowData[h] || '      ');
+                            newRows.push(`| ${d.toString().padStart(2, ' ')} | ${rowVals.join(" | ")} |`);
                         }
+
+                        const newTableStr = [newHeaderLine, newSepLine, ...newRows].join('\n');
+
+                        if (tableStart !== -1) {
+                            chkSection = chkLines.slice(0, tableStart).join('\n') + '\n' + newTableStr + '\n' + chkLines.slice(tableEnd + 1).join('\n');
+                        } else {
+                            chkSection = chkSection.trim() + '\n\n' + newTableStr + '\n';
+                        }
+
+                        resetContent = beforeChk + chkSection + afterChk;
                     }
+
+                    // --- [Step 1-1] 상단 루틴 콜아웃 체크박스 초기화 (다음 날을 위해 클린 리셋) ---
+                    resetContent = RoutineSyncEngine.resetRoutineCalloutCheckboxes(resetContent);
+
 
                     // --- [Step 2] 프로젝트 파일 획득 (완료 항목 정리를 위해) ---
                     const allFiles = this.utils.getProjectFiles();
@@ -319,7 +299,14 @@ export class ResetManager {
                             cleanedProjLines.push(...this.utils.filterResetTasks(execBuf, true));
                         }
 
-                        const newProjContent = cleanedProjLines.join("\n");
+                        let newProjContent = cleanedProjLines.join("\n");
+
+                        // 3. 프로젝트 실행 탭 긴급도/마감일 자동 정렬
+                        const execHeaderMatch = newProjContent.match(/(?:^|\n)(#+\s+(?:🏃‍♂️\s*)?(?:실행|Execution))[ \t]*(?=\n|$)/i);
+                        if (execHeaderMatch && execHeaderMatch[1]) {
+                            newProjContent = this.utils.processSectionLogic(newProjContent, execHeaderMatch[1].trim(), todayObj, false, true);
+                        }
+
                         if (projContent !== newProjContent) {
                             await this.fileManager.pluginWrite(projFile, newProjContent);
                         }
@@ -342,8 +329,8 @@ export class ResetManager {
                         if (inRoutine && /^((?:>\s*)*\s*[-*+]\s+)\[[^ ]\]/.test(l)) {
                             l = l.replace(/^((?:>\s*)*\s*[-*+]\s+)\[[^ ]\]/, "$1[ ]");
                         }
-                        if (/^((?:>\s*)+.*?(?:[Ss]tep|도전)\s*:).*$/.test(l)) {
-                            l = l.replace(/^((?:>\s*)+.*?(?:[Ss]tep|도전)\s*:).*$/, (_match, p1) => `${p1} ${stepInput || " "}`);
+                        if (/^((?:>\s*|[-*+]\s*|\s*)*.*?(?:[Ss]tep|도전)\s*:).*$/i.test(l)) {
+                            l = l.replace(/^((?:>\s*|[-*+]\s*|\s*)*.*?(?:[Ss]tep|도전)\s*:).*$/i, (_match, p1) => `${p1} ${stepInput || " "}`);
                         }
                         finalL.push(l);
                     }

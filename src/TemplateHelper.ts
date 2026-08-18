@@ -5,7 +5,7 @@ import { t } from "./i18n";
 
 export class TemplateHelper {
     private app: App;
-    private settings: PluginSettings;
+    public settings: PluginSettings;
     private utils: TaskUtils;
 
     constructor(app: App, settings: PluginSettings, utils: TaskUtils) {
@@ -16,6 +16,14 @@ export class TemplateHelper {
 
     public updateSettings(settings: PluginSettings) {
         this.settings = settings;
+    }
+
+    public replacePlaceholder(template: string, replacements: Record<string, string>): string {
+        let result = template;
+        for (const [key, value] of Object.entries(replacements)) {
+            result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+        }
+        return result;
     }
 
     public getScheduleTemplateContent(isKo: boolean): string {

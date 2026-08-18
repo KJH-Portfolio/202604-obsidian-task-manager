@@ -51,7 +51,6 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
         const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
         if (!activeFile) return builder.finish();
 
-        // @ts-ignore
         const today = window.moment().startOf('day');
         
         const tabSize = view.state.tabSize || 4;
@@ -103,7 +102,6 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
                     }
 
                     if (dateStr) {
-                        // @ts-ignore
                         const targetDate = window.moment(dateStr, "YYYY-MM-DD", true);
                         if (targetDate.isValid()) {
                             const diff = targetDate.diff(today, 'days');

@@ -11,7 +11,7 @@ import { buildDDayBadgePlugin } from "./ui/DDayBadgePlugin";
 import { buildCopyToExecutionButtonExtension } from "./ui/CopyToExecutionWidget";
 import { buildAddExecutionTaskButtonExtension } from "./ui/AddExecutionTaskWidget";
 import { buildScheduleHeaderButtonsExtension, ScheduleHeaderActionType } from "./ui/ScheduleHeaderButtonsWidget";
-import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab, StartupSyncModal } from "./settings";
+import { PluginSettings, DEFAULT_SETTINGS, MyWorldTaskManagerSettingTab } from "./settings";
 import { TaskUtils } from "./TaskUtils";
 import { Synchronizer } from "./Synchronizer";
 import { ResetManager } from "./ResetManager";
@@ -179,6 +179,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         const path = fileToSync.path;
 
+        // 프로젝트 계획서 폴더 내 파일에 대해서만 식별자 동기화 수행
+        if (!path.startsWith(this.settings.projectDirectory)) {
+            this.modifiedFiles.delete(path);
+            return;
+        }
+
         // 300ms 디바운스 및 순차 실행 큐(TaskQueue) 적용
         this.taskQueue.enqueue(path, async () => {
             // 동기화 중복 실행 방지 (Race Condition Lock)
@@ -189,11 +195,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             this.syncLock.add(path);
 
             try {
-                if (path === this.settings.mainSchedulePath) {
-                    await this.synchronizer.syncDailyTasks(fileToSync, silent);
-                } else if (path.startsWith(this.settings.projectDirectory)) {
-                    await this.synchronizer.syncProjectNoteIdentifiers(fileToSync, silent);
-                }
+                await this.synchronizer.syncProjectNoteIdentifiers(fileToSync, silent);
             } catch (e) {
                 console.error("Auto-sync error:", e);
             } finally {
@@ -216,7 +218,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.utils = new TaskUtils(this.app, this.settings, this.dateManager, this.fileManager);
         this.synchronizer = new Synchronizer(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
         this.resetManager = new ResetManager(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
-        this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils, this.dateManager, this.fileManager);
+        this.templateHelper = new TemplateHelper(this.app, this.settings, this.utils);
 
         // 3. 컨트롤러 인스턴스 생성 및 이벤트/명령어 등록
         const eventController = new EventController(this.app, this);
@@ -960,7 +962,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const btn = createSpan();
                         btn.className = "myworld-today-btn";
                         btn.textContent = "📅";
-                        btn.title = "날짜 지정";
+                        btn.title = t("cal_tooltip", this.settings.language);
                         btn.addEventListener("mousedown", (e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -1072,41 +1074,24 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             })
         );
 
-        // 플러그인 로드 시(초기 1회) 스케줄 기준 전체 동기화 확인 팝업 (설정에서 켜진 경우에만)
-        // active-leaf-change는 EventController에서 단일 관리
+        // 플러그인 로드 시 활성 파일 초기화 (active-leaf-change는 EventController에서 관리)
         this.app.workspace.onLayoutReady(() => {
             this.lastActiveFile = this.app.workspace.getActiveFile();
-            if (!this.settings.syncOnStartup) {
-                // console.log("Startup sync popup disabled in settings. Skipping.");
-                return;
-            }
-
-            const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
-            if (scheduleFile && scheduleFile instanceof TFile) {
-                // 자동 실행 대신 사용자 확인 팝업을 띄움
-                new StartupSyncModal(this.app, this.settings.language, async () => {
-                    try {
-                        // console.log("Running initial sync (user confirmed)...");
-                        await this.synchronizer.syncDailyTasks(scheduleFile);
-                    } catch (e) {
-                        console.error("Initial sync error:", e);
-                    }
-                }).open();
-            }
         });
 
         // 5. 명령어(Command) 등록
 
-        // 명령어 A: 양방향 프로젝트 및 스케줄 동기화 (task-manage)
+        // 명령어 A: 프로젝트 식별자 수동 동기화 (task-manage)
         this.addCommand({
             id: "task-manage",
-            name: t("cmd_sync_main", this.settings.language),
+            name: this.settings.language === "ko" ? "프로젝트 식별자 동기화" : "Sync Project Identifiers",
             callback: async () => {
-                const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
-                if (scheduleFile && scheduleFile instanceof TFile) {
-                    await this.synchronizer.syncDailyTasks(scheduleFile);
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile && activeFile.path.startsWith(this.settings.projectDirectory)) {
+                    await this.synchronizer.syncProjectNoteIdentifiers(activeFile);
+                    new Notice(t("notice_sync_project_complete", this.settings.language));
                 } else {
-                    new Notice(t("notice_no_schedule_path", this.settings.language, { path: this.settings.mainSchedulePath }));
+                    new Notice(this.settings.language === "ko" ? "프로젝트 노트가 아닙니다." : "Not a project note.");
                 }
             }
         });
@@ -1286,10 +1271,6 @@ Modified: "2000-01-01T00:00"
 > - [ ] 3 times
 > - [ ] 5 times+
 ---
-
-| Date  | Step | Block | Mental  | Diet  | Exercise  | Sleep  | Detox |
-| :-: | :--: | :---: | :-: | :-: | :-: | :-: | :-: |
-| {{currentDay}}  |      |      |      |      |      |      |      |
 # Todo
 #### Todo
 - [ ] Task due today 📅 {{date}}
@@ -1313,40 +1294,36 @@ ${checklistTable}
 ---
 
 # 루틴
->Step : 계획 따라 움직이기. 1:30 취침하기.
+Step : 계획 따라 움직이기. 1:30 취침하기.
 
 > [!routine]
 > 확언 : 시작이 반 이다.
-> ## ==Step==
+> ## <span aria-label="핵심 1순위 행동 완료">==Step==</span>
 > - [ ] 작성
 > - [ ] 실행
-> ## ==Block==
+> ## <span aria-label="1시간 집중 블록">==Block==</span>
 > - [ ] 1
 > - [ ] 2
 > - [ ] 3
 > - [ ] 4
 > - [ ] 5
 > - [ ] 6
-> ## ==멘탈==
+> ## <span aria-label="5분 확언 및 명상">==멘탈==</span>
 > - [ ] 확언 읽기
 > - [ ] 10분 명상
-> ## ==식단==
+> ## <span aria-label="건강한 3끼 식단">==식단==</span>
 > - [ ] 아침
 > - [ ] 점심
 > - [ ] 저녁
-> ## ==운동==
+> ## <span aria-label="스트레칭 + 유산소">==운동==</span>
 > - [ ] 스쿼트 60, 팔굽 20
-> ## ==취침==
+> ## <span aria-label="12시 이전 취침 준비">==취침==</span>
 > - [ ] 11시부터 정적 활동
-> ## ==디톡스==
+> ## <span aria-label="25분 타이머 집중">==디톡스==</span>
 > - [ ] 1회
 > - [ ] 3회
 > - [ ] 5회+
 ---
-
-| 날짜  | Step | Block | 멘탈  | 식단  | 운동  | 취침  | 디톡스 |
-| :-: | :--: | :---: | :-: | :-: | :-: | :-: | :-: |
-| {{currentDay}}  |      |      |      |      |      |      |      |
 # Todo
 #### 할 일
 - [ ] 오늘 마감인 작업 📅 {{date}}
@@ -1520,10 +1497,7 @@ ${checklistTable}
             this.utils,
             this.synchronizer,
             async () => {
-                const scheduleFile = this.app.vault.getAbstractFileByPath(this.settings.mainSchedulePath);
-                if (scheduleFile && scheduleFile instanceof TFile) {
-                    await this.synchronizer.syncMainScheduleNote(scheduleFile, true);
-                }
+                // 저장 후 추가 작업
             },
             targetFile
         ).open();

@@ -23,42 +23,7 @@ export class Synchronizer {
 
 
 
-    // 1. 데일리 스케줄 관리 노트 관점 동기화 (기존 98번 스크립트 역할)
-    async syncDailyTasks(dailyFile: TFile, silent = false): Promise<void> {
-        // catch 블록에서 롤백에 사용하기 위해 try 바깥에 선언
-        let originalContent = "";
-        try {
-            if (!silent) this.utils.showLoadingOverlay("⏳ 스케줄 동기화 중...");
-            if (!silent) new Notice(t("sync_full_start", this.settings.language));
-            // BUG-18: vault.read 대신 getActiveViewOrFileText를 사용하여 에디터 미저장 내용도 반영
-            originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
-            let content = this.utils.preprocessContent(originalContent);
-            const now = this.dateManager.getAdjustedNow();
-            const todayObj = now.clone().startOf('day').toDate();
-
-
-
-            // # Todo 섹션의 기한 마커 정렬 및 전파
-            content = this.utils.processSectionLogic(content, "# Todo", todayObj, false, true);
-
-            await this.fileManager.saveIfChanged(dailyFile, originalContent, content);
-            if (!silent) new Notice(t("sync_full_complete", this.settings.language));
-        } catch (e) {
-            console.error("Task Manage Error:", e instanceof Error ? e.message : String(e));
-            // 스케줄 파일 원본 복구 시도
-            try {
-                await this.fileManager.pluginWrite(dailyFile, originalContent);
-                new Notice(t("sync_fail_restore", this.settings.language));
-            } catch (rollbackErr) {
-                console.error("Rollback failed for daily file:", dailyFile.path, rollbackErr);
-                new Notice(t("sync_fail_critical", this.settings.language));
-            }
-        } finally {
-            if (!silent) this.utils.hideLoadingOverlay();
-        }
-    }
-
-    // 2. 프로젝트 노트 식별자 자동 부여
+    // 1. 프로젝트 노트 식별자 자동 부여 (계획 ↔ 실행 양방향 연동용)
     async syncProjectNoteIdentifiers(projectFile: TFile, silent = false): Promise<void> {
         let originalContent = "";
         try {
