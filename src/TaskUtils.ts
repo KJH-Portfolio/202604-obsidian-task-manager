@@ -727,13 +727,20 @@ export class TaskUtils {
                     .trim();
 
                 const isDeficient = deficientItems.has(pureCatName);
-                const displayCatName = isDeficient ? `==${pureCatName}==` : pureCatName;
 
                 if (desc) {
                     const safeDesc = desc.replace(/"/g, '&quot;');
-                    l = prefix + `<span aria-label="${safeDesc}">${displayCatName}</span>`;
+                    if (isDeficient) {
+                        l = prefix + `<span aria-label="${safeDesc}" class="routine-deficient-name">${pureCatName}</span>`;
+                    } else {
+                        l = prefix + `<span aria-label="${safeDesc}">${pureCatName}</span>`;
+                    }
                 } else {
-                    l = prefix + displayCatName;
+                    if (isDeficient) {
+                        l = prefix + `<span class="routine-deficient-name">${pureCatName}</span>`;
+                    } else {
+                        l = prefix + pureCatName;
+                    }
                 }
                 lines[i] = l;
             }

@@ -597,30 +597,36 @@ body .callout[data-callout="routine"] .cm-line.HyperMD-header {
     line-height: 1.2;
 }
 
-/* 제목에 툴팁(aria-label)이 있는 경우 은은한 힌트 표시 (Obsidian 린터 호환 단축 속성 적용) */
+/* 제목에 툴팁(aria-label)이 있는 경우: 깔끔한 기본 텍스트 유지 및 마우스 커서 안내 */
 body .callout[data-callout="routine"] h2 span[aria-label],
 body .callout[data-callout="routine"] .cm-line span[aria-label] {
     cursor: help;
-    text-decoration: underline dotted var(--text-faint);
-    text-underline-offset: 3px;
 }
 
-/* 4. 체크박스 목록 컨테이너 (읽기모드 & 라이브뷰 공통) */
+/* 달성도 낮은(부족) 루틴 카테고리 강조 글자색 (형광펜 대신 세련된 포인트 컬러) */
+.routine-deficient-name,
+body .callout[data-callout="routine"] .routine-deficient-name {
+    color: #f87171;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+}
+
+/* 4. 체크박스 목록 컨테이너 (읽기모드 & 라이브뷰 공통 - 계층형 들여쓰기 적용) */
 body .callout[data-callout="routine"] ul {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    padding: 0 0 6px 0;
-    margin: 3px 0 8px 0;
+    padding: 2px 0 8px 12px;
+    margin: 4px 0 8px 0;
     margin-left: 0;
     list-style: none;
     border-bottom: 1px solid rgba(128, 128, 128, 0.12);
 }
 
-/* 라이브 프리뷰 라인 여백 초기화 */
+/* 라이브 프리뷰 라인 들여쓰기 */
 body .callout[data-callout="routine"] .cm-line.HyperMD-task-line {
-    margin-left: 0;
+    margin-left: 12px;
     padding-left: 0;
 }
 
@@ -658,19 +664,25 @@ body .callout[data-callout="routine"] .cm-line input[type="checkbox"] {
     display: none;
 }
 
-/* 6. 체크 완료 시 (Active 토글) - 보라/블루 불 들어옴 */
+/* 6. 체크 완료 시 (Active 토글) - 원래의 화려하고 선명한 보라/블루 네온 글로우 불빛 */
+body .markdown-rendered .callout[data-callout="routine"] ul > li.task-list-item.is-checked,
+body .markdown-rendered .callout[data-callout="routine"] ul > li.task-list-item[data-task="x"],
+body .markdown-rendered .callout[data-callout="routine"] ul > li.task-list-item[data-task="X"],
+body .cm-editor .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
+body .cm-editor .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"],
 body .callout[data-callout="routine"] ul>li.task-list-item.is-checked,
 body .callout[data-callout="routine"] ul>li.task-list-item[data-task="x"],
 body .callout[data-callout="routine"] ul>li.task-list-item[data-task="X"],
 body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
 body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.45), rgba(96, 165, 250, 0.35));
-    border-color: #a78bfa;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(59, 130, 246, 0.75));
+    border: 1px solid #c084fc;
     color: #ffffff;
-    font-weight: 700;
-    box-shadow: 0 1px 5px rgba(124, 58, 237, 0.25);
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.3);
     opacity: 1;
     text-decoration: none;
+    filter: none;
 }
 
 .myworld-padding-20-10 {
