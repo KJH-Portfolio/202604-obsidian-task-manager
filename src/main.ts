@@ -267,6 +267,61 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         attachNoticeObserver(window.document);
         // ------------------------------------------------
 
+        // DOM 엘리먼트에서 카테고리 헤더 문맥 및 순번(Index)을 정밀 추출하는 헬퍼 함수
+        const extractTaskContextFromDOM = (targetEl: HTMLElement) => {
+            const taskEl = (targetEl.closest(".task-list-item") || targetEl.closest(".HyperMD-task-line") || targetEl) as HTMLElement;
+            const calloutEl = targetEl.closest('.callout[data-callout="routine"]');
+            const isInsideRoutineCallout = !!calloutEl;
+
+            const cloned = taskEl.cloneNode(true) as HTMLElement;
+            cloned.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable, .dday-virtual-badge, .myworld-copy-btn, input").forEach(el => el.remove());
+            const cleanText = (cloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
+
+            let categoryName = "";
+            let itemIndexInCat = -1;
+
+            if (calloutEl) {
+                // 1. ul 안의 li 목록 형태인 경우 (일반 렌더링)
+                const parentUl = taskEl.closest("ul");
+                if (parentUl) {
+                    const siblings = Array.from(parentUl.querySelectorAll(":scope > li.task-list-item, :scope > li"));
+                    itemIndexInCat = siblings.indexOf(taskEl);
+
+                    let prev = parentUl.previousElementSibling;
+                    while (prev) {
+                        if (/^H[1-6]$/i.test(prev.tagName)) {
+                            categoryName = prev.textContent?.trim() || "";
+                            break;
+                        }
+                        prev = prev.previousElementSibling;
+                    }
+                } else {
+                    // 2. CM6 에디터 라인들로 렌더링된 경우 (라이브 프리뷰 블록)
+                    let prev = taskEl.previousElementSibling;
+                    let count = 0;
+                    while (prev) {
+                        if (/^H[1-6]$/i.test(prev.tagName) || prev.classList.contains("HyperMD-header")) {
+                            categoryName = prev.textContent?.trim() || "";
+                            break;
+                        }
+                        if (prev.classList.contains("task-list-item") || prev.classList.contains("HyperMD-task-line")) {
+                            count++;
+                        }
+                        prev = prev.previousElementSibling;
+                    }
+                    if (itemIndexInCat === -1 && categoryName) {
+                        itemIndexInCat = count;
+                    }
+                }
+
+                if (categoryName) {
+                    categoryName = categoryName.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
+                }
+            }
+
+            return { taskEl, cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout };
+        };
+
         const checkboxCaptureHandler = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             if (!target || target.tagName !== "INPUT" || (target as HTMLInputElement).type !== "checkbox") return;
@@ -287,45 +342,104 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const view = EditorView.findFromDOM(cmEditorEl as HTMLElement);
             if (!view) return;
 
-            // posAtDOM(cmLineEl)은 콜아웃 컨텍스트에서 잘못된 위치를 반환하므로
-            // 마우스 좌표 기반을 primary로, target DOM 기반을 fallback으로 사용
-            const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false)
-                     ?? view.posAtDOM(target);
-            if (pos === null || pos < 0) return;
+            const { cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout } = extractTaskContextFromDOM(target);
 
-            let line = view.state.doc.lineAt(pos);
-            let markerMatch = line.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+            let targetLine: { from: number; to: number; number: number; text: string } | null = null;
+            let targetMarkerMatch: RegExpMatchArray | null = null;
 
-            // 콜아웃(Live Preview Widget) 내부 클릭 시 pos가 콜아웃 시작점으로 잡혀서 매칭 실패하는 경우 대비 폴백
-            if (!markerMatch) {
-                const taskEl = target.closest(".task-list-item") as HTMLElement | null;
-                if (taskEl) {
-                    const clonedForMatch = taskEl.cloneNode(true) as HTMLElement;
-                    clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable").forEach(el => el.remove());
-                    const cleanText = (clonedForMatch.textContent?.trim() || "").replace(/📅.*/, "").trim();
+            // 1. 루틴 콜아웃 내부 클릭: 카테고리 문맥 + 인덱스 기반 핀포인트 탐색
+            if (isInsideRoutineCallout && categoryName) {
+                let inCallout = false;
+                let foundCategory = false;
+                const catTasks: Array<{ line: { from: number; to: number; number: number; text: string }; match: RegExpMatchArray; clean: string }> = [];
 
-                    if (cleanText) {
-                        for (let i = line.number; i <= Math.min(line.number + 50, view.state.doc.lines); i++) {
-                            const l = view.state.doc.line(i);
-                            const m = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
-                            if (m && l.text.includes(cleanText)) {
-                                line = l;
-                                markerMatch = m;
+                for (let i = 1; i <= view.state.doc.lines; i++) {
+                    const l = view.state.doc.line(i);
+                    const text = l.text.trim();
+
+                    if (/^>\s*\[!routine\]/i.test(text)) {
+                        inCallout = true;
+                        continue;
+                    }
+
+                    if (inCallout) {
+                        if (!text.startsWith(">") && text !== "") {
+                            inCallout = false;
+                            break;
+                        }
+
+                        const catMatch = l.text.match(/^>\s*##\s+(.*)$/);
+                        if (catMatch) {
+                            const headerRaw = catMatch[1];
+                            const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
+                            if (headerClean.toLowerCase() === categoryName.toLowerCase()) {
+                                foundCategory = true;
+                                catTasks.length = 0;
+                                continue;
+                            } else if (foundCategory) {
                                 break;
                             }
+                        }
+
+                        if (foundCategory) {
+                            const m = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])\s*(.*)$/);
+                            if (m) {
+                                const taskClean = (m[4] || "").replace(/📅.*/, "").trim();
+                                catTasks.push({ line: l, match: m, clean: taskClean });
+                            }
+                        }
+                    }
+                }
+
+                if (catTasks.length > 0) {
+                    if (itemIndexInCat >= 0 && itemIndexInCat < catTasks.length) {
+                        targetLine = catTasks[itemIndexInCat].line;
+                        targetMarkerMatch = catTasks[itemIndexInCat].match;
+                    } else if (cleanText) {
+                        const found = catTasks.find(t => t.clean === cleanText);
+                        if (found) {
+                            targetLine = found.line;
+                            targetMarkerMatch = found.match;
                         }
                     }
                 }
             }
 
-            if (!markerMatch) return;
+            // 2. 일반 태스크 또는 콜아웃 외부: 좌표 기반 및 정확 일치(exact match) 탐색
+            if (!targetLine) {
+                const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false) ?? view.posAtDOM(target);
+                if (pos !== null && pos >= 0) {
+                    const initialLine = view.state.doc.lineAt(pos);
+                    const directMatch = initialLine.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+                    if (directMatch && !isInsideRoutineCallout) {
+                        targetLine = initialLine;
+                        targetMarkerMatch = directMatch;
+                    }
+                }
+
+                if (!targetLine && cleanText) {
+                    const escaped = cleanText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const exactRegex = new RegExp(`^\\s*(?:>\\s*)*[-*+]\\s+\\[(.)\\]\\s*${escaped}(?:\\s+.*)?$`);
+                    for (let i = 1; i <= view.state.doc.lines; i++) {
+                        const l = view.state.doc.line(i);
+                        const m = l.text.match(exactRegex);
+                        if (m) {
+                            targetLine = l;
+                            targetMarkerMatch = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!targetLine || !targetMarkerMatch) return;
 
             // 옵시디언 코어 및 타 플러그인 개입 원천 차단 (우리가 직접 처리할 수 있는 경우에만 차단)
             e.preventDefault();
             e.stopImmediatePropagation();
 
-            const nextMarker = /^[xX]$/.test(markerMatch[2]) ? " " : "x";
-            const markerStart = line.from + markerMatch[1].length;
+            const nextMarker = /^[xX]$/.test(targetMarkerMatch[2]) ? " " : "x";
+            const markerStart = targetLine.from + targetMarkerMatch[1].length;
 
             view.dispatch({ changes: { from: markerStart, to: markerStart + 1, insert: nextMarker } });
 
@@ -395,16 +509,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     e.stopImmediatePropagation();
 
                     const target = e.target as HTMLElement;
+                    const { cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout } = extractTaskContextFromDOM(target);
                     const taskEl = (target.closest(".task-list-item") || item.closest(".task-list-item")) as HTMLElement | null;
                     if (!taskEl) return;
 
                     const currentMarker = taskEl.getAttribute("data-task") ?? " ";
                     const nextMarker = /^[xX]$/.test(currentMarker) ? " " : "x";
-
-                    const clonedForMatch = taskEl.cloneNode(true) as HTMLElement;
-                    clonedForMatch.querySelectorAll("ul, ol, .myworld-today-btn, .myworld-date-clickable, .dday-virtual-badge, .myworld-copy-btn, input").forEach(el => el.remove());
-                    const rawText = clonedForMatch.textContent?.trim() || "";
-                    const cleanText = rawText.replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/📅.*/, "").trim();
 
                     if (!cleanText) return;
 
@@ -416,23 +526,75 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const lines = fileContent.split("\n");
                         let targetLineIndex = -1;
 
-                        // 1. exact 핀포인트 매칭 정규식: 태스크 텍스트와 정확히 일치하는 파일 라인 탐색
-                        const escapedText = cleanText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const exactRegex = new RegExp(`^\\s*(?:>\\s*)*[-*+]\\s+\\[.\\]\\s*${escapedText}(?:\\s+.*)?$`);
+                        // 1. 루틴 콜아웃 내부 클릭: 카테고리 문맥 + 인덱스 매칭
+                        if (isInsideRoutineCallout && categoryName) {
+                            let inCallout = false;
+                            let foundCategory = false;
+                            const catTasks: Array<{ lineIndex: number; clean: string }> = [];
 
-                        for (let i = 0; i < lines.length; i++) {
-                            if (exactRegex.test(lines[i])) {
-                                targetLineIndex = i;
-                                break;
+                            for (let i = 0; i < lines.length; i++) {
+                                const text = lines[i].trim();
+                                if (/^>\s*\[!routine\]/i.test(text)) {
+                                    inCallout = true;
+                                    continue;
+                                }
+                                if (inCallout) {
+                                    if (!text.startsWith(">") && text !== "") {
+                                        inCallout = false;
+                                        break;
+                                    }
+                                    const catMatch = lines[i].match(/^>\s*##\s+(.*)$/);
+                                    if (catMatch) {
+                                        const headerRaw = catMatch[1];
+                                        const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
+                                        if (headerClean.toLowerCase() === categoryName.toLowerCase()) {
+                                            foundCategory = true;
+                                            catTasks.length = 0;
+                                            continue;
+                                        } else if (foundCategory) {
+                                            break;
+                                        }
+                                    }
+                                    if (foundCategory) {
+                                        const m = lines[i].match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])\s*(.*)$/);
+                                        if (m) {
+                                            const taskClean = (m[4] || "").replace(/📅.*/, "").trim();
+                                            catTasks.push({ lineIndex: i, clean: taskClean });
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (catTasks.length > 0) {
+                                if (itemIndexInCat >= 0 && itemIndexInCat < catTasks.length) {
+                                    targetLineIndex = catTasks[itemIndexInCat].lineIndex;
+                                } else if (cleanText) {
+                                    const found = catTasks.find(t => t.clean === cleanText);
+                                    if (found) {
+                                        targetLineIndex = found.lineIndex;
+                                    }
+                                }
                             }
                         }
 
-                        // 2. 부분 일치 fallback
+                        // 2. 일반 태스크 탐색: exact match
                         if (targetLineIndex === -1) {
+                            const escapedText = cleanText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const exactRegex = new RegExp(`^\\s*(?:>\\s*)*[-*+]\\s+\\[.\\]\\s*${escapedText}(?:\\s+.*)?$`);
+
                             for (let i = 0; i < lines.length; i++) {
-                                if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText)) {
+                                if (exactRegex.test(lines[i])) {
                                     targetLineIndex = i;
                                     break;
+                                }
+                            }
+
+                            if (targetLineIndex === -1) {
+                                for (let i = 0; i < lines.length; i++) {
+                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]) && lines[i].includes(cleanText)) {
+                                        targetLineIndex = i;
+                                        break;
+                                    }
                                 }
                             }
                         }

@@ -539,133 +539,138 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
 /* ========================================================================== */
 
 /* 1. 콜아웃 외곽 테두리 투명화 & 타이틀 바 숨김 (순수 본문 일체화) */
-.callout[data-callout="routine"] {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 6px 0 16px 0 !important;
+body .callout[data-callout="routine"],
+body .markdown-rendered .callout[data-callout="routine"],
+body .cm-editor .callout[data-callout="routine"] {
+    --callout-color: transparent;
+    --callout-icon: none;
+    --callout-title-padding: 0;
+    --callout-content-padding: 0;
+    --callout-border-width: 0px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 6px 0 16px 0;
 }
 
-.callout[data-callout="routine"] .callout-title {
-    display: none !important;
+body .callout[data-callout="routine"] .callout-title {
+    display: none;
 }
 
-.callout[data-callout="routine"] .callout-content {
-    padding: 0 !important;
+body .callout[data-callout="routine"] .callout-content {
+    padding: 0;
 }
 
 /* 2. 확언(Affirmation) 라인: 담백한 1줄 텍스트 */
-.callout[data-callout="routine"] p:first-of-type,
-.callout[data-callout="routine"] .callout-content > p:first-child,
-.callout[data-callout="routine"] .cm-line:not(.HyperMD-header):not(.HyperMD-task-line):not(.HyperMD-list-line):first-of-type {
-    border-left: none !important;
-    background: transparent !important;
-    padding: 0 0 6px 0 !important;
-    margin: 0 0 10px 0 !important;
-    font-size: 0.88em !important;
-    font-weight: 500 !important;
-    color: var(--text-muted) !important;
-    border-bottom: 1px dashed var(--background-modifier-border) !important;
-    box-shadow: none !important;
+body .callout[data-callout="routine"] p:first-of-type,
+body .callout[data-callout="routine"] .callout-content > p:first-child,
+body .callout[data-callout="routine"] .cm-line:not(.HyperMD-header):not(.HyperMD-task-line):not(.HyperMD-list-line):first-of-type {
+    border-left: none;
+    background: transparent;
+    padding: 0 0 6px 0;
+    margin: 0 0 10px 0;
+    font-size: 0.88em;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-bottom: 1px dashed var(--background-modifier-border);
+    box-shadow: none;
 }
 
 /* 3. 카테고리 헤더: 제목과 버튼이 다닥다닥 붙도록 마진 최소화 */
-.callout[data-callout="routine"] h1,
-.callout[data-callout="routine"] h2,
-.callout[data-callout="routine"] h3,
-.callout[data-callout="routine"] .cm-line.HyperMD-header {
-    display: block !important;
-    width: 100% !important;
-    margin-top: 12px !important;
-    margin-bottom: 2px !important;
-    margin-left: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-    font-size: 0.94em !important;
-    font-weight: 700 !important;
-    color: var(--text-normal) !important;
-    text-align: left !important;
-    line-height: 1.2 !important;
+body .callout[data-callout="routine"] h1,
+body .callout[data-callout="routine"] h2,
+body .callout[data-callout="routine"] h3,
+body .callout[data-callout="routine"] .cm-line.HyperMD-header {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    margin-bottom: 2px;
+    margin-left: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 0.94em;
+    font-weight: 700;
+    color: var(--text-normal);
+    text-align: left;
+    line-height: 1.2;
 }
 
-/* 제목에 툴팁(aria-label)이 있는 경우 은은한 힌트 표시 */
-.callout[data-callout="routine"] h2 span[aria-label],
-.callout[data-callout="routine"] .cm-line span[aria-label] {
+/* 제목에 툴팁(aria-label)이 있는 경우 은은한 힌트 표시 (Obsidian 린터 호환 단축 속성 적용) */
+body .callout[data-callout="routine"] h2 span[aria-label],
+body .callout[data-callout="routine"] .cm-line span[aria-label] {
     cursor: help;
-    text-decoration-line: underline;
-    text-decoration-style: dotted;
+    text-decoration: underline dotted var(--text-faint);
     text-underline-offset: 3px;
-    text-decoration-color: var(--text-faint);
 }
 
 /* 4. 체크박스 목록 컨테이너 (읽기모드 & 라이브뷰 공통) */
-.callout[data-callout="routine"] ul {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    gap: 6px !important;
-    padding: 0 0 6px 0 !important;
-    margin: 3px 0 8px 0 !important;
-    margin-left: 0 !important;
-    list-style: none !important;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.12) !important;
+body .callout[data-callout="routine"] ul {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 0 0 6px 0;
+    margin: 3px 0 8px 0;
+    margin-left: 0;
+    list-style: none;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.12);
 }
 
 /* 라이브 프리뷰 라인 여백 초기화 */
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line {
-    margin-left: 0 !important;
-    padding-left: 0 !important;
+body .callout[data-callout="routine"] .cm-line.HyperMD-task-line {
+    margin-left: 0;
+    padding-left: 0;
 }
 
 /* 5. 알약 버튼: 클릭하기 편안한 컴팩트 사이즈 */
-.callout[data-callout="routine"] ul>li.task-list-item,
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background-color: var(--background-secondary-alt) !important;
-    border: 1px solid var(--background-modifier-border) !important;
-    border-radius: 14px !important;
-    padding: 4px 14px !important;
-    margin: 2px 4px 4px 0 !important;
-    font-size: 0.88em !important;
-    font-weight: 500 !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
-    user-select: none !important;
-    height: 28px !important;
-    box-sizing: border-box !important;
+body .callout[data-callout="routine"] ul>li.task-list-item,
+body .callout[data-callout="routine"] .cm-line.HyperMD-task-line {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 14px;
+    padding: 4px 14px;
+    margin: 2px 4px 4px 0;
+    font-size: 0.88em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    height: 28px;
+    box-sizing: border-box;
 }
 
 /* 호버 시 */
-.callout[data-callout="routine"] ul>li.task-list-item:hover,
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line:hover {
-    background-color: var(--background-modifier-hover) !important;
-    border-color: var(--interactive-accent) !important;
-    transform: translateY(-1px) !important;
+body .callout[data-callout="routine"] ul>li.task-list-item:hover,
+body .callout[data-callout="routine"] .cm-line.HyperMD-task-line:hover {
+    background-color: var(--background-modifier-hover);
+    border-color: var(--interactive-accent);
+    transform: translateY(-1px);
 }
 
 /* 네모 체크박스 숨김 */
-.callout[data-callout="routine"] input[type="checkbox"],
-.callout[data-callout="routine"] .cm-line input[type="checkbox"] {
-    display: none !important;
+body .callout[data-callout="routine"] input[type="checkbox"],
+body .callout[data-callout="routine"] .cm-line input[type="checkbox"] {
+    display: none;
 }
 
 /* 6. 체크 완료 시 (Active 토글) - 보라/블루 불 들어옴 */
-.callout[data-callout="routine"] ul>li.task-list-item.is-checked,
-.callout[data-callout="routine"] ul>li.task-list-item[data-task="x"],
-.callout[data-callout="routine"] ul>li.task-list-item[data-task="X"],
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
-.callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.45), rgba(96, 165, 250, 0.35)) !important;
-    border-color: #a78bfa !important;
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    box-shadow: 0 1px 5px rgba(124, 58, 237, 0.25) !important;
-    opacity: 1 !important;
-    text-decoration: none !important;
+body .callout[data-callout="routine"] ul>li.task-list-item.is-checked,
+body .callout[data-callout="routine"] ul>li.task-list-item[data-task="x"],
+body .callout[data-callout="routine"] ul>li.task-list-item[data-task="X"],
+body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
+body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.45), rgba(96, 165, 250, 0.35));
+    border-color: #a78bfa;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 1px 5px rgba(124, 58, 237, 0.25);
+    opacity: 1;
+    text-decoration: none;
 }
 
 .myworld-padding-20-10 {
@@ -1714,18 +1719,24 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     opacity: 0.85;
 }
 
+.modal .routine-cat-desc-row input.routine-cat-desc-input,
 .routine-cat-desc-input {
     flex: 1;
-    border: none !important;
-    background: transparent !important;
+    border: none;
+    background: transparent;
     font-size: 0.88em;
     color: var(--text-muted);
     padding: 2px 4px;
+    box-shadow: none;
+    outline: none;
 }
 
+.modal .routine-cat-desc-row input.routine-cat-desc-input:focus,
 .routine-cat-desc-input:focus {
     color: var(--text-normal);
-    box-shadow: none !important;
+    box-shadow: none;
+    border: none;
+    outline: none;
 }
 
 .routine-items-container {
