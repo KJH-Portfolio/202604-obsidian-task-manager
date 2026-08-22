@@ -92,11 +92,18 @@ export function buildScheduleHeaderButtonsExtension(
 
             if (forceRebuild || (!isTyping && !update.view.composing && (update.viewportChanged || update.geometryChanged))) {
                 this.decorations = this.buildDecorations(update.view);
-            } else if (update.docChanged || update.focusChanged || update.selectionSet) {
+            } else if (!isTyping && !update.view.composing && (update.docChanged || update.focusChanged || update.selectionSet)) {
                 if (this.timer) window.clearTimeout(this.timer);
                 this.timer = window.setTimeout(() => {
                     this.currentView.dispatch({ effects: RebuildDecorations.of(null) });
-                }, 300);
+                }, 150);
+            }
+        }
+
+        destroy() {
+            if (this.timer) {
+                window.clearTimeout(this.timer);
+                this.timer = null;
             }
         }
 
@@ -107,7 +114,9 @@ export function buildScheduleHeaderButtonsExtension(
             if (!activeFile) return builder.finish();
 
             const plugin = getPlugin();
-            const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
+            const activePath = activeFile.path.replace(/\\/g, "/");
+            const schedulePath = (plugin.settings.mainSchedulePath || "").replace(/\\/g, "/");
+            const isSchedule = activePath === schedulePath;
             if (!isSchedule) return builder.finish();
 
             const lang = plugin.settings.language || "en";

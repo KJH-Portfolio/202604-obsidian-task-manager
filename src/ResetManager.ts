@@ -138,11 +138,14 @@ export class ResetManager {
             // 회고/Step 입력 창 띄우기
             new DailyResetModal(this.app, this.settings.language, defaultReview, async (reviewInput, stepInput) => {
                 const originalProjectsCache: Map<TFile, string> = new Map();
+                let latestOriginalContent = "";
                 try {
                     this.utils.showLoadingOverlay("⏳ 일간 마감 처리 중...");
                     new Notice(t("reset_start_daily", this.settings.language));
-                    // BUG-G: 외부 스코프의 content(dailyMeta 파싱용)와 섀도잉 방지
-                    let resetContent = this.utils.preprocessContent(originalContent);
+
+                    // 모달 제출 시점의 최신 에디터/파일 텍스트를 다시 읽어와 동시성 유실 방지
+                    latestOriginalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
+                    let resetContent = this.utils.preprocessContent(latestOriginalContent);
 
                     // --- [Step 1] 루틴 콜아웃 체크박스 분석 및 하단 마스터 표 자동 이관 ---
                     const routineEmojiMap = RoutineSyncEngine.calculateRoutineEmojiMap(resetContent);
@@ -316,21 +319,12 @@ export class ResetManager {
                     resetContent = this.utils.processSectionLogic(resetContent, "# Todo", todayObj, true, true);
                     resetContent = this.utils.formatChecklistTable(resetContent);
 
-                    // --- [Step 4] 루틴 체크박스 리셋 및 Step(목표) 업데이트 ---
-                    let finalL: string[] = [], allL = resetContent.split('\n'), inRoutine = false, routineType = "";
+                    // --- [Step 4] Step(목표) 업데이트 ---
+                    let finalL: string[] = [], allL = resetContent.split('\n');
                     for (let i = 0; i < allL.length; i++) {
                         let l = allL[i];
-                        if (/^>\s*\[!routine\]/i.test(l)) { inRoutine = true; routineType = "callout"; }
-                        else if (/^#+\s*(루틴|Routine)/i.test(l)) { inRoutine = true; routineType = "header"; }
-                        else if (inRoutine) {
-                            if (routineType === "header" && l.startsWith('#') && !/^#+\s*(루틴|Routine)/i.test(l)) inRoutine = false;
-                            else if (routineType === "callout" && !l.startsWith('>') && l.trim() !== '') inRoutine = false;
-                        }
-                        if (inRoutine && /^((?:>\s*)*\s*[-*+]\s+)\[[^ ]\]/.test(l)) {
-                            l = l.replace(/^((?:>\s*)*\s*[-*+]\s+)\[[^ ]\]/, "$1[ ]");
-                        }
-                        if (/^((?:>\s*|[-*+]\s*|\s*)*.*?(?:[Ss]tep|도전)\s*:).*$/i.test(l)) {
-                            l = l.replace(/^((?:>\s*|[-*+]\s*|\s*)*.*?(?:[Ss]tep|도전)\s*:).*$/i, (_match, p1) => `${p1} ${stepInput || " "}`);
+                        if (stepInput && stepInput.trim() && /^((?:>\s*|[-*+]\s*|\s*)*.*?(?:[Ss]tep|도전)\s*:).*$/i.test(l)) {
+                            l = l.replace(/^((?:>\s*|[-*+]\s*|\s*)*.*?(?:[Ss]tep|도전)\s*:).*$/i, (_match, p1) => `${p1} ${stepInput.trim()}`);
                         }
                         finalL.push(l);
                     }
@@ -407,14 +401,15 @@ export class ResetManager {
 
                     // 최종 파일 저장
                     const newContent = mainContent + statsSection + tailContent;
-                    await this.fileManager.saveIfChanged(dailyFile, originalContent, newContent);
+                    await this.fileManager.saveIfChanged(dailyFile, latestOriginalContent, newContent);
                     new Notice(t("reset_complete", this.settings.language));
                 } catch (innerErr) {
                     console.error("Daily Reset Execution Error:", innerErr);
 
                     // [트랜잭션 롤백] 데일리 파일 복구 (해시 필터 등록 후 안전하게 저장)
                     try {
-                        await this.fileManager.pluginWrite(dailyFile, originalContent);
+                        const rollbackTargetContent = latestOriginalContent || originalContent;
+                        await this.fileManager.pluginWrite(dailyFile, rollbackTargetContent);
                     } catch (e) {
                         console.error("Rollback failed for daily file", dailyFile.path, e);
                     }

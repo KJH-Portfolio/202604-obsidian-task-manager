@@ -223,11 +223,18 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
         
         if (forceRebuild || (!isTyping && !update.view.composing && update.viewportChanged)) {
             this.decorations = this.buildDeco(update.view);
-        } else if (update.docChanged || update.selectionSet || update.focusChanged) {
+        } else if (!isTyping && !update.view.composing && (update.docChanged || update.selectionSet || update.focusChanged)) {
             if (this.timer) window.clearTimeout(this.timer);
             this.timer = window.setTimeout(() => {
                 update.view.dispatch({ effects: RebuildDecorations.of(null) });
-            }, 300);
+            }, 150);
+        }
+    }
+
+    destroy() {
+        if (this.timer) {
+            window.clearTimeout(this.timer);
+            this.timer = null;
         }
     }
 
@@ -239,8 +246,12 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
 
         // 캘린더 클릭 기능 스코프 제한 (스케줄 노트 또는 프로젝트 폴더 내부만)
         const plugin = getPlugin();
-        const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
-        const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
+        const activePath = activeFile.path.replace(/\\/g, "/");
+        const schedulePath = (plugin.settings.mainSchedulePath || "").replace(/\\/g, "/");
+        const projectDir = (plugin.settings.projectDirectory || "").replace(/\\/g, "/");
+        const dirPrefix = projectDir.endsWith("/") ? projectDir : projectDir + "/";
+        const isSchedule = activePath === schedulePath;
+        const isProject = activePath.startsWith(dirPrefix);
         if (!isSchedule && !isProject) return builder.finish();
 
         const processedLines = new Set<number>();
@@ -387,29 +398,33 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
             
             if (forceRebuild || (!isTyping && !update.view.composing && (update.viewportChanged || update.geometryChanged))) {
                 this.decorations = this.buildDecorations(update.view);
-            } else if (update.docChanged || update.focusChanged || update.selectionSet) {
+            } else if (!isTyping && !update.view.composing && (update.docChanged || update.focusChanged || update.selectionSet)) {
                 if (this.timer) window.clearTimeout(this.timer);
                 this.timer = window.setTimeout(() => {
                     this.currentView.dispatch({ effects: RebuildDecorations.of(null) });
-                }, 300);
+                }, 150);
             }
         }
 
         buildDecorations(view: EditorView) {
             const builder = new RangeSetBuilder<Decoration>();
             const leaf = app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(view.dom));
-            const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
+            let activeFile = leaf ? (leaf.view as MarkdownView).file : null;
+            if (!activeFile) activeFile = app.workspace.getActiveFile();
             if (!activeFile) return builder.finish();
 
             const plugin = getPlugin();
-            const lang = plugin.settings.language || "en";
-            const isSchedule = activeFile.path === plugin.settings.mainSchedulePath;
-            const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
+            const activePath = activeFile.path.replace(/\\/g, "/");
+            const schedulePath = (plugin.settings.mainSchedulePath || "").replace(/\\/g, "/");
+            const projectDir = (plugin.settings.projectDirectory || "").replace(/\\/g, "/");
+            const isSchedule = activePath === schedulePath;
+            const isProject = activePath.startsWith(projectDir) && !isSchedule;
             if (!isSchedule && !isProject) return builder.finish();
 
             const getView = () => this.currentView;
+            const lang = plugin.settings.language || "en";
 
-            // 아이디어 2번: 현재 커서가 위치한 줄(활성 줄) 찾기
+            // 현재 커서가 위치한 줄(활성 줄) 찾기
             const activeLines = new Set<number>();
             for (const range of view.state.selection.ranges) {
                 activeLines.add(view.state.doc.lineAt(range.head).number);
@@ -418,32 +433,45 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                 }
             }
 
+            // 단일 패스 순방향 파서:
+            // visible range 시작점에서 단 1번만 위로 역추적하여 초기 헤더 컨텍스트 파악
+            let currentHeader = "";
+            if (view.visibleRanges.length > 0) {
+                const firstLineNo = view.state.doc.lineAt(view.visibleRanges[0].from).number;
+                for (let i = firstLineNo; i > 0; i--) {
+                    const m = view.state.doc.line(i).text.match(/^#+\s+(.*)$/);
+                    if (m) { currentHeader = m[1].trim().toLowerCase(); break; }
+                }
+            }
+
             for (const { from, to } of view.visibleRanges) {
                 let pos = from;
                 while (pos <= to) {
                     const line = view.state.doc.lineAt(pos);
-                    // 현재 활성화된 줄이면 위젯을 렌더링하지 않음 (IME 충돌 및 타자 방해 차단)
+                    // 현재 활성화된 줄이면 위젯을 렌더링하지 않음 (타자 방해 차단)
                     if (activeLines.has(line.number)) {
                         pos = line.to + 1;
                         continue;
                     }
-                    
+
                     const text = line.text;
+
+                    // 헤더 라인이면 currentHeader 갱신 후 계속
+                    const headerMatch = text.match(/^#+\s+(.*)$/);
+                    if (headerMatch) {
+                        currentHeader = headerMatch[1].trim().toLowerCase();
+                        pos = line.to + 1;
+                        continue;
+                    }
+
                     const isTask = /^(?:\s*>\s*)*\s*[-*+]\s+\[.\]\s+\S/.test(text);
                     const isCompleted = /^(?:\s*>\s*)*\s*[-*+]\s+\[[xX-]\]/.test(text);
 
                     if (isTask && !isCompleted && !/\d{4}-\d{2}-\d{2}/.test(text)) {
                         let shouldShow = false;
 
-                        let header = "";
-                        for (let i = line.number; i > 0; i--) {
-                            const l = view.state.doc.line(i).text;
-                            const m = l.match(/^#\s+(.*)$/);
-                            if (m) { header = m[1].trim().toLowerCase(); break; }
-                        }
-
                         if (isSchedule) {
-                            if (header === "todo" || header === "project") shouldShow = true;
+                            if (currentHeader.includes("todo") || currentHeader.includes("project")) shouldShow = true;
                         } else if (isProject) {
                             shouldShow = true;
                         }
@@ -453,7 +481,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                                 line.to, line.to,
                                 Decoration.widget({
                                     widget: new TodayEmojiWidget(getView, lang),
-                                    side: 1
+                                    side: -1
                                 })
                             );
                         }

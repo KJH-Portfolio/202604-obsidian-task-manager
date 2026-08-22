@@ -252,9 +252,19 @@ export class TaskUtils {
         if (!dateStr) return "";
         const match = dateStr.match(REGEX.DATE_LABEL);
         if (!match) return "";
-        const parts = match[0].split('-');
+        const cleanDateStr = match[0].replace('📅', '').trim();
+        const momentFn = (window as { moment?: (d?: string | Date) => moment.Moment }).moment;
+        if (momentFn) {
+            const targetM = momentFn(cleanDateStr).startOf('day');
+            const todayM = momentFn(today).startOf('day');
+            const diffDays = targetM.diff(todayM, 'days');
+            if (diffDays < 0) return "[!] ";
+            return "[D] ";
+        }
+        const parts = cleanDateStr.split('-');
         const targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        const diff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const diff = Math.floor((targetDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
         if (diff < 0) return "[!] ";
         return "[D] ";
     }
@@ -495,29 +505,33 @@ export class TaskUtils {
                 return this.flattenTreeToMarkdown(tree);
             });
 
-            return (sub.header ? [sub.header, ...processedLines] : processedLines).join('\n');
+            return (sub.header ? [sub.header, ...processedLines] : processedLines).filter(l => l !== undefined).join('\n');
         });
 
-        return cContent.substring(0, sIdx) + mainHeader + "\n" + processed.join('\n') + cContent.substring(nIdx);
+        const cleanedProcessed = processed.join('\n').trim();
+        const nextPart = cContent.substring(nIdx).replace(/^\r?\n+/, "");
+        return cContent.substring(0, sIdx) + mainHeader + "\n" + (cleanedProcessed ? cleanedProcessed + "\n" : "") + nextPart;
     }
 
     parseTableStats(linesStrs: string[], headers: string) {
         let sq: Record<string, number> = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 };
         if (!headers || !linesStrs || linesStrs.length === 0) return { sq, cs: {} as Record<string, Record<string, number>>, tableHeaders: [] as string[] };
 
-        const tableHeaders = headers.split("|").map(s => s.trim());
+        // 파이프 양 끝의 빈 요소를 제거하여 순수 컬럼 배열 획득 [0: "날짜", 1: "Step", 2: "Block", ...]
+        const cleanHeaders = headers.split("|").map(s => s.trim()).filter(s => s !== "");
         let cs: Record<string, Record<string, number>> = {};
 
         linesStrs.forEach(l => {
-            let cols = l.split("|");
-            if (cols.length > 2) {
-                for (let c = 2; c < cols.length; c++) {
-                    let v = cols[c].trim();
-                    if (!v) continue;
-                    let emoji = EMOJI_MAP[v] || v;
-                    let hw = tableHeaders[c];
+            const cleanCols = l.split("|").map(s => s.trim()).filter(s => s !== "");
+            if (cleanCols.length > 1) {
+                // 0번(날짜) 이후의 루틴 컬럼 순회
+                for (let c = 1; c < cleanCols.length; c++) {
+                    const v = cleanCols[c];
+                    if (!v || v === "-") continue;
+                    const emoji = EMOJI_MAP[v] || v;
+                    const hw = cleanHeaders[c];
 
-                    if (hw && hw !== "" && hw !== "날짜") {
+                    if (hw && hw !== "" && hw !== "날짜" && hw !== "Date") {
                         if (!cs[hw]) cs[hw] = { "🟦": 0, "🟩": 0, "🟨": 0, "🟥": 0 };
                         if (Object.prototype.hasOwnProperty.call(cs[hw], emoji)) cs[hw][emoji]++;
                     }
@@ -525,7 +539,7 @@ export class TaskUtils {
                 }
             }
         });
-        return { sq, cs, tableHeaders };
+        return { sq, cs, tableHeaders: cleanHeaders };
     }
 
     renderStatsDashboard(sq: Record<string, number>, cs: Record<string, Record<string, number>>, title = "", type = "info"): string {
@@ -848,27 +862,81 @@ export class TaskUtils {
 
     extractDailyMetadata(content: string): DailyMeta {
         let step = "미작성", review = "미작성";
-        const stepMatch = content.match(/^(?:>|\s*[-*+]|\s*)*.*?(?:[Ss]tep|도전)\s*:\s*(.*)$/im);
-        if (stepMatch && stepMatch[1].trim()) step = stepMatch[1].trim();
+        if (!content) return { step, review };
 
-        const reviewMatch = content.match(/^(?:>|\s*[-*+]|\s*)*.*?(?:회고|Review)\s*:\s*(.*)$/im);
-        if (reviewMatch && reviewMatch[1].trim()) review = reviewMatch[1].trim();
+        const lines = content.split("\n");
+        let capturingReview = false;
+        const reviewLines: string[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // 1. Step 추출
+            if (step === "미작성") {
+                const stepMatch = line.match(/^(?:>|\s*[-*+]|\s*)*.*?(?:[Ss]tep|도전)\s*:\s*(.*)$/i);
+                if (stepMatch && stepMatch[1].trim()) {
+                    step = stepMatch[1].trim();
+                }
+            }
+
+            // 2. 회고 추출 (멀티라인 지원)
+            if (!capturingReview) {
+                const reviewMatch = line.match(/^(?:>|\s*[-*+]|\s*)*.*?(?:회고|Review)\s*:\s*(.*)$/i);
+                if (reviewMatch) {
+                    capturingReview = true;
+                    if (reviewMatch[1].trim()) {
+                        reviewLines.push(reviewMatch[1].trim());
+                    }
+                }
+            } else {
+                // 회고 종료 조건: 다음 헤더(#), 다른 메타데이터 콜아웃(>[!quote]), 체크박스, 구분선 등
+                if (/^(?:#|> ?\[!|[-*+]\s+\[|---|___)/.test(line.trim()) || (line.trim() === "" && i + 1 < lines.length && /^[#>|-]/.test(lines[i+1].trim()))) {
+                    capturingReview = false;
+                } else if (line.trim() !== "") {
+                    const cleanLine = line.replace(/^>\s*/, "").trim();
+                    if (cleanLine) reviewLines.push(cleanLine);
+                }
+            }
+        }
+
+        if (reviewLines.length > 0) {
+            review = reviewLines.join("\n");
+        }
 
         return { step, review };
     }
 
 
 
+    isScheduleFile(fileOrPath: TFile | string | null): boolean {
+        if (!fileOrPath) return false;
+        const p = (typeof fileOrPath === "string" ? fileOrPath : fileOrPath.path).replace(/\\/g, "/");
+        const schedulePath = (this.settings.mainSchedulePath || "").replace(/\\/g, "/");
+        return p === schedulePath;
+    }
+
+    isProjectFile(fileOrPath: TFile | string | null): boolean {
+        if (!fileOrPath) return false;
+        const p = (typeof fileOrPath === "string" ? fileOrPath : fileOrPath.path).replace(/\\/g, "/");
+        const projectDir = (this.settings.projectDirectory || "").replace(/\\/g, "/");
+        const dirPrefix = projectDir.endsWith("/") ? projectDir : projectDir + "/";
+        return p.startsWith(dirPrefix) && !this.isScheduleFile(p);
+    }
+
     getProjectFiles(): TFile[] {
         const dir = this.settings.projectDirectory;
         const folder = this.app.vault.getAbstractFileByPath(dir);
         const files: TFile[] = [];
+        const schedulePath = (this.settings.mainSchedulePath || "").replace(/\\/g, "/");
 
         const traverse = (f: TFolder) => {
             if (!f.children) return;
             for (const child of f.children) {
                 if (child instanceof TFile && child.extension === "md") {
-                    files.push(child);
+                    const childPath = child.path.replace(/\\/g, "/");
+                    if (childPath !== schedulePath) {
+                        files.push(child);
+                    }
                 } else if (child instanceof TFolder) {
                     traverse(child);
                 }

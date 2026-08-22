@@ -41,7 +41,7 @@ const RebuildDecorations = StateEffect.define<null>();
 
 export function buildAddExecutionTaskButtonExtension(
     app: App,
-    getPlugin: () => { settings: { projectDirectory: string; language: string } },
+    getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string } },
     onOpenAddModal: (file: TFile) => void
 ) {
     return ViewPlugin.fromClass(class {
@@ -65,11 +65,18 @@ export function buildAddExecutionTaskButtonExtension(
 
             if (forceRebuild || (!isTyping && !update.view.composing && (update.viewportChanged || update.geometryChanged))) {
                 this.decorations = this.buildDecorations(update.view);
-            } else if (update.docChanged || update.focusChanged || update.selectionSet) {
+            } else if (!isTyping && !update.view.composing && (update.docChanged || update.focusChanged || update.selectionSet)) {
                 if (this.timer) window.clearTimeout(this.timer);
                 this.timer = window.setTimeout(() => {
                     this.currentView.dispatch({ effects: RebuildDecorations.of(null) });
-                }, 300);
+                }, 150);
+            }
+        }
+
+        destroy() {
+            if (this.timer) {
+                window.clearTimeout(this.timer);
+                this.timer = null;
             }
         }
 
@@ -80,7 +87,11 @@ export function buildAddExecutionTaskButtonExtension(
             if (!activeFile) return builder.finish();
 
             const plugin = getPlugin();
-            const isProject = activeFile.path.startsWith(plugin.settings.projectDirectory);
+            const activePath = activeFile.path.replace(/\\/g, "/");
+            const schedulePath = (plugin.settings.mainSchedulePath || "").replace(/\\/g, "/");
+            const projectDir = (plugin.settings.projectDirectory || "").replace(/\\/g, "/");
+            const dirPrefix = projectDir.endsWith("/") ? projectDir : projectDir + "/";
+            const isProject = activePath.startsWith(dirPrefix) && activePath !== schedulePath;
             if (!isProject) return builder.finish();
 
             const lang = plugin.settings.language || "en";

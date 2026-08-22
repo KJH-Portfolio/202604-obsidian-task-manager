@@ -91,10 +91,13 @@ export class RoutineSyncEngine {
                         .replace(/==/g, "")
                         .trim();
 
+                    const isCumulative = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(rawHeader);
+
                     currentCat = {
                         id: catName.toLowerCase().replace(/\s+/g, "-") + "_" + Math.random().toString(36).substring(2, 7),
                         name: catName,
                         description: desc,
+                        isCumulative: isCumulative,
                         items: []
                     };
                     continue;
@@ -124,27 +127,120 @@ export class RoutineSyncEngine {
     }
 
     /**
-     * RoutineStructure 데이터를 마크다운 Callout 텍스트로 생성
-     * (설명이 있을 경우 제목의 aria-label 툴팁 속성으로 삽입하여 본문이 초깔끔하게 유지됨)
+     * 기존 마크다운 본문의 루틴 콜아웃 내 체크 상태(체크 여부) 추출
      */
-    static generateRoutineCalloutMarkdown(structure: RoutineStructure, lang: "en" | "ko" = "ko"): string {
+    static parseExistingCheckStates(content: string): Map<string, boolean> {
+        const checkedMap = new Map<string, boolean>();
+        if (!content) return checkedMap;
+
+        const lines = content.split("\n");
+        let inRoutine = false;
+        let currentCatName = "";
+        let currentItemIdx = 0;
+
+        for (let l of lines) {
+            const trimmed = l.trim();
+
+            if (/^>\s*\[!routine\]/i.test(trimmed)) {
+                inRoutine = true;
+                continue;
+            }
+
+            if (inRoutine) {
+                if (!trimmed.startsWith(">") && trimmed !== "") {
+                    inRoutine = false;
+                    break;
+                }
+
+                // 카테고리 헤더 감지
+                const catMatch = l.match(/^>\s*##\s+(.*)$/);
+                if (catMatch) {
+                    const rawHeader = catMatch[1].trim();
+                    currentCatName = rawHeader
+                        .replace(/<[^>]+>/g, "")
+                        .replace(/==/g, "")
+                        .trim();
+                    currentItemIdx = 0;
+                    continue;
+                }
+
+                // 체크리스트 항목 감지
+                const itemMatch = l.match(/^>\s*[-*+]\s+\[(.)\]\s*(.*)$/);
+                if (itemMatch && currentCatName) {
+                    const checkChar = itemMatch[1].trim();
+                    const isChecked = checkChar.toLowerCase() === "x";
+                    const itemText = (itemMatch[2] || "").trim();
+
+                    // 1. 이름 기반 키
+                    checkedMap.set(`${currentCatName.toLowerCase()}:::${itemText.toLowerCase()}`, isChecked);
+                    // 2. 순번(Index) 기반 키
+                    checkedMap.set(`${currentCatName.toLowerCase()}:::__idx_${currentItemIdx}`, isChecked);
+                    currentItemIdx++;
+                }
+            }
+        }
+
+        return checkedMap;
+    }
+
+    /**
+     * RoutineStructure 데이터를 마크다운 Callout 텍스트로 생성
+     * (기존에 체크되어 있던 [x] 상태를 완벽히 계승 보존)
+     */
+    static generateRoutineCalloutMarkdown(
+        structure: RoutineStructure,
+        lang: "en" | "ko" = "ko",
+        existingCheckedMap?: Map<string, boolean>,
+        diff?: RoutineDiff
+    ): string {
         const affLabel = lang === "en" ? "Affirmation" : "확언";
         const lines: string[] = [];
 
         lines.push("> [!routine]");
         lines.push(`> ${affLabel} : ${structure.affirmation || ""}`);
 
+        // rename 역방향 맵 생성: currentName -> originalName
+        const reverseRenamed: Record<string, string> = {};
+        if (diff && diff.renamedCategories) {
+            for (const [orig, curr] of Object.entries(diff.renamedCategories)) {
+                reverseRenamed[curr.toLowerCase()] = orig.toLowerCase();
+            }
+        }
+
         for (const cat of structure.categories) {
             const cleanDesc = cat.description ? cat.description.replace(/^(?:💡|\uD83D\uDCA1|\uFFFD|\?|\s)+/u, "").trim() : "";
+            const stepAttr = cat.isCumulative ? ' data-mode="step"' : "";
             if (cleanDesc) {
                 // 옵시디언 네이티브 툴팁 속성 적용
                 const safeDesc = cleanDesc.replace(/"/g, "&quot;");
-                lines.push(`> ## <span aria-label="${safeDesc}">${cat.name}</span>`);
+                lines.push(`> ## <span aria-label="${safeDesc}"${stepAttr}>${cat.name}</span>`);
+            } else if (cat.isCumulative) {
+                lines.push(`> ## <span${stepAttr}>${cat.name}</span>`);
             } else {
                 lines.push(`> ## ${cat.name}`);
             }
-            for (const item of cat.items) {
-                lines.push(`> - [ ] ${item}`);
+
+            const catKey = cat.name.toLowerCase();
+            const origCatKey = reverseRenamed[catKey] || catKey;
+
+            for (let idx = 0; idx < cat.items.length; idx++) {
+                const item = cat.items[idx];
+                if (!item || !item.trim()) continue; // 빈 항목은 건너뜀
+
+                const itemKey = item.trim().toLowerCase();
+
+                let isChecked = false;
+                if (existingCheckedMap) {
+                    // 1순위: 이전 카테고리명 또는 현재 카테고리명 + 항목명 일치
+                    if (existingCheckedMap.has(`${origCatKey}:::${itemKey}`)) {
+                        isChecked = existingCheckedMap.get(`${origCatKey}:::${itemKey}`)!;
+                    } else if (existingCheckedMap.has(`${catKey}:::${itemKey}`)) {
+                        isChecked = existingCheckedMap.get(`${catKey}:::${itemKey}`)!;
+                    }
+                }
+
+                const checkMarker = isChecked ? "x" : " ";
+                lines.push(`> - [${checkMarker}] ${item.trim()}`);
             }
         }
 
@@ -153,7 +249,7 @@ export class RoutineSyncEngine {
 
     /**
      * 루틴 콜아웃 내부의 체크박스 상태를 분석하여 각 카테고리별 이모지 매핑 맵 생성
-     * - 100% 완료: 🟦
+     * - 80% 이상 완료: 🟦
      * - 50% 이상 완료: 🟩
      * - 1개 이상 완료: 🟨
      * - 0% 미달성: 🟥
@@ -172,9 +268,10 @@ export class RoutineSyncEngine {
             if (currentCatName) {
                 let emoji = "🟥";
                 if (totalCount > 0) {
-                    if (checkedCount === totalCount) {
+                    const ratio = checkedCount / totalCount;
+                    if (ratio >= 0.8) {
                         emoji = "🟦";
-                    } else if (checkedCount >= Math.ceil(totalCount / 2) && checkedCount > 0) {
+                    } else if (ratio >= 0.5) {
                         emoji = "🟩";
                     } else if (checkedCount > 0) {
                         emoji = "🟨";
@@ -264,7 +361,7 @@ export class RoutineSyncEngine {
     /**
      * 메인 스케줄 문서 텍스트 전체에서 루틴 Callout 및 체크리스트 테이블 컬럼 동기화
      */
-    static syncRoutineToMarkdown(content: string, newStructure: RoutineStructure, diff: RoutineDiff, lang: "en" | "ko" = "ko"): string {
+    static syncRoutineToMarkdown(content: string, newStructure: RoutineStructure, diff: RoutineDiff, lang: "en" | "ko" = "ko", adjustedNowDay?: number): string {
         if (!content) return content;
 
         // 1. Callout 영역 교체
@@ -288,7 +385,8 @@ export class RoutineSyncEngine {
             }
         }
 
-        const newCalloutStr = this.generateRoutineCalloutMarkdown(newStructure, lang);
+        const existingCheckedMap = this.parseExistingCheckStates(content);
+        const newCalloutStr = this.generateRoutineCalloutMarkdown(newStructure, lang, existingCheckedMap, diff);
 
         if (calloutStart !== -1) {
             lines.splice(calloutStart, calloutEnd - calloutStart + 1, newCalloutStr);
@@ -307,7 +405,7 @@ export class RoutineSyncEngine {
         let updatedContent = lines.join("\n");
 
         // 2. 체크리스트 테이블 컬럼 동기화
-        updatedContent = this.syncChecklistTableColumns(updatedContent, newStructure, diff);
+        updatedContent = this.syncChecklistTableColumns(updatedContent, newStructure, diff, adjustedNowDay);
 
         return updatedContent;
     }
@@ -318,7 +416,7 @@ export class RoutineSyncEngine {
      * 2. 비활성 루틴의 빈 셀에는 '-' 표기
      * 3. 신규 활성 루틴의 과거 날짜 빈 셀에는 '-' 표기, 오늘/미래는 빈칸
      */
-    static syncChecklistTableColumns(content: string, newStructure: RoutineStructure, diff: RoutineDiff): string {
+    static syncChecklistTableColumns(content: string, newStructure: RoutineStructure, diff: RoutineDiff, adjustedNowDay?: number): string {
         let lines = content.split("\n");
         let idx = 0;
 
@@ -373,9 +471,9 @@ export class RoutineSyncEngine {
                     const newSeparatorLine = `| :-: | ${finalCatCols.map(() => ":--:").join(" | ")} |`;
                     const newTableLines: string[] = [newHeaderLine, newSeparatorLine];
 
-                    // 4) 데이터 행(Data Rows) 컬럼 재배열 및 셀 채우기
+                    // 4) 데이터 행(Data Rows) 컬럼 재배열 및 셀 채우기 (자정 보정 날짜 적용)
                     const momentFn = (window as { moment?: () => { date: () => number } }).moment;
-                    const nowDay = momentFn ? momentFn().date() : new Date().getDate();
+                    const nowDay = adjustedNowDay !== undefined ? adjustedNowDay : (momentFn ? momentFn().date() : new Date().getDate());
 
                     for (let r = 2; r < tableLines.length; r++) {
                         const rowStr = tableLines[r];

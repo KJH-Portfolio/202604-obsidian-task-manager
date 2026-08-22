@@ -185,7 +185,7 @@ export class TodoManagerModal extends Modal {
         const addSection = contentEl.createDiv({ cls: "myworld-todo-add-section" });
         const inputEl = addSection.createEl("input", {
             type: "text",
-            placeholder: t("todo_modal_input_placeholder", this.language),
+            placeholder: isKo ? "새 할 일 입력 후 Enter (빈 칸에서 Enter 누르면 저장)" : "Enter new task (Press Enter on empty to Save)",
             cls: "myworld-todo-add-input"
         });
 
@@ -209,7 +209,8 @@ export class TodoManagerModal extends Modal {
             };
 
             this.items.push(newItem);
-            this.render(newItem.id);
+            // 연속 입력을 위해 상단 입력창 포커스 유지 플래그로 렌더링
+            this.render("ADD_INPUT_FOCUS");
         };
 
         const addBtn = addSection.createEl("button", {
@@ -219,9 +220,28 @@ export class TodoManagerModal extends Modal {
         addBtn.addEventListener("click", submitNewTask);
 
         inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (e.key === "Enter") {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
-                submitNewTask();
+                saveBtn.click();
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (!inputEl.value.trim()) {
+                    // 빈 칸에서 엔터 시 저장 확정 및 닫기
+                    saveBtn.click();
+                } else {
+                    submitNewTask();
+                }
+            } else if (e.key === "Tab") {
+                // Tab 키를 누르면 날짜를 오늘 날짜(YYYY-MM-DD)로 즉시 토글/설정
+                e.preventDefault();
+                const todayVal = window.moment ? window.moment().format("YYYY-MM-DD") : new Date().toISOString().split("T")[0];
+                if (!dateInputEl.value) {
+                    dateInputEl.value = todayVal;
+                } else if (dateInputEl.value === todayVal) {
+                    dateInputEl.value = "";
+                } else {
+                    dateInputEl.value = todayVal;
+                }
             }
         });
 
@@ -294,7 +314,7 @@ export class TodoManagerModal extends Modal {
             });
         });
 
-        if (focusedItemId) {
+        if (focusedItemId && focusedItemId !== "ADD_INPUT_FOCUS") {
             window.setTimeout(() => {
                 const targetInput = contentEl.querySelector<HTMLInputElement>(`input[data-item-id="${focusedItemId}"]`);
                 if (targetInput) {
@@ -304,7 +324,10 @@ export class TodoManagerModal extends Modal {
                 }
             }, 30);
         } else {
-            window.setTimeout(() => inputEl.focus(), 50);
+            // 모달 열림 또는 ADD_INPUT_FOCUS 시 상단 입력창으로 자동 포커스
+            window.setTimeout(() => {
+                inputEl.focus();
+            }, 50);
         }
     }
 
@@ -373,7 +396,10 @@ export class TodoManagerModal extends Modal {
         });
 
         textInput.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                saveBtn.click();
+            } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
                 e.preventDefault();
                 this.moveItem(idx, e.key === "ArrowUp" ? -1 : 1);
             } else if ((e.altKey && e.key === "ArrowRight") || (e.key === "Tab" && !e.shiftKey)) {

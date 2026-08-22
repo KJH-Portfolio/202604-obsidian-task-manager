@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unsafe-return -- External API and dynamic data parsing requires flexible typing */
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- Complex type casting needed for markdown AST */
-import { Plugin, TFile, Notice, Modal, App, MarkdownView, setIcon } from "obsidian";
+import { Plugin, TFile, Notice, Modal, App, MarkdownView, setIcon, Editor } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { buildCalendarPopup, buildTodayButtonExtension, buildDateClickablePlugin } from "./ui/CalendarWidget";
 import { buildDDayBadgePlugin } from "./ui/DDayBadgePlugin";
@@ -23,6 +23,7 @@ import { EventController } from "./controllers/EventController";
 import { RoutineManagerModal } from "./ui/RoutineManagerModal";
 import { RoutineSyncEngine } from "./RoutineSyncEngine";
 import { TodoManagerModal, TodoItem } from "./ui/TodoManagerModal";
+import { DocFormatter } from "./DocFormatter";
 import { ProjectTaskManagerModal } from "./ui/ProjectTaskManagerModal";
 
 import { t, translations } from "./i18n";
@@ -179,8 +180,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         const path = fileToSync.path;
 
-        // 프로젝트 계획서 폴더 내 파일에 대해서만 식별자 동기화 수행
-        if (!path.startsWith(this.settings.projectDirectory)) {
+        // 프로젝트 계획서 폴더(00.Tasks) 내 파일에 대해서만 식별자 동기화 수행
+        if (!this.utils.isProjectFile(fileToSync)) {
             this.modifiedFiles.delete(path);
             return;
         }
@@ -227,13 +228,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // 강제로 scRender.js 업데이트 (데이터뷰 로직 최신화)
         this.app.workspace.onLayoutReady(async () => {
             try {
-                const folderPath = this.settings.projectDirectory + "/01.List";
+                const folderPath = this.settings.scriptsDirectory || "3. Resource/01.Tools/Obsidian tools/Scripts";
+                await this.utils.ensureFolder(folderPath);
                 const scRenderPath = `${folderPath}/scRender.js`;
                 const existingScRender = this.app.vault.getAbstractFileByPath(scRenderPath);
                 if (existingScRender instanceof TFile) {
                     await this.app.vault.modify(existingScRender, this.templateHelper.scRenderJsContent);
                 } else if (!existingScRender) {
-                    // 상위 폴더가 존재하는지 확인 후 생성
                     const folder = this.app.vault.getAbstractFileByPath(folderPath);
                     if (folder) await this.app.vault.create(scRenderPath, this.templateHelper.scRenderJsContent);
                 }
@@ -241,31 +242,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 console.error("Failed to update scRender.js on load:", e);
             }
         });
-
-        // --- [Tasks 플러그인 특정 경고창 차단 옵저버] ---
-        const attachNoticeObserver = (doc: Document) => {
-            const noticeObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            const el = node as HTMLElement;
-                            if (el.classList.contains("notice")) {
-                                const text = el.innerText || "";
-                                if (text.includes("obsidian-tasks-plugin warning") && text.includes("inside a callout")) {
-                                    el.addClass("myworld-d-none");
-                                }
-                            }
-                        }
-                    });
-                });
-            });
-            noticeObserver.observe(doc.body, { childList: true, subtree: true });
-            this.register(() => noticeObserver.disconnect());
-        };
-
-        // 메인 창에 부착
-        attachNoticeObserver(window.document);
-        // ------------------------------------------------
 
         // DOM 엘리먼트에서 카테고리 헤더 문맥 및 순번(Index)을 정밀 추출하는 헬퍼 함수
         const extractTaskContextFromDOM = (targetEl: HTMLElement) => {
@@ -322,146 +298,303 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             return { taskEl, cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout };
         };
 
-        const checkboxCaptureHandler = (e: MouseEvent) => {
+        const checkboxCaptureHandler = async (e: MouseEvent) => {
             const target = e.target as HTMLElement;
-            if (!target || target.tagName !== "INPUT" || (target as HTMLInputElement).type !== "checkbox") return;
+            if (!target) return;
 
-            // 라이브 프리뷰(CM6) 안의 체크박스인지 확인 (읽기 모드는 개입 금지)
-            const cmEditorEl = target.closest(".cm-editor");
-            if (!cmEditorEl) return;
+            const isCheckbox = target.tagName === "INPUT" && (target as HTMLInputElement).type === "checkbox";
+            const taskItemEl = target.closest("li.task-list-item, .HyperMD-task-line") as HTMLElement;
+            if (!isCheckbox && !taskItemEl) return;
 
-            // 마우스 클릭 시 포커스가 이동하기 전에 getActiveFile()을 호출하면 이전 파일이 반환될 수 있으므로,
-            // 현재 클릭한 엘리먼트가 속한 Leaf를 직접 찾아내어 정확한 파일을 식별합니다.
+            // 마우스 클릭 시 대상 파일 식별
             const leaf = this.app.workspace.getLeavesOfType("markdown").find(l => l.view.containerEl.contains(target));
-            const targetFile = leaf ? (leaf.view as MarkdownView).file : null;
+            const mdView = leaf ? (leaf.view as MarkdownView) : null;
+            const targetFile = mdView ? mdView.file : null;
             if (!targetFile) return;
 
-            const isSchedule = targetFile.path === this.settings.mainSchedulePath;
+            const targetPath = targetFile.path.replace(/\\/g, "/");
+            const schedulePath = (this.settings.mainSchedulePath || "").replace(/\\/g, "/");
+            const isSchedule = targetPath === schedulePath;
             if (!isSchedule) return;
 
-            const view = EditorView.findFromDOM(cmEditorEl as HTMLElement);
-            if (!view) return;
+            const cmEditorEl = target.closest(".cm-editor");
+            const view = cmEditorEl ? EditorView.findFromDOM(cmEditorEl as HTMLElement) : null;
 
             const { cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout } = extractTaskContextFromDOM(target);
 
-            let targetLine: { from: number; to: number; number: number; text: string } | null = null;
-            let targetMarkerMatch: RegExpMatchArray | null = null;
+            // ── [1. 라이브 프리뷰 (CM6) 모드] ──
+            if (view) {
+                let targetLine: { from: number; to: number; number: number; text: string } | null = null;
+                let targetMarkerMatch: RegExpMatchArray | null = null;
+                let isCumulativeCategory = false;
+                let cumulativeCatTasks: Array<{ line: { from: number; to: number; number: number; text: string }; match: RegExpMatchArray; clean: string }> = [];
+                let targetCumulativeIndex = -1;
 
-            // 1. 루틴 콜아웃 내부 클릭: 카테고리 문맥 + 인덱스 기반 핀포인트 탐색
+                if (isInsideRoutineCallout && categoryName) {
+                    let inCallout = false;
+                    let foundCategory = false;
+                    const catTasks: Array<{ line: { from: number; to: number; number: number; text: string }; match: RegExpMatchArray; clean: string }> = [];
+
+                    for (let i = 1; i <= view.state.doc.lines; i++) {
+                        const l = view.state.doc.line(i);
+                        const text = l.text.trim();
+
+                        if (/^>\s*\[!routine\]/i.test(text)) {
+                            inCallout = true;
+                            continue;
+                        }
+
+                        if (inCallout) {
+                            if (!text.startsWith(">") && text !== "") {
+                                inCallout = false;
+                                break;
+                            }
+
+                            const catMatch = l.text.match(/^>\s*##\s+(.*)$/);
+                            if (catMatch) {
+                                const headerRaw = catMatch[1];
+                                const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
+                                if (headerClean.toLowerCase() === categoryName.toLowerCase()) {
+                                    foundCategory = true;
+                                    isCumulativeCategory = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(headerRaw);
+                                    catTasks.length = 0;
+                                    continue;
+                                } else if (foundCategory) {
+                                    break;
+                                }
+                            }
+
+                            if (foundCategory) {
+                                const m = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])\s*(.*)$/);
+                                if (m) {
+                                    const taskClean = (m[4] || "").replace(/📅.*/, "").trim();
+                                    catTasks.push({ line: l, match: m, clean: taskClean });
+                                }
+                            }
+                        }
+                    }
+
+                    if (catTasks.length > 0) {
+                        if (itemIndexInCat >= 0 && itemIndexInCat < catTasks.length) {
+                            targetLine = catTasks[itemIndexInCat].line;
+                            targetMarkerMatch = catTasks[itemIndexInCat].match;
+                            targetCumulativeIndex = itemIndexInCat;
+                        } else if (cleanText) {
+                            const foundIdx = catTasks.findIndex(t => t.clean === cleanText);
+                            if (foundIdx !== -1) {
+                                targetLine = catTasks[foundIdx].line;
+                                targetMarkerMatch = catTasks[foundIdx].match;
+                                targetCumulativeIndex = foundIdx;
+                            }
+                        }
+                        if (isCumulativeCategory) {
+                            cumulativeCatTasks = catTasks;
+                        }
+                    }
+                }
+
+                if (!targetLine) {
+                    const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false) ?? view.posAtDOM(target);
+                    if (pos !== null && pos >= 0) {
+                        const initialLine = view.state.doc.lineAt(pos);
+                        const directMatch = initialLine.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+                        if (directMatch && !isInsideRoutineCallout) {
+                            targetLine = initialLine;
+                            targetMarkerMatch = directMatch;
+                        }
+                    }
+
+                    if (!targetLine && cleanText) {
+                        const escaped = cleanText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const exactRegex = new RegExp(`^\\s*(?:>\\s*)*[-*+]\\s+\\[(.)\\]\\s*${escaped}(?:\\s+.*)?$`);
+                        for (let i = 1; i <= view.state.doc.lines; i++) {
+                            const l = view.state.doc.line(i);
+                            const m = l.text.match(exactRegex);
+                            if (m) {
+                                targetLine = l;
+                                targetMarkerMatch = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!targetLine || !targetMarkerMatch) return;
+
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                if (isCumulativeCategory && cumulativeCatTasks.length > 0 && targetCumulativeIndex >= 0) {
+                    const k = targetCumulativeIndex;
+                    let isFullUpToK = true;
+                    for (let i = 0; i <= k; i++) {
+                        if (!/^[xX]$/.test(cumulativeCatTasks[i].match[2])) {
+                            isFullUpToK = false;
+                            break;
+                        }
+                    }
+                    if (isFullUpToK && k + 1 < cumulativeCatTasks.length) {
+                        if (/^[xX]$/.test(cumulativeCatTasks[k + 1].match[2])) {
+                            isFullUpToK = false;
+                        }
+                    }
+
+                    const targetCheckLevel = isFullUpToK ? k - 1 : k;
+
+                    const changes: Array<{ from: number; to: number; insert: string }> = [];
+                    for (let i = 0; i < cumulativeCatTasks.length; i++) {
+                        const task = cumulativeCatTasks[i];
+                        const shouldBeChecked = i <= targetCheckLevel;
+                        const nextChar = shouldBeChecked ? "x" : " ";
+                        if (task.match[2] !== nextChar) {
+                            const markerStart = task.line.from + task.match[1].length;
+                            changes.push({ from: markerStart, to: markerStart + 1, insert: nextChar });
+                        }
+                    }
+
+                    if (changes.length > 0) {
+                        view.dispatch({ changes });
+                    }
+
+                    const parentUl = target.closest("ul");
+                    const allCheckboxes = parentUl ? Array.from(parentUl.querySelectorAll<HTMLInputElement>("input[type='checkbox']")) : [(target as HTMLInputElement)];
+                    window.setTimeout(() => {
+                        allCheckboxes.forEach((cb, idx) => {
+                            cb.checked = idx <= targetCheckLevel;
+                        });
+                    }, 1);
+
+                    window.setTimeout(() => {
+                        if (targetFile) {
+                            this.modifiedFiles.add(targetFile.path);
+                            void this.triggerAutoSyncForFile(targetFile, true, true);
+                        }
+                    }, 50);
+                    return;
+                }
+
+                // 일반 토글
+                const nextMarker = /^[xX]$/.test(targetMarkerMatch[2]) ? " " : "x";
+                const markerStart = targetLine.from + targetMarkerMatch[1].length;
+
+                view.dispatch({ changes: { from: markerStart, to: markerStart + 1, insert: nextMarker } });
+
+                const desiredChecked = nextMarker !== " ";
+                window.setTimeout(() => {
+                    (target as HTMLInputElement).checked = desiredChecked;
+                }, 1);
+
+                window.setTimeout(() => {
+                    if (targetFile) {
+                        this.modifiedFiles.add(targetFile.path);
+                        void this.triggerAutoSyncForFile(targetFile, true, true);
+                    }
+                }, 50);
+                return;
+            }
+
+            // ── [2. 읽기 모드 (Reading View / Preview)] ──
             if (isInsideRoutineCallout && categoryName) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                const fileContent = await this.fileManager.getActiveViewOrFileText(targetFile);
+                const lines = fileContent.split("\n");
+
                 let inCallout = false;
-                let foundCategory = false;
-                const catTasks: Array<{ line: { from: number; to: number; number: number; text: string }; match: RegExpMatchArray; clean: string }> = [];
+                let foundCat = false;
+                let isCumulative = false;
+                const catTaskLineIndices: number[] = [];
 
-                for (let i = 1; i <= view.state.doc.lines; i++) {
-                    const l = view.state.doc.line(i);
-                    const text = l.text.trim();
+                for (let i = 0; i < lines.length; i++) {
+                    const l = lines[i];
+                    const trimmed = l.trim();
 
-                    if (/^>\s*\[!routine\]/i.test(text)) {
+                    if (/^>\s*\[!routine\]/i.test(trimmed)) {
                         inCallout = true;
                         continue;
                     }
 
                     if (inCallout) {
-                        if (!text.startsWith(">") && text !== "") {
+                        if (!trimmed.startsWith(">") && trimmed !== "") {
                             inCallout = false;
                             break;
                         }
 
-                        const catMatch = l.text.match(/^>\s*##\s+(.*)$/);
+                        const catMatch = l.match(/^>\s*##\s+(.*)$/);
                         if (catMatch) {
                             const headerRaw = catMatch[1];
                             const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
                             if (headerClean.toLowerCase() === categoryName.toLowerCase()) {
-                                foundCategory = true;
-                                catTasks.length = 0;
+                                foundCat = true;
+                                isCumulative = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(headerRaw);
+                                catTaskLineIndices.length = 0;
                                 continue;
-                            } else if (foundCategory) {
+                            } else if (foundCat) {
                                 break;
                             }
                         }
 
-                        if (foundCategory) {
-                            const m = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])\s*(.*)$/);
-                            if (m) {
-                                const taskClean = (m[4] || "").replace(/📅.*/, "").trim();
-                                catTasks.push({ line: l, match: m, clean: taskClean });
+                        if (foundCat && /^>\s*[-*+]\s+\[.\]/.test(l)) {
+                            catTaskLineIndices.push(i);
+                        }
+                    }
+                }
+
+                if (catTaskLineIndices.length > 0 && itemIndexInCat >= 0 && itemIndexInCat < catTaskLineIndices.length) {
+                    const k = itemIndexInCat;
+
+                    if (isCumulative) {
+                        let isFullUpToK = true;
+                        for (let i = 0; i <= k; i++) {
+                            const lineIdx = catTaskLineIndices[i];
+                            if (!/^>\s*[-*+]\s+\[[xX]\]/.test(lines[lineIdx])) {
+                                isFullUpToK = false;
+                                break;
                             }
                         }
-                    }
-                }
+                        if (isFullUpToK && k + 1 < catTaskLineIndices.length) {
+                            const nextLineIdx = catTaskLineIndices[k + 1];
+                            if (/^>\s*[-*+]\s+\[[xX]\]/.test(lines[nextLineIdx])) {
+                                isFullUpToK = false;
+                            }
+                        }
 
-                if (catTasks.length > 0) {
-                    if (itemIndexInCat >= 0 && itemIndexInCat < catTasks.length) {
-                        targetLine = catTasks[itemIndexInCat].line;
-                        targetMarkerMatch = catTasks[itemIndexInCat].match;
-                    } else if (cleanText) {
-                        const found = catTasks.find(t => t.clean === cleanText);
-                        if (found) {
-                            targetLine = found.line;
-                            targetMarkerMatch = found.match;
+                        const targetCheckLevel = isFullUpToK ? k - 1 : k;
+
+                        for (let i = 0; i < catTaskLineIndices.length; i++) {
+                            const lineIdx = catTaskLineIndices[i];
+                            const shouldCheck = i <= targetCheckLevel;
+                            lines[lineIdx] = lines[lineIdx].replace(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/, `$1${shouldCheck ? "x" : " "}$3`);
+                        }
+
+                        const parentUl = target.closest("ul");
+                        const allCheckboxes = parentUl ? Array.from(parentUl.querySelectorAll<HTMLInputElement>("input[type='checkbox']")) : [(target as HTMLInputElement)];
+                        allCheckboxes.forEach((cb, idx) => {
+                            cb.checked = idx <= targetCheckLevel;
+                        });
+                    } else {
+                        // 일반 단일 토글
+                        const lineIdx = catTaskLineIndices[k];
+                        const wasChecked = /^>\s*[-*+]\s+\[[xX]\]/.test(lines[lineIdx]);
+                        lines[lineIdx] = lines[lineIdx].replace(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/, `$1${wasChecked ? " " : "x"}$3`);
+
+                        if (isCheckbox) {
+                            (target as HTMLInputElement).checked = !wasChecked;
                         }
                     }
-                }
-            }
 
-            // 2. 일반 태스크 또는 콜아웃 외부: 좌표 기반 및 정확 일치(exact match) 탐색
-            if (!targetLine) {
-                const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false) ?? view.posAtDOM(target);
-                if (pos !== null && pos >= 0) {
-                    const initialLine = view.state.doc.lineAt(pos);
-                    const directMatch = initialLine.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
-                    if (directMatch && !isInsideRoutineCallout) {
-                        targetLine = initialLine;
-                        targetMarkerMatch = directMatch;
-                    }
-                }
+                    const newContent = lines.join("\n");
+                    await this.fileManager.saveIfChanged(targetFile, fileContent, newContent);
 
-                if (!targetLine && cleanText) {
-                    const escaped = cleanText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const exactRegex = new RegExp(`^\\s*(?:>\\s*)*[-*+]\\s+\\[(.)\\]\\s*${escaped}(?:\\s+.*)?$`);
-                    for (let i = 1; i <= view.state.doc.lines; i++) {
-                        const l = view.state.doc.line(i);
-                        const m = l.text.match(exactRegex);
-                        if (m) {
-                            targetLine = l;
-                            targetMarkerMatch = l.text.match(/^(\s*(?:>\s*)*[-*+]\s+\[)(.)(\])/);
-                            break;
+                    window.setTimeout(() => {
+                        if (targetFile) {
+                            this.modifiedFiles.add(targetFile.path);
+                            void this.triggerAutoSyncForFile(targetFile, true, true);
                         }
-                    }
+                    }, 50);
                 }
             }
-
-            if (!targetLine || !targetMarkerMatch) return;
-
-            // 옵시디언 코어 및 타 플러그인 개입 원천 차단 (우리가 직접 처리할 수 있는 경우에만 차단)
-            e.preventDefault();
-            e.stopImmediatePropagation();
-
-            const nextMarker = /^[xX]$/.test(targetMarkerMatch[2]) ? " " : "x";
-            const markerStart = targetLine.from + targetMarkerMatch[1].length;
-
-            view.dispatch({ changes: { from: markerStart, to: markerStart + 1, insert: nextMarker } });
-
-            // Tasks 플러그인의 Dirty Workaround 방식:
-            // 옵시디언이 강제로 상태를 되돌리는 것을 막기 위해 명시적으로 상태 재지정
-            const desiredChecked = nextMarker !== " ";
-            window.setTimeout(() => {
-                (target as HTMLInputElement).checked = desiredChecked;
-            }, 1);
-
-            // BUG-FIX: active-leaf-change 의존 제거
-            // view.dispatch()는 CM6 메모리 상태만 변경하고 파일 저장은 비동기로 발생하므로,
-            // 탭 전환 없이 같은 파일에 머물거나 팝아웃 창에서 클릭하는 경우 동기화가
-            // 영원히 트리거되지 않는 버그를 방지하기 위해 클릭 직후 강제 동기화한다.
-            // getActiveViewOrFileText()가 editor.getValue()(메모리)를 사용하므로
-            // CM6 디스크 저장 완료 여부와 무관하게 최신 내용을 읽을 수 있다.
-            window.setTimeout(() => {
-                if (targetFile) {
-                    this.modifiedFiles.add(targetFile.path);
-                    void this.triggerAutoSyncForFile(targetFile, true, true); // silent=true: 로딩창/노티스 숨김
-                }
-            }, 50);
         };
 
         // mousedown 등은 텍스트 포커싱을 위해 살려두고, 오직 click 이벤트만 최우선(capture)으로 차단합니다.
@@ -469,7 +602,6 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         // 팝아웃(새 창) 열릴 때마다 부착
         this.registerEvent(this.app.workspace.on("window-open", (win) => {
-            attachNoticeObserver(win.doc);
             // 새 창의 window 객체에도 click 이벤트 캡처 핸들러 부착
             win.win.addEventListener("click", checkboxCaptureHandler, { capture: true });
         }));
@@ -498,7 +630,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // 2. 읽기 모드(Reading Mode): 마크다운 렌더링 파이프라인 개입
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         this.registerMarkdownPostProcessor((element, context) => {
-            const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
+            const currentPath = context.sourcePath.replace(/\\/g, "/");
+            const schedulePath = (this.settings.mainSchedulePath || "").replace(/\\/g, "/");
+            const isSchedule = currentPath === schedulePath;
             if (!isSchedule) return;
 
             const items = element.querySelectorAll(".task-list-item, input[type='checkbox']");
@@ -630,11 +764,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.registerEditorExtension(buildScheduleHeaderButtonsExtension(this.app, () => this, (file, action) => this.handleScheduleHeaderAction(file, action)));
 
         // CM6: 라이브 프리뷰용 D-Day 가상 뱃지 ([!], [D])
-        this.registerEditorExtension(buildDDayBadgePlugin(this.app));
+        this.registerEditorExtension(buildDDayBadgePlugin(this.app, () => this));
 
         // Reading Mode: 스케줄 노트 헤더 전용 버튼들 (루틴, Todo, 통계)
         this.registerMarkdownPostProcessor((element, context) => {
-            const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
+            const currentPath = context.sourcePath.replace(/\\/g, "/");
+            const schedulePath = (this.settings.mainSchedulePath || "").replace(/\\/g, "/");
+            const isSchedule = currentPath === schedulePath;
             if (!isSchedule) return;
 
             const headings = Array.from(element.querySelectorAll("h1, h2, h3, h4, h5, h6")) as HTMLElement[];
@@ -684,7 +820,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
         // Reading Mode: 프로젝트 노트 # 실행 헤더 ➕ 빠른 Task 추가 버튼
         this.registerMarkdownPostProcessor((element, context) => {
-            const isProject = context.sourcePath.startsWith(this.settings.projectDirectory);
+            const isProject = this.utils.isProjectFile(context.sourcePath);
             if (!isProject) return;
 
             const headings = Array.from(element.querySelectorAll("h1, h2, h3, h4, h5, h6")) as HTMLElement[];
@@ -710,10 +846,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             });
         });
 
-        // Reading Mode 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
+        // Reading Mode 및 Dataview 임베드 용 MarkdownPostProcessor (오늘 버튼 및 달력 날짜)
         this.registerMarkdownPostProcessor((element, context) => {
-            const isSchedule = context.sourcePath === this.settings.mainSchedulePath;
-            const isProject = context.sourcePath.startsWith(this.settings.projectDirectory);
+            const currentPath = context.sourcePath.replace(/\\/g, "/");
+            const isSchedule = this.utils.isScheduleFile(currentPath);
+            const isProject = this.utils.isProjectFile(currentPath);
             if (!isSchedule && !isProject) return;
 
             const listItems = Array.from(element.querySelectorAll("li")) as HTMLElement[];
@@ -819,9 +956,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             nodesToProcess.push(n);
                         }
                     }
-                                        let globalDateIndex = 0;
+                    let globalDateIndex = 0;
 
-                    const processTextNode = (textNode) => {
+                    const processTextNode = (textNode: Text) => {
                         const text = textNode.textContent || "";
                         const match = text.match(/(\uD83D\uDCC5\s*)(\d{4}-\d{2}-\d{2})/);
                         if (!match || match.index === undefined) return;
@@ -834,7 +971,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const frag = createFragment();
                         if (before) frag.appendChild(doc.createTextNode(before));
 
-                                                const dateSpan = createSpan();
+                        const dateSpan = createSpan();
                         dateSpan.className = "myworld-date-clickable";
                         dateSpan.textContent = "\uD83D\uDCC5 " + dateStr;
 
@@ -846,10 +983,26 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             ev.stopPropagation();
                             const rect = dateSpan.getBoundingClientRect();
 
+                            // 대상 파일 찾기: Dataview 콜아웃/링크로부터 원본 프로젝트 파일 탐색
+                            let writeTargetFile = clickFile;
+                            const taskUl = taskEl.closest("ul, ol");
+                            let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
+                            while (prevEl) {
+                                const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
+                                if (link && link.dataset.href) {
+                                    const resolved = this.app.metadataCache.getFirstLinkpathDest(link.dataset.href, context.sourcePath);
+                                    if (resolved instanceof TFile) {
+                                        writeTargetFile = resolved;
+                                        break;
+                                    }
+                                }
+                                prevEl = prevEl.previousElementSibling;
+                            }
+
                             const taskClone = taskEl.cloneNode(true) as HTMLElement;
                             taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
                             const cleanTextForMatch = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
-                            const container = taskEl.closest(".markdown-reading-view") || doc.body;
+                            const container = taskEl.closest(".markdown-reading-view, .cm-embed-block, .block-language-dataviewjs") || doc.body;
                             const allTasks = Array.from((container as HTMLElement).querySelectorAll(isTaskItem ? ".task-list-item" : "li:not(.task-list-item)"));
                             let occurrenceIndex = 0;
                             for (const t of allTasks) {
@@ -863,12 +1016,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             }
 
                             buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
-                                this.enqueueFileWrite(clickFile.path, async () => {
-                                    const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                this.enqueueFileWrite(writeTargetFile.path, async () => {
+                                    const rawContent = await this.fileManager.getActiveViewOrFileText(writeTargetFile);
                                     const lines = rawContent.split("\n");
                                     let targetLineIndex = -1;
                                     const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
-                                    if (dataLineNode && (dataLineNode as HTMLElement).dataset.line) {
+                                    if (dataLineNode && (dataLineNode as HTMLElement).dataset.line && writeTargetFile === clickFile) {
                                         const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
                                         if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+/.test(lines[lineNum])) {
                                             targetLineIndex = lineNum;
@@ -884,7 +1037,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                             if ((isTaskItem && isLineTask) || (!isTaskItem && isLineList && !isLineTask)) {
                                                 let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
                                                 if (lineClean === cleanTextForMatch) {
-                                                    if (matchCount === occurrenceIndex) {
+                                                    if (matchCount === occurrenceIndex || writeTargetFile !== clickFile) {
                                                         targetLineIndex = i;
                                                         break;
                                                     }
@@ -897,7 +1050,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     if (targetLineIndex !== -1) {
                                         let dateOccurrence = 0;
                                         lines[targetLineIndex] = lines[targetLineIndex].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
-                                            if (dateOccurrence === currentTargetIndex) {
+                                            if (dateOccurrence === currentTargetIndex || writeTargetFile !== clickFile) {
                                                 dateOccurrence++;
                                                 if (newDate === null) return "";
                                                 return m.replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/, `\uD83D\uDCC5 ${newDate}`);
@@ -905,7 +1058,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                             dateOccurrence++;
                                             return m;
                                         });
-                                        await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
+                                        await this.fileManager.saveIfChanged(writeTargetFile, rawContent, lines.join("\n"));
                                     }
                                 });
                             }, activeDocument, this.settings.language);
@@ -1211,8 +1364,15 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             this.app.vault.on('modify', (file) => {
                 if (!(file instanceof TFile) || file.extension !== 'md') return;
 
-                // BUG-01/05/04: 플러그인이 쓴 파일인지 콘텐츠 해시로 판단 (타임스탬프 저기의 1초 방식 개선)
-                // cachedHash가 있는 경우에만 vault.read()를 호출하므로 플러그인이 안 쓴 파일은 I/O 추가 없음
+                // 🚀 프로젝트 폴더 또는 메인 스케줄 파일이 아니면 0.001ms 만에 즉시 무시하여 보관소 전체 부하 제로화
+                const projDir = (this.settings.projectDirectory || "").replace(/\\/g, "/");
+                const schedulePath = (this.settings.mainSchedulePath || "").replace(/\\/g, "/");
+                const filePath = file.path.replace(/\\/g, "/");
+                const isScheduleFile = schedulePath ? filePath === schedulePath : false;
+                const isProjectFile = projDir ? filePath.startsWith(projDir) : false;
+                if (!isProjectFile && !isScheduleFile) return;
+
+                // 플러그인이 쓴 파일인지 콘텐츠 해시로 판단
                 const cachedHash = this.pluginWritingFiles.get(file.path);
                 if (cachedHash !== undefined) {
                     void (async () => {
@@ -1249,11 +1409,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             name: this.settings.language === "ko" ? "프로젝트 식별자 동기화" : "Sync Project Identifiers",
             callback: async () => {
                 const activeFile = this.app.workspace.getActiveFile();
-                if (activeFile && activeFile.path.startsWith(this.settings.projectDirectory)) {
+                if (activeFile && this.utils.isProjectFile(activeFile)) {
                     await this.synchronizer.syncProjectNoteIdentifiers(activeFile);
                     new Notice(t("notice_sync_project_complete", this.settings.language));
                 } else {
-                    new Notice(this.settings.language === "ko" ? "프로젝트 노트가 아닙니다." : "Not a project note.");
+                    new Notice(this.settings.language === "ko" ? "태스크 계획서 노트(00.Tasks)가 아닙니다." : "Not a task plan note.");
                 }
             }
         });
@@ -1297,18 +1457,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             }
         });
 
-        // 명령어 F: 현재 창 강제 수동 동기화 (새로고침)
+        // 명령어 F: 스마트 코드 및 문서 자동 포맷터 (F5 단축키 연동)
         this.addCommand({
             id: "refresh-active-view",
-            name: t("cmd_refresh_view", this.settings.language),
-            callback: async () => {
-                const activeFile = this.app.workspace.getActiveFile();
-                if (activeFile) {
-                    await this.triggerAutoSyncForFile(activeFile, true);
-                    new Notice(t("notice_sync_project_complete", this.settings.language));
-                } else {
-                    new Notice(t("notice_no_active_sync", this.settings.language));
-                }
+            name: this.settings.language === "ko" ? "스마트 코드 & 문서 자동 정돈 (포맷터)" : "Smart Code & Document Formatter",
+            editorCallback: (editor: Editor, view: MarkdownView) => {
+                DocFormatter.execute(editor, view);
             }
         });
 
@@ -1361,6 +1515,73 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
     onunload() {
         this.taskQueue.clear();
+    }
+
+    public openCalendarPopupForElement(dateSpan: HTMLElement, initialDate: string, taskEl: HTMLElement) {
+        const rect = dateSpan.getBoundingClientRect();
+        let targetFile: TFile | null = null;
+
+        const taskUl = taskEl.closest("ul, ol");
+        let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
+        while (prevEl) {
+            const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
+            if (link && link.dataset.href) {
+                const resolved = this.app.metadataCache.getFirstLinkpathDest(link.dataset.href, "");
+                if (resolved instanceof TFile) {
+                    targetFile = resolved;
+                    break;
+                }
+            }
+            prevEl = prevEl.previousElementSibling;
+        }
+
+        if (!targetFile) {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (activeFile instanceof TFile) targetFile = activeFile;
+        }
+
+        if (!targetFile) return;
+
+        const writeTargetFile = targetFile;
+        const taskClone = taskEl.cloneNode(true) as HTMLElement;
+        taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+        const cleanTextForMatch = (taskClone.textContent?.trim() || "")
+            .replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "")
+            .replace(/📅.*/, "")
+            .trim();
+
+        buildCalendarPopup(initialDate, rect.left, rect.bottom + 5, (newDate) => {
+            this.enqueueFileWrite(writeTargetFile.path, async () => {
+                const rawContent = await this.fileManager.getActiveViewOrFileText(writeTargetFile);
+                const lines = rawContent.split("\n");
+                let targetLineIndex = -1;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
+                    if (isLineTask) {
+                        const lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/📅.*/, "").trim();
+                        if (lineClean === cleanTextForMatch) {
+                            targetLineIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                if (targetLineIndex !== -1) {
+                    const line = lines[targetLineIndex];
+                    if (newDate) {
+                        if (/📅\s*\d{4}-\d{2}-\d{2}/.test(line)) {
+                            lines[targetLineIndex] = line.replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
+                        } else {
+                            lines[targetLineIndex] = line + ` 📅 ${newDate}`;
+                        }
+                    } else {
+                        lines[targetLineIndex] = line.replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
+                    }
+                    await this.fileManager.saveIfChanged(writeTargetFile, rawContent, lines.join("\n"));
+                }
+            });
+        }, activeDocument, this.settings.language);
     }
 
 
@@ -1438,7 +1659,7 @@ Modified: "2000-01-01T00:00"
 - [ ] Task due today 📅 {{date}}
 # Project
 \`\`\`dataviewjs
-dv.view("1. Project/01.List/스케줄렌더링");
+dv.view("\${this.settings.templatesDirectory || '3. Resource/01.Tools/Obsidian tools/01.Templater'}/scRender");
 \`\`\`
 
 # Checklist
@@ -1491,7 +1712,7 @@ Step : 계획 따라 움직이기. 1:30 취침하기.
 - [ ] 오늘 마감인 작업 📅 {{date}}
 # Project
 \`\`\`dataviewjs
-dv.view("1. Project/01.List/스케줄렌더링");
+dv.view("\${this.settings.templatesDirectory || '3. Resource/01.Tools/Obsidian tools/01.Templater'}/scRender");
 \`\`\`
 
 # 체크리스트
@@ -1519,13 +1740,13 @@ ${checklistTable}
             };
 
             let content = this.templateHelper.replacePlaceholder(templateText, replacements);
-            content = content.replace(/dv\.view\(['"]1\.\s*Project\/01\.List\/스케줄렌더링['"]\)/g, `dv.view("${folderPath}/scRender")`);
-            content = content.replace(/dv\.view\(['"]\$\{this\.settings\.templatesDirectory\}\/02\.scRender['"]\)/g, `dv.view("${folderPath}/scRender")`);
-            content = content.replace(/dv\.view\(['"]\$\{folderPath\}\/scRender['"]\)/g, `dv.view("${folderPath}/scRender")`);
+            const scriptsFolder = this.settings.scriptsDirectory || "3. Resource/01.Tools/Obsidian tools/Scripts";
+            content = content.replace(/dv\.view\(['"](?:1\.\s*Project\/01\.List\/스케줄렌더링|[^'"]*\/scRender)['"]\)/g, `dv.view("${scriptsFolder}/scRender")`);
 
             const newFile = await this.app.vault.create(schedulePath, content);
 
-            const scRenderPath = `${folderPath}/scRender.js`;
+            await this.utils.ensureFolder(scriptsFolder);
+            const scRenderPath = `${scriptsFolder}/scRender.js`;
             const existingScRender = this.app.vault.getAbstractFileByPath(scRenderPath);
             if (existingScRender instanceof TFile) {
                 await this.app.vault.modify(existingScRender, this.templateHelper.scRenderJsContent);
@@ -1575,10 +1796,10 @@ ${checklistTable}
                 const startIdx = (todoRange as { start: number; end: number }).start;
                 const endIdx = (todoRange as { start: number; end: number }).end;
                 const beforeHeader = text.substring(0, startIdx);
-                const afterHeader = text.substring(endIdx);
-                text = beforeHeader + "# Todo\n" + newTodoBlock + "\n" + afterHeader;
+                const afterHeader = text.substring(endIdx).replace(/^\r?\n+/, "");
+                text = beforeHeader + "# Todo\n" + (newTodoBlock ? newTodoBlock + "\n" : "") + afterHeader;
             } else {
-                text = text.trimEnd() + "\n\n# Todo\n" + newTodoBlock + "\n";
+                text = text.trimEnd() + "\n\n# Todo\n" + (newTodoBlock ? newTodoBlock + "\n" : "");
             }
 
             const todayObj = this.dateManager.getTodayStart();
@@ -1685,13 +1906,16 @@ ${checklistTable}
                 this.settings.routineStructure = newStructure;
                 await this.saveSettings();
 
+                const adjustedNowDay = this.utils.getAdjustedNow().date();
+
                 if (scheduleFile && scheduleFile instanceof TFile) {
                     const latestContent = await this.app.vault.read(scheduleFile);
                     const updatedScheduleContent = RoutineSyncEngine.syncRoutineToMarkdown(
                         latestContent,
                         newStructure,
                         diff,
-                        this.settings.language
+                        this.settings.language,
+                        adjustedNowDay
                     );
                     if (latestContent !== updatedScheduleContent) {
                         await this.fileManager.pluginWrite(scheduleFile, updatedScheduleContent);
@@ -1708,7 +1932,8 @@ ${checklistTable}
                             const updatedArchiveContent = RoutineSyncEngine.syncChecklistTableColumns(
                                 archiveContent,
                                 newStructure,
-                                diff
+                                diff,
+                                adjustedNowDay
                             );
                             if (archiveContent !== updatedArchiveContent) {
                                 await this.fileManager.pluginWrite(file, updatedArchiveContent);

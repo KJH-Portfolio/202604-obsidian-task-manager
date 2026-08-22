@@ -40,8 +40,7 @@ export class ProjectTaskManagerModal extends Modal {
     }
 
     private async loadAllProjectSections() {
-        const files = this.app.vault.getMarkdownFiles();
-        const projectFiles = files.filter(f => f.path.startsWith("1. Project/01.List") && !f.name.includes("스케줄"));
+        const projectFiles = this.utils.getProjectFiles();
         
         // @ts-ignore
         const todayMoment = window.moment ? window.moment().startOf('day') : null;
@@ -339,7 +338,7 @@ export class ProjectTaskManagerModal extends Modal {
                         rawIndent: "",
                         indentLevel: 0
                     });
-                    this.render();
+                    this.render(`add-input-proj-${sIdx}`);
                 };
 
                 const addBtn = addBar.createEl("button", {
@@ -348,10 +347,29 @@ export class ProjectTaskManagerModal extends Modal {
                 });
                 addBtn.addEventListener("click", submitNewTask);
 
+                inputEl.dataset.addInputId = `add-input-proj-${sIdx}`;
                 inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
-                    if (e.key === "Enter") {
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                         e.preventDefault();
-                        submitNewTask();
+                        saveBtn.click();
+                    } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (!inputEl.value.trim()) {
+                            saveBtn.click();
+                        } else {
+                            submitNewTask();
+                        }
+                    } else if (e.key === "Tab") {
+                        // Tab 키를 누르면 날짜를 오늘 날짜(YYYY-MM-DD)로 즉시 토글/설정
+                        e.preventDefault();
+                        const todayVal = window.moment ? window.moment().format("YYYY-MM-DD") : new Date().toISOString().split("T")[0];
+                        if (!dateInputEl.value) {
+                            dateInputEl.value = todayVal;
+                        } else if (dateInputEl.value === todayVal) {
+                            dateInputEl.value = "";
+                        } else {
+                            dateInputEl.value = todayVal;
+                        }
                     }
                 });
 
@@ -397,16 +415,24 @@ export class ProjectTaskManagerModal extends Modal {
         });
 
         // 5. 포커스 복원 제어
-        if (focusedItemId) {
-            window.setTimeout(() => {
-                const targetInput = contentEl.querySelector<HTMLInputElement>(`input[data-item-id="${focusedItemId}"]`);
-                if (targetInput) {
-                    targetInput.focus();
-                    const valLen = targetInput.value.length;
-                    targetInput.setSelectionRange(valLen, valLen);
+        window.setTimeout(() => {
+            if (focusedItemId) {
+                if (focusedItemId.startsWith("add-input-proj-")) {
+                    const targetInput = contentEl.querySelector<HTMLInputElement>(`input[data-add-input-id="${focusedItemId}"]`);
+                    if (targetInput) targetInput.focus();
+                } else {
+                    const targetInput = contentEl.querySelector<HTMLInputElement>(`input[data-item-id="${focusedItemId}"]`);
+                    if (targetInput) {
+                        targetInput.focus();
+                        const valLen = targetInput.value.length;
+                        targetInput.setSelectionRange(valLen, valLen);
+                    }
                 }
-            }, 30);
-        }
+            } else {
+                const firstAddInput = contentEl.querySelector<HTMLInputElement>(".myworld-todo-add-input");
+                if (firstAddInput) firstAddInput.focus();
+            }
+        }, 40);
     }
 
     private setupDatePickerClick(dateInput: HTMLInputElement, onChange: (val: string) => void) {
@@ -481,7 +507,12 @@ export class ProjectTaskManagerModal extends Modal {
         });
 
         textInput.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                void this.saveAllProjectSections().then(() => {
+                    this.close();
+                });
+            } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
                 e.preventDefault();
                 this.moveItem(sIdx, itemIdx, e.key === "ArrowUp" ? -1 : 1);
             } else if ((e.altKey && e.key === "ArrowRight") || (e.key === "Tab" && !e.shiftKey)) {
@@ -518,7 +549,7 @@ export class ProjectTaskManagerModal extends Modal {
 
     private async saveAllProjectSections() {
         for (const section of this.projectSections) {
-            let fileContent = await this.app.vault.read(section.file);
+            let fileContent = await this.utils.fileManager.getActiveViewOrFileText(section.file);
             const execMatch = fileContent.match(/#(?: 실행| 🏃‍♂️ 실행)([\s\S]*?)(?=\n#|$)/);
             if (!execMatch) continue;
 
@@ -538,9 +569,9 @@ export class ProjectTaskManagerModal extends Modal {
 
             const newExecSection = `# 실행\n${newExecLines.join("\n")}\n`;
             fileContent = fileContent.replace(/#(?: 실행| 🏃‍♂️ 실행)[\s\S]*?(?=\n#|$)/, newExecSection);
-            await this.app.vault.modify(section.file, fileContent);
+            await this.utils.fileManager.pluginWrite(section.file, fileContent);
         }
 
-        new Notice(this.language === "ko" ? "✅ جميع 프로젝트 실행 항목 동기화 완료!" : "✅ All Project Tasks Synced Successfully!");
+        new Notice(this.language === "ko" ? "✅ 모든 프로젝트 실행 항목 동기화 완료!" : "✅ All Project Tasks Synced Successfully!");
     }
 }

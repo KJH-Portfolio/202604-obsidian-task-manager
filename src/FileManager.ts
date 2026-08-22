@@ -88,12 +88,24 @@ export class FileManager {
     }
 
     /**
+     * 해시 등록 및 3초 후 안전 자동 소멸(TTL)로 좀비 해시 영구 잔존 방지
+     */
+    private setWritingHash(filePath: string, hash: string): void {
+        this.pluginWritingFiles.set(filePath, hash);
+        window.setTimeout(() => {
+            if (this.pluginWritingFiles.get(filePath) === hash) {
+                this.pluginWritingFiles.delete(filePath);
+            }
+        }, 3000);
+    }
+
+    /**
      * 플러그인이 직접 vault.modify를 호출해야 할 때 사용.
      * 저장하는 콘텐츠의 해시를 pluginWritingFiles에 기록하여,
      * vault.on('modify') 이벤트 발생 시 이중 동기화를 유발하지 않도록 필터링한다.
      */
     async pluginWrite(file: TFile, content: string): Promise<void> {
-        this.pluginWritingFiles.set(file.path, this.simpleHash(content));
+        this.setWritingHash(file.path, this.simpleHash(content));
         await this.app.vault.modify(file, content);
     }
 
@@ -101,7 +113,7 @@ export class FileManager {
         if (originalContent === newContent) return false;
 
         // 저장할 콘텐츠의 해시를 등록하여 vault.on('modify') 이벤트 발생 시 이중 동기화를 방지
-        this.pluginWritingFiles.set(file.path, this.simpleHash(newContent));
+        this.setWritingHash(file.path, this.simpleHash(newContent));
 
         // 열려있는 에디터(Live View) 중 이 파일을 편집 중인 탭을 찾음
         // 1. 현재 활성 뷰를 최우선으로 확인

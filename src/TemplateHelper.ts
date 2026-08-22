@@ -33,8 +33,11 @@ export class TemplateHelper {
     }
 
     
-    public readonly scRenderJsContent = `// 1. 프로젝트 파일 가져오기 ("1. Project/01.List" 폴더)
-const pages = dv.pages('"1. Project/01.List"').where(p => !p.file.name.includes("스케줄"));
+    public readonly scRenderJsContent = `// 1. 프로젝트 파일 가져오기 (오직 "1. Project/00.Tasks" 폴더 내부 계획서만 엄격하게 격리)
+const pages = dv.pages().where(p => {
+    const normPath = (p.file.path || "").replace(/\\\\/g, "/");
+    return normPath.startsWith("1. Project/00.Tasks/");
+});
 const todayObj = new Date();
 todayObj.setHours(0, 0, 0, 0);
 const todayMoment = moment().startOf('day');
@@ -126,11 +129,12 @@ for (let p of pages) {
         }
 
         const displayText = t.text.replace(/\\s*\\^[a-zA-Z0-9]+$/, "");
+        const formattedText = displayText.replace(/(📅\\s*\\d{4}-\\d{2}-\\d{2})/g, '<span class="myworld-date-clickable">$1</span>');
         if (badge !== "") {
             badgeMap.set(t.line, { badge, color });
-            t.visual = \`<span><span class="dday-virtual-badge" style="color: \${color};">\${badge}</span>\` + displayText + \`</span>\`;
+            t.visual = \`<span><span class="dday-virtual-badge" style="color: \${color};">\${badge}</span>\` + formattedText + \`</span>\`;
         } else {
-            t.visual = displayText;
+            t.visual = formattedText;
         }
     });
 
@@ -231,18 +235,54 @@ if (projects.length > 0) {
     setTimeout(() => {
         if (!dv.container.dataset.clickBound) {
             dv.container.dataset.clickBound = "true";
+
+            // mousedown 캡처 단계에서 링크 포커스 및 네비게이션 원천 차단
+            dv.container.addEventListener('mousedown', (e) => {
+                const dateSpan = e.target.closest('.myworld-date-clickable');
+                if (dateSpan) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
+            }, true);
+
+            // click 캡처 단계에서 달력 팝업 오픈
             dv.container.addEventListener('click', (e) => {
+                const dateSpan = e.target.closest('.myworld-date-clickable');
+                if (dateSpan) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    
+                    const text = dateSpan.textContent || "";
+                    const match = text.match(/\\d{4}-\\d{2}-\\d{2}/);
+                    if (!match) return;
+                    const dateStr = match[0];
+                    
+                    const li = dateSpan.closest('.task-list-item');
+                    if (!li) return;
+                    
+                    const plugin = app.plugins.plugins["myworld-task-manager"];
+                    if (plugin && plugin.openCalendarPopupForElement) {
+                        plugin.openCalendarPopupForElement(dateSpan, dateStr, li);
+                    }
+                    return;
+                }
+
                 let li = e.target.closest('.task-list-item');
                 if (li && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A') {
                     let checkbox = li.querySelector('input.task-list-item-checkbox');
                     if (checkbox) checkbox.click();
                 }
-            });
+            }, true);
+
             dv.container.classList.add("myworld-dv-container");
             const style = createEl("style");
             style.innerHTML = \`
                 .myworld-dv-container .task-list-item { cursor: pointer; transition: background-color 0.2s ease; border-radius: 4px; padding-right: 5px; }
                 .myworld-dv-container .task-list-item:hover { background-color: var(--background-modifier-hover); }
+                .myworld-date-clickable { cursor: pointer !important; padding: 2px 4px; border-radius: 4px; transition: background-color 0.15s ease; }
+                .myworld-date-clickable:hover { background-color: var(--background-modifier-hover); }
             \`;
             dv.container.appendChild(style);
         }

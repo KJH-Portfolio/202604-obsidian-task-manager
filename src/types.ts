@@ -8,6 +8,7 @@ export interface RoutineCategory {
     id: string;
     name: string;
     description?: string;
+    isCumulative?: boolean;
     items: string[];
 }
 

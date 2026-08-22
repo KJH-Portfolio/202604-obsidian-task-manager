@@ -42,7 +42,8 @@ export class Synchronizer {
                 if (inTargetSection && REGEX.MATCH_TASK.test(line)) {
                     const match = line.match(REGEX.EXTRACT_ID);
                     if (!match || !match[2]) {
-                        const newId = this.utils.generateBlockId([projectFile]);
+                        const allProjectFiles = this.utils.getProjectFiles();
+                        const newId = this.utils.generateBlockId(allProjectFiles.length > 0 ? allProjectFiles : [projectFile]);
                         lines[i] = `${line.trimEnd()} ^${newId}`;
                         isModified = true;
                     }

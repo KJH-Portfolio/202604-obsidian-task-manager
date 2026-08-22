@@ -10,6 +10,7 @@ export interface PluginSettings {
     mainSchedulePath: string;
     archiveDirectory: string;
     templatesDirectory: string;
+    scriptsDirectory: string;
     statsDirectory: string;
     midnightOffsetHour: number;
     projectDirectory: string;
@@ -20,13 +21,14 @@ export interface PluginSettings {
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
-    language: "en",
-    mainSchedulePath: "1. Project/-Main/Schedule Management.md",
+    language: "ko",
+    mainSchedulePath: "1. Project/01.스케줄.md",
     archiveDirectory: "4. Archive/98.Schedule",
-    templatesDirectory: "3. Resource/01.Templates",
+    templatesDirectory: "3. Resource/01.Tools/Obsidian tools/01.Templater",
+    scriptsDirectory: "3. Resource/01.Tools/Obsidian tools/Scripts",
     statsDirectory: "4. Archive/99.Stats",
     midnightOffsetHour: 4,
-    projectDirectory: "1. Project/01.List",
+    projectDirectory: "1. Project/00.Tasks",
     customTemplates: {
         dailySchedule: ""
     }
@@ -127,6 +129,21 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.archiveDirectory)
                     .onChange(async (value) => {
                         this.plugin.settings.archiveDirectory = value.trim();
+                        await this.plugin.saveSettings();
+                    });
+                new FolderSuggest(this.app, text.inputEl);
+            });
+
+        new Setting(containerEl)
+            .setName(this.plugin.settings.language === "ko" ? "태스크 계획서 폴더 경로" : "Task Plan Directory")
+            .setDesc(this.plugin.settings.language === "ko"
+                ? "스케줄 노트와 연동되어 태스크 식별자(^p-1) 및 D-Day를 관리할 전용 폴더를 지정합니다."
+                : "Folder path where task plan notes are stored for identifier sync and D-Day tracking.")
+            .addText(text => {
+                text.setPlaceholder("1. Project/00.Tasks")
+                    .setValue(this.plugin.settings.projectDirectory || "1. Project/00.Tasks")
+                    .onChange(async (value) => {
+                        this.plugin.settings.projectDirectory = value.trim() || "1. Project/00.Tasks";
                         await this.plugin.saveSettings();
                     });
                 new FolderSuggest(this.app, text.inputEl);

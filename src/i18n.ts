@@ -178,12 +178,12 @@ export const translations = {
     // ----------------------------------------------------
     // Default Paths
     // ----------------------------------------------------
-    default_main_schedule_path: { en: "1. Project/-Main/Schedule Management.md", ko: "1. Project/-Main/스케줄 관리.md" },
+    default_main_schedule_path: { en: "1. Project/01.Schedule.md", ko: "1. Project/01.스케줄.md" },
     default_archive_folder: { en: "4. Archive/98.Schedule", ko: "4. Archive/98.Schedule" },
     default_fleeting_memo_path: { en: "5. Zettelkasten/01.Fleeting/Fleeting Memo.md", ko: "5. Zettelkasten/01.Fleeting/임시 메모.md" },
     default_templates_folder: { en: "3. Resource/01.Templates", ko: "3. Resource/01.Templates" },
-    default_project_directory: { en: "1. Project", ko: "1. Project" },
-    default_stats_directory: { en: "1. Project/-Main/Stats", ko: "1. Project/-Main/Stats" },
+    default_project_directory: { en: "1. Project/00.Tasks", ko: "1. Project/00.Tasks" },
+    default_stats_directory: { en: "4. Archive/99.Stats", ko: "4. Archive/99.Stats" },
 
 
 

@@ -138,11 +138,10 @@ export class RoutineManagerModal extends Modal {
         addCatBtn.addEventListener("click", () => {
             const scrollTop = this.getCurrentScrollTop();
             const newId = "cat_" + Date.now() + "_" + Math.random().toString(36).substring(2, 5);
-            const defaultName = isKo ? `새 루틴 ${this.currentStructure.categories.length + 1}` : `New Routine ${this.currentStructure.categories.length + 1}`;
             this.currentStructure.categories.push({
                 id: newId,
-                name: defaultName,
-                items: [isKo ? "실행 항목 1" : "Item 1"]
+                name: "",
+                items: [""]
             });
             this.render(`input-cat-name-${newId}`, scrollTop);
         });
@@ -160,7 +159,7 @@ export class RoutineManagerModal extends Modal {
             const nameInput = cardHeader.createEl("input", {
                 type: "text",
                 value: cat.name,
-                placeholder: isKo ? "카테고리 이름" : "Category Name",
+                placeholder: isKo ? "카테고리 이름 (예: 디톡스, 운동)" : "Category Name (e.g. Detox, Exercise)",
                 cls: "routine-cat-name-input"
             });
             const catFocusId = `input-cat-name-${cat.id}`;
@@ -188,7 +187,7 @@ export class RoutineManagerModal extends Modal {
                 this.render(undefined, scrollTop);
             });
 
-            // 세부 계획/가이드 입력란 (표 헤더와 분리된 설명란)
+            // 세부 계획/가이드 입력란 (표 헤더와 분리된 설명란) + 우측 누적형 모드 인라인 토글
             const descRow = catCard.createDiv({ cls: "routine-cat-desc-row" });
             descRow.createSpan({ text: "💡", cls: "routine-cat-desc-icon" });
             const descInput = descRow.createEl("input", {
@@ -201,6 +200,24 @@ export class RoutineManagerModal extends Modal {
                 cat.description = (e.target as HTMLInputElement).value;
             });
 
+            // 우측 인라인 누적형 토글 라벨 및 체크박스
+            const cumulativeLabel = descRow.createEl("label", { cls: "routine-cat-cumulative-label" });
+            cumulativeLabel.title = isKo ? "특정 항목을 누르면 이전 단계들이 한 번에 자동 체크되는 누적형 모드입니다." : "Cumulative step mode: auto-checks all preceding steps.";
+            
+            const cumulativeCheckbox = cumulativeLabel.createEl("input", {
+                type: "checkbox",
+                cls: "routine-cat-cumulative-checkbox"
+            });
+            cumulativeCheckbox.checked = !!cat.isCumulative;
+            cumulativeCheckbox.addEventListener("change", (e) => {
+                cat.isCumulative = (e.target as HTMLInputElement).checked;
+            });
+
+            cumulativeLabel.createSpan({
+                text: isKo ? " 📊 누적형" : " 📊 Step",
+                cls: "routine-cat-cumulative-text"
+            });
+
             // 세부 항목(Items) 영역
             const itemsContainer = catCard.createDiv({ cls: "routine-items-container" });
 
@@ -211,7 +228,7 @@ export class RoutineManagerModal extends Modal {
                 const itemInput = itemRow.createEl("input", {
                     type: "text",
                     value: itemText,
-                    placeholder: isKo ? "세부 실행 항목" : "Item description",
+                    placeholder: isKo ? "세부 실행 항목 (예: 1회, 스트레칭)" : "Item description",
                     cls: "routine-item-input"
                 });
                 const itemFocusId = `input-item-${cat.id}-${itemIdx}`;
@@ -247,7 +264,7 @@ export class RoutineManagerModal extends Modal {
             });
             addItemBtn.addEventListener("click", () => {
                 const scrollTop = this.getCurrentScrollTop();
-                cat.items.push(isKo ? "새 실행 항목" : "New Item");
+                cat.items.push("");
                 const newItemIdx = cat.items.length - 1;
                 this.render(`input-item-${cat.id}-${newItemIdx}`, scrollTop);
             });
@@ -261,6 +278,18 @@ export class RoutineManagerModal extends Modal {
             cls: "mod-cta"
         });
         saveBtn.addEventListener("click", () => {
+            // 빈 카테고리명 보정 및 빈 실행 항목 정리
+            for (let i = 0; i < this.currentStructure.categories.length; i++) {
+                const cat = this.currentStructure.categories[i];
+                if (!cat.name.trim()) {
+                    cat.name = isKo ? `새 루틴 ${i + 1}` : `New Routine ${i + 1}`;
+                }
+                cat.items = cat.items.map(it => it.trim()).filter(it => it !== "");
+                if (cat.items.length === 0) {
+                    cat.items.push(isKo ? "실행" : "Execute");
+                }
+            }
+
             const diff = this.computeDiff();
             void this.onSaveCallback(this.currentStructure, diff).then(() => {
                 this.close();

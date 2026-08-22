@@ -19,7 +19,10 @@ class DDayBadgeWidget extends WidgetType {
 
 const RebuildDecorations = StateEffect.define<null>();
 
-export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
+export const buildDDayBadgePlugin = (
+    app: App,
+    getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string } }
+) => ViewPlugin.fromClass(class {
     decorations: DecorationSet;
     timer: number | null = null;
 
@@ -37,11 +40,18 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
         
         if (forceRebuild || (!isTyping && !update.view.composing && update.viewportChanged)) {
             this.decorations = this.buildDeco(update.view);
-        } else if (update.docChanged || update.selectionSet || update.focusChanged) {
+        } else if (!isTyping && !update.view.composing && (update.docChanged || update.selectionSet || update.focusChanged)) {
             if (this.timer) window.clearTimeout(this.timer);
             this.timer = window.setTimeout(() => {
                 update.view.dispatch({ effects: RebuildDecorations.of(null) });
-            }, 300);
+            }, 150);
+        }
+    }
+
+    destroy() {
+        if (this.timer) {
+            window.clearTimeout(this.timer);
+            this.timer = null;
         }
     }
 
@@ -51,8 +61,26 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
         const activeFile = leaf ? (leaf.view as MarkdownView).file : null;
         if (!activeFile) return builder.finish();
 
-        const today = window.moment().startOf('day');
-        
+        // 🚀 스코프 제한: 스케줄 노트 또는 프로젝트 폴더 내부 파일이 아니면 즉시 종료
+        const plugin = getPlugin();
+        const activePath = activeFile.path.replace(/\\/g, "/");
+        const schedulePath = (plugin.settings.mainSchedulePath || "").replace(/\\/g, "/");
+        const projectDir = (plugin.settings.projectDirectory || "").replace(/\\/g, "/");
+        const dirPrefix = projectDir.endsWith("/") ? projectDir : projectDir + "/";
+        const isSchedule = activePath === schedulePath;
+        const isProject = activePath.startsWith(dirPrefix);
+        if (!isSchedule && !isProject) return builder.finish();
+
+        // 🚀 한글(IME) 조합 및 타이핑 방해 차단: 현재 커서가 위치한 줄(활성 줄) 제외
+        const activeLines = new Set<number>();
+        for (const range of view.state.selection.ranges) {
+            activeLines.add(view.state.doc.lineAt(range.head).number);
+            if (!range.empty) {
+                activeLines.add(view.state.doc.lineAt(range.anchor).number);
+            }
+        }
+
+        const todayStr = window.moment().format("YYYY-MM-DD");
         const tabSize = view.state.tabSize || 4;
         
         const getIndent = (text: string) => {
@@ -67,6 +95,11 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
             while (pos <= to) {
                 const line = view.state.doc.lineAt(pos);
                 pos = line.to + 1;
+
+                // 현재 타이핑 중인 활성 줄이면 뱃지 삽입 제외 (IME 버벅거림 방지)
+                if (activeLines.has(line.number)) {
+                    continue;
+                }
                 
                 const taskMatch = line.text.match(/^([\s]*(?:>\s*)*[-*+]\s+\[(.)\])/);
                 if (taskMatch && taskMatch[2] === " ") {
@@ -102,9 +135,12 @@ export const buildDDayBadgePlugin = (app: App) => ViewPlugin.fromClass(class {
                     }
 
                     if (dateStr) {
-                        const targetDate = window.moment(dateStr, "YYYY-MM-DD", true);
-                        if (targetDate.isValid()) {
-                            const diff = targetDate.diff(today, 'days');
+                        // ISO 날짜 문자열 직접 비교 (moment 객체 생성 없이 O(1) 연산)
+                        const msPerDay = 86400000;
+                        const todayMs = new Date(todayStr).getTime();
+                        const targetMs = new Date(dateStr).getTime();
+                        if (!isNaN(targetMs)) {
+                            const diff = Math.round((targetMs - todayMs) / msPerDay);
                             let badge = "";
                             let color = "";
                             

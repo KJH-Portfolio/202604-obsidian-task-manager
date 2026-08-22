@@ -816,9 +816,6 @@ body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] 
     padding: 10px;
 }
 
-.myworld-d-none {
-    display: none;
-}
 
 .myworld-copy-btn {
     cursor: pointer;
@@ -1794,6 +1791,45 @@ body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] 
     align-self: flex-start;
     font-size: 0.85em;
     margin-top: 4px;
+}
+
+.routine-cat-desc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.routine-cat-desc-input {
+    flex: 1;
+}
+
+.routine-cat-cumulative-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    user-select: none;
+    transition: all 0.15s ease;
+}
+
+.routine-cat-cumulative-label:hover {
+    color: var(--text-normal);
+    border-color: var(--color-accent);
+    background: var(--background-modifier-hover);
+}
+
+.routine-cat-cumulative-checkbox {
+    cursor: pointer;
+    margin: 0 !important;
 }
 
 

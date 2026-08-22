@@ -23,26 +23,30 @@ export class TaskQueue {
     }
 
     /**
-     * 큐에 쌓인 비동기 작업을 한 번에 1개씩 순서대로(Sequential) 실행.
+     * 큐에 쌓인 비동기 작업을 한 번에 1개씩 순서대로(Sequential) 안전하게 실행.
+     * while 루프와 try...finally를 적용하여 데드락 및 재귀 스택 누수를 원천 차단.
      */
     private async processQueue(): Promise<void> {
-        if (this.isProcessing || this.queue.length === 0) {
+        if (this.isProcessing) {
             return;
         }
 
         this.isProcessing = true;
-        const currentTask = this.queue.shift();
 
-        if (currentTask) {
-            try {
-                await currentTask();
-            } catch (err) {
-                console.error("[TaskQueue] Failed to process queued task:", err);
+        try {
+            while (this.queue.length > 0) {
+                const currentTask = this.queue.shift();
+                if (currentTask) {
+                    try {
+                        await currentTask();
+                    } catch (err) {
+                        console.error("[TaskQueue] Failed to process queued task:", err);
+                    }
+                }
             }
+        } finally {
+            this.isProcessing = false;
         }
-
-        this.isProcessing = false;
-        void this.processQueue();
     }
 
     /**
