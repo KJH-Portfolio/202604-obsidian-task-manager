@@ -30,7 +30,7 @@ export function buildCalendarPopup(
         baseDate = today.clone();
     }
 
-    let weekOffset = 0;
+    let monthOffset = 0;
 
     // 기존 팝업 제거
     doc.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
@@ -62,12 +62,16 @@ export function buildCalendarPopup(
 
         const todayStr = today.format("YYYY-MM-DD");
         // @ts-ignore
-        const primaryDate = baseDate.clone().add(weekOffset, 'weeks');
+        const currentMonthStart = baseDate.clone().add(monthOffset, 'months').startOf('month');
         // @ts-ignore
-        const startDate = primaryDate.clone().startOf('week');
+        const currentMonthEnd = currentMonthStart.clone().endOf('month');
+        // @ts-ignore
+        const startDate = currentMonthStart.clone().startOf('week');
+        // @ts-ignore
+        const endDate = currentMonthEnd.clone().endOf('week');
 
-        const primaryMonthNum = primaryDate.month();
-        const monthLabel = lang === 'ko' ? `${primaryDate.format('M월')}` : `${primaryDate.format('MMM')}`;
+        const primaryMonthNum = currentMonthStart.month();
+        const monthLabel = lang === 'ko' ? `${currentMonthStart.format('YYYY년 M월')}` : `${currentMonthStart.format('MMMM YYYY')}`;
         const DAYS = [t("cal_sun", lang), t("cal_mon", lang), t("cal_tue", lang), t("cal_wed", lang), t("cal_thu", lang), t("cal_fri", lang), t("cal_sat", lang)];
 
         // Header
@@ -79,7 +83,7 @@ export function buildCalendarPopup(
         btnPrev.textContent = "‹";
         btnPrev.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            weekOffset -= 5;
+            monthOffset -= 1;
             render();
         });
 
@@ -92,7 +96,7 @@ export function buildCalendarPopup(
         btnNext.textContent = "›";
         btnNext.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            weekOffset += 5;
+            monthOffset += 1;
             render();
         });
 
@@ -115,7 +119,10 @@ export function buildCalendarPopup(
         const grid = createDiv();
         grid.className = "myworld-cal-grid";
 
-        for (let i = 0; i < 35; i++) {
+        // @ts-ignore
+        const totalDays = Math.max(35, endDate.diff(startDate, 'days') + 1);
+
+        for (let i = 0; i < totalDays; i++) {
             // @ts-ignore
             const currentCellDate = startDate.clone().add(i, 'days');
             const ds = currentCellDate.format("YYYY-MM-DD");
@@ -123,12 +130,13 @@ export function buildCalendarPopup(
             const cell = createDiv();
             cell.className = "myworld-cal-day";
             
-            if (ds < todayStr) {
-                cell.classList.add("myworld-cal-past");
-            }
             if (currentCellDate.month() !== primaryMonthNum) {
                 cell.classList.add("myworld-cal-other-month");
             }
+            if (ds < todayStr) {
+                cell.classList.add("myworld-cal-past");
+            }
+
             cell.addEventListener("mousedown", (e) => {
                 e.preventDefault(); e.stopPropagation();
                 onSelect(ds);

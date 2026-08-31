@@ -170,12 +170,24 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     padding: 4px 2px;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 0.82em;
-    transition: background 0.1s, color 0.1s;
+    font-size: 0.84em;
+    color: var(--text-normal);
+    opacity: 1;
+    transition: background 0.1s, color 0.1s, opacity 0.1s;
+    user-select: none;
 }
-.myworld-cal-day:hover { background: var(--interactive-accent); color: var(--text-on-accent); }
-.myworld-cal-today { font-weight: 700; color: var(--interactive-accent); border: 1px solid white; border-radius: 5px; }
-.myworld-cal-selected { background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 5px; }
+.myworld-cal-day:hover { background: var(--interactive-accent); color: var(--text-on-accent) !important; opacity: 1 !important; }
+.myworld-cal-day.myworld-cal-past { opacity: 0.88; color: var(--text-normal); }
+.myworld-cal-day.myworld-cal-other-month { opacity: 0.35 !important; color: var(--text-muted) !important; }
+.myworld-cal-day.myworld-cal-past:hover,
+.myworld-cal-day.myworld-cal-other-month:hover {
+    cursor: pointer !important;
+    opacity: 1 !important;
+    background: var(--background-modifier-hover);
+    color: var(--text-normal) !important;
+}
+.myworld-cal-today { font-weight: 700; color: var(--interactive-accent); border: 1px solid var(--interactive-accent); border-radius: 5px; }
+.myworld-cal-selected { background: var(--interactive-accent) !important; color: var(--text-on-accent) !important; opacity: 1 !important; border-radius: 5px; }
 .myworld-cal-sat { color: var(--color-blue, #4b8ef0); }
 .myworld-cal-sun { color: var(--color-red, #e93147); }
 
