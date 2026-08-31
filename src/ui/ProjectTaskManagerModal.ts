@@ -69,23 +69,9 @@ export class ProjectTaskManagerModal extends Modal {
             }
             if (!isWithinDate) continue;
 
-            // 2. `# 계획` 태스크 진행도 산정
-            const planSectionMatch = content.match(/#(?: 계획| 📅 계획| Plan| 📅 Plan)([\s\S]*?)(?=\n#|$)/i);
-            let planTotal = 0;
-            let planDone = 0;
-            if (planSectionMatch) {
-                const planLines = planSectionMatch[1].split("\n");
-                for (const line of planLines) {
-                    const taskMatch = line.match(/^(\s*)-\s*\[([ xX\-/])\]/);
-                    if (taskMatch) {
-                        planTotal++;
-                        if (taskMatch[2] === "x" || taskMatch[2] === "X") {
-                            planDone++;
-                        }
-                    }
-                }
-            }
-            const pct = planTotal > 0 ? Math.round((planDone / planTotal) * 100) : 0;
+            // 2. `# 계획` 태스크 진행도 산정 (계층형 지분 분배 적용)
+            const parsedPlan = this.utils.parseProjectPlan(content);
+            const { pct, doneCount: planDone, totalCount: planTotal } = this.utils.calculateTreeProgress(parsedPlan.items);
 
             // 3. `# 실행` 탭 태스크 파싱 및 Dataview 동일 우선순위(sortPri) 산정
             const execSectionMatch = content.match(/#(?: 실행| 🏃‍♂️ 실행| Execution| 🏃‍♂️ Execution)([\s\S]*?)(?=\n#|$)/i);
@@ -571,7 +557,11 @@ export class ProjectTaskManagerModal extends Modal {
             const isKo = this.language === "ko";
             const execHeader = isKo ? "# 실행" : "# Execution";
             const newExecSection = `${execHeader}\n${newExecLines.join("\n")}\n`;
-            const updatedContent = fileContent.replace(/#(?: 실행| 🏃‍♂️ 실행| 🏃\u200d♂️ 실행| Execution| 🏃‍♂️ Execution)[\s\S]*?(?=\n#|$)/i, newExecSection);
+            let updatedContent = fileContent.replace(/#(?: 실행| 🏃‍♂️ 실행| 🏃\u200d♂️ 실행| Execution| 🏃‍♂️ Execution)[\s\S]*?(?=\n#|$)/i, newExecSection);
+            
+            // 🔄 # 계획 섹션 및 진행도 실시간 역방향 동기화
+            updatedContent = this.utils.syncExecutionToPlan(updatedContent, section.file, this.language);
+
             await this.utils.fileManager.saveIfChanged(section.file, fileContent, updatedContent);
         }
 

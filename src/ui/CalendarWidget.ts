@@ -25,8 +25,8 @@ export function buildCalendarPopup(
         baseDate = today.clone();
     }
     
-    // 과거 날짜이거나, '미정'을 의미하는 먼 미래(2099년 이상)의 날짜인 경우 오늘 기준으로 덮어씌움
-    if (baseDate.isBefore(today, 'day') || baseDate.year() >= 2099) {
+    // '미정'을 의미하는 먼 미래(2099년 이상)의 날짜인 경우 오늘 기준으로 덮어씌움
+    if (baseDate.year() >= 2099) {
         baseDate = today.clone();
     }
 
@@ -125,16 +125,15 @@ export function buildCalendarPopup(
             
             if (ds < todayStr) {
                 cell.classList.add("myworld-cal-past");
-            } else {
-                if (currentCellDate.month() !== primaryMonthNum) {
-                    cell.classList.add("myworld-cal-other-month");
-                }
-                cell.addEventListener("mousedown", (e) => {
-                    e.preventDefault(); e.stopPropagation();
-                    onSelect(ds);
-                    cleanupAndClose();
-                });
             }
+            if (currentCellDate.month() !== primaryMonthNum) {
+                cell.classList.add("myworld-cal-other-month");
+            }
+            cell.addEventListener("mousedown", (e) => {
+                e.preventDefault(); e.stopPropagation();
+                onSelect(ds);
+                cleanupAndClose();
+            });
 
             if (ds === todayStr) cell.classList.add("myworld-cal-today");
             if (ds === initialDate) cell.classList.add("myworld-cal-selected");
@@ -254,14 +253,6 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
         const isProject = activePath.startsWith(dirPrefix);
         if (!isSchedule && !isProject) return builder.finish();
 
-        const activeLines = new Set<number>();
-        for (const range of view.state.selection.ranges) {
-            activeLines.add(view.state.doc.lineAt(range.head).number);
-            if (!range.empty) {
-                activeLines.add(view.state.doc.lineAt(range.anchor).number);
-            }
-        }
-
         const processedLines = new Set<number>();
         const marks: { start: number; end: number; className: string }[] = [];
         const todayStr = window.moment().format("YYYY-MM-DD");
@@ -284,14 +275,12 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
                         marks.push({ start, end, className: cls });
                     }
 
-                    // 2. 비활성 줄의 블록 ID 자동 숨김 마킹
-                    if (!activeLines.has(line.number)) {
-                        const blockIdMatch = line.text.match(/\s+(\^[a-zA-Z0-9]+)$/);
-                        if (blockIdMatch && blockIdMatch.index !== undefined) {
-                            const start = line.from + blockIdMatch.index;
-                            const end = line.to;
-                            marks.push({ start, end, className: "myworld-hidden-block-id" });
-                        }
+                    // 2. 블록 ID 완전 은닉 마킹
+                    const blockIdMatch = line.text.match(/\s+(\^[a-zA-Z0-9]+)$/);
+                    if (blockIdMatch && blockIdMatch.index !== undefined) {
+                        const start = line.from + blockIdMatch.index;
+                        const end = line.to;
+                        marks.push({ start, end, className: "myworld-hidden-block-id" });
                     }
                 }
                 pos = line.to + 1;
@@ -443,15 +432,6 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
             const getView = () => this.currentView;
             const lang = plugin.settings.language || "en";
 
-            // 현재 커서가 위치한 줄(활성 줄) 찾기
-            const activeLines = new Set<number>();
-            for (const range of view.state.selection.ranges) {
-                activeLines.add(view.state.doc.lineAt(range.head).number);
-                if (!range.empty) {
-                    activeLines.add(view.state.doc.lineAt(range.anchor).number);
-                }
-            }
-
             // 단일 패스 순방향 파서:
             // visible range 시작점에서 단 1번만 위로 역추적하여 초기 헤더 컨텍스트 파악
             let currentHeader = "";
@@ -467,12 +447,6 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                 let pos = from;
                 while (pos <= to) {
                     const line = view.state.doc.lineAt(pos);
-                    // 현재 활성화된 줄이면 위젯을 렌더링하지 않음 (타자 방해 차단)
-                    if (activeLines.has(line.number)) {
-                        pos = line.to + 1;
-                        continue;
-                    }
-
                     const text = line.text;
 
                     // 헤더 라인이면 currentHeader 갱신 후 계속
@@ -500,7 +474,7 @@ export function buildTodayButtonExtension(app: App, getPlugin: () => { settings:
                                 line.to, line.to,
                                 Decoration.widget({
                                     widget: new TodayEmojiWidget(getView, lang),
-                                    side: -1
+                                    side: 2
                                 })
                             );
                         }

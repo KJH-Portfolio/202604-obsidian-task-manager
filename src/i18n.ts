@@ -294,7 +294,32 @@ export const translations = {
     settings_plugins_desc: { en: "View the list of plugins required for MyWorld Task Manager to work perfectly.", ko: "MyWorld Task Manager를 100% 활용하기 위해 함께 설치해야 하는 필수 플러그인 목록을 확인합니다." },
     settings_plugins_btn: { en: "View Plugins", ko: "목록 보기" },
     modal_plugins_title: { en: "Essential & Recommended Plugins", ko: "필수 및 권장 플러그인 안내" },
-    modal_plugins_desc: { en: "To fully utilize this plugin, please install and enable the following plugins in Obsidian:\n\n🚨 [Required] Advanced URI (by Vinzent03)\nWhy? The 'Magic Buttons' (Quick Capture, Daily Reset, Monthly Archive, etc.) in the daily schedule use `obsidian://advanced-uri` links. Without this plugin, clicking them will do nothing.\n\n🌟 [Highly Recommended] Periodic Notes\nWhy? Helpful for seamlessly navigating and managing your daily schedule notes every day, in addition to the plugin's built-in creation button.\n\n🌟 [Highly Recommended] Calendar (by Liam Cain)\nWhy? Highly recommended for quickly navigating between daily schedules using the right sidebar calendar.", ko: "이 플러그인을 100% 활용하기 위해 다음 플러그인들을 꼭 함께 설치해 주세요:\n\n🚨 [필수] Advanced URI (by Vinzent03)\n왜 필요한가요? 데일리 스케줄 상단의 '매직 버튼(빠른 캡처, 일간 마감 등)'은 명령 실행을 위해 이 플러그인에 의존합니다. 설치하지 않으면 버튼을 눌러도 반응하지 않습니다.\n\n🌟 [강력 권장] Periodic Notes\n왜 필요한가요? 플러그인에 내장된 '스케줄 자동 생성' 버튼 외에도, 매일 새로운 스케줄 노트를 쉽게 관리하고 다른 날짜로 이동하려면 권장됩니다.\n\n🌟 [강력 권장] Calendar (by Liam Cain)\n왜 필요한가요? 우측 사이드바에 달력을 띄워두고 특정 날짜의 스케줄로 빠르게 이동하기 위해 가장 찰떡궁합입니다." }
+    modal_plugins_desc: { en: "To fully utilize this plugin, please install and enable the following plugins in Obsidian:\n\n🚨 [Required] Advanced URI (by Vinzent03)\nWhy? The 'Magic Buttons' (Quick Capture, Daily Reset, Monthly Archive, etc.) in the daily schedule use `obsidian://advanced-uri` links. Without this plugin, clicking them will do nothing.\n\n🌟 [Highly Recommended] Periodic Notes\nWhy? Helpful for seamlessly navigating and managing your daily schedule notes every day, in addition to the plugin's built-in creation button.\n\n🌟 [Highly Recommended] Calendar (by Liam Cain)\nWhy? Highly recommended for quickly navigating between daily schedules using the right sidebar calendar.", ko: "이 플러그인을 100% 활용하기 위해 다음 플러그인들을 꼭 함께 설치해 주세요:\n\n🚨 [필수] Advanced URI (by Vinzent03)\n왜 필요한가요? 데일리 스케줄 상단의 '매직 버튼(빠른 캡처, 일간 마감 등)'은 명령 실행을 위해 이 플러그인에 의존합니다. 설치하지 않으면 버튼을 눌러도 반응하지 않습니다.\n\n🌟 [강력 권장] Periodic Notes\n왜 필요한가요? 플러그인에 내장된 '스케줄 자동 생성' 버튼 외에도, 매일 새로운 스케줄 노트를 쉽게 관리하고 다른 날짜로 이동하려면 권장됩니다.\n\n🌟 [강력 권장] Calendar (by Liam Cain)\n왜 필요한가요? 우측 사이드바에 달력을 띄워두고 특정 날짜의 스케줄로 빠르게 이동하기 위해 가장 찰떡궁합입니다." },
+
+    // ----------------------------------------------------
+    // Project Overview & Plan Modals
+    // ----------------------------------------------------
+    header_overview: { en: "# Overview", ko: "# 개요" },
+    cmd_edit_project_overview: { en: "Edit Project Overview", ko: "프로젝트 개요 관리" },
+    cmd_edit_project_plan: { en: "Edit Project Plan", ko: "프로젝트 계획 관리" },
+    overview_modal_title: { en: "⚙️ Manage Project Overview", ko: "⚙️ 프로젝트 개요 관리" },
+    plan_modal_title: { en: "⚙️ Manage Project Plan", ko: "⚙️ 프로젝트 계획 관리" },
+    overview_period_title: { en: "📅 Period Setting", ko: "📅 기한 설정" },
+    overview_start_date: { en: "Start Date", ko: "시작일" },
+    overview_end_date: { en: "End Date", ko: "종료일" },
+    overview_goals_title: { en: "🎯 Core Goals", ko: "🎯 핵심 목표" },
+    overview_goal_placeholder: { en: "Enter core goal (Enter)...", ko: "새 목표 입력 후 Enter..." },
+    overview_save_btn: { en: "💾 Save Overview", ko: "💾 개요 저장" },
+    plan_progress_label: { en: "📊 Plan Progress", ko: "📊 계획 실시간 진행도" },
+    plan_add_placeholder: { en: "Enter new plan task... (Enter to add, Enter on empty to save)", ko: "새 계획 태스크 입력 후 Enter... (빈 칸에서 Enter 누르면 저장)" },
+    plan_save_btn: { en: "💾 Save & Sync", ko: "💾 저장 및 양방향 동기화" },
+    notice_overview_saved: { en: "✅ Project overview updated successfully.", ko: "✅ 프로젝트 개요가 성공적으로 업데이트되었습니다." },
+    notice_plan_saved: { en: "✅ Project plan and progress updated successfully.", ko: "✅ 프로젝트 계획 및 진행도가 성공적으로 업데이트되었습니다." },
+    notice_copy_to_exec: { en: "✅ Copied to Execution tab!", ko: "✅ 실행 탭으로 복사 완료!" },
+    help_overview_title: { en: "Keyboard Shortcuts Guide", ko: "단축키 사용 설명서" },
+    help_overview_enter: { en: "• Enter : Add new goal in input / Save when empty", ko: "• Enter : 입력창에서 새 목표 추가 / 빈 칸에서 엔터 시 저장" },
+    help_overview_indent: { en: "• Tab / Shift+Tab : Indent sub-goal (1., 2. -> Bullet)", ko: "• Tab / Shift+Tab : 하위 목표 들여쓰기 (1., 2. -> 불릿)" },
+    help_overview_move: { en: "• Alt + ↑/↓ : Move goal order", ko: "• Alt + ↑/↓ : 목표 순서 이동" }
 };
 
 export function t(key: keyof typeof translations, language: string, params: Record<string, string | number> = {}): string {

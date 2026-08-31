@@ -68,8 +68,13 @@ class CopyToExecutionWidget extends WidgetType {
                             return m[1].replace(/\t/g, "    ").length;
                         };
                         
-                        const baseIndent = getIndent(taskText);
-                        let textToCopy = taskText;
+                        const baseIndentMatch = taskText.match(/^([\s\t]*)/);
+                        const baseIndentStr = baseIndentMatch ? baseIndentMatch[1] : "";
+                        const baseIndentLen = getIndent(taskText);
+                        
+                        // 복사할 라인들을 수집하며, 선택한 태스크의 들여쓰기를 제거하여 최상위(0레벨)로 정규화
+                        const linesToCopy: string[] = [];
+                        linesToCopy.push(taskText.substring(baseIndentStr.length));
                         
                         let nextLine = line.number + 1;
                         while (nextLine <= clickedView.state.doc.lines) {
@@ -78,12 +83,21 @@ class CopyToExecutionWidget extends WidgetType {
                                 nextLine++;
                                 continue;
                             }
-                            if (getIndent(nextText) <= baseIndent) {
+                            if (getIndent(nextText) <= baseIndentLen) {
                                 break;
                             }
-                            textToCopy += "\n" + nextText;
+                            // 하위 자식 라인들은 baseIndent만큼 잘라내어 상대적 깊이 유지
+                            if (baseIndentStr && nextText.startsWith(baseIndentStr)) {
+                                linesToCopy.push(nextText.substring(baseIndentStr.length));
+                            } else {
+                                const diff = getIndent(nextText) - baseIndentLen;
+                                const indentPart = "\t".repeat(Math.max(0, Math.floor(diff / 4)));
+                                linesToCopy.push(indentPart + nextText.trimStart());
+                            }
                             nextLine++;
                         }
+
+                        const textToCopy = linesToCopy.join("\n");
 
                         lines.splice(targetIndex, 0, textToCopy);
                         await this.fileManager.saveIfChanged(this.activeFile, rawContent, lines.join("\n"));
@@ -188,11 +202,21 @@ export function buildCopyToExecutionButtonExtension(app: App, getPlugin: () => {
                         const isInPlanSection = currentHeader === "계획" || currentHeader === "plan";
 
                         if (isInPlanSection) {
+                            let insertPos = line.to;
+                            const dateMatch = text.match(/📅\s*\d{4}-\d{2}-\d{2}/);
+                            const blockIdMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+
+                            if (dateMatch && dateMatch.index !== undefined) {
+                                insertPos = line.from + dateMatch.index;
+                            } else if (blockIdMatch && blockIdMatch.index !== undefined) {
+                                insertPos = line.from + blockIdMatch.index;
+                            }
+
                             builder.add(
-                                line.to, line.to,
+                                insertPos, insertPos,
                                 Decoration.widget({
                                     widget: new CopyToExecutionWidget(getView, lang, plugin.fileManager, activeFile),
-                                    side: 2
+                                    side: -1
                                 })
                             );
                         }

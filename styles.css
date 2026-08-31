@@ -1843,4 +1843,200 @@ body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] 
     margin: 0 !important;
 }
 
+/* ==========================================================================
+   Project Overview & Plan Modals Styling
+   ========================================================================== */
+
+/* Header Action Buttons for # 개요 and # 계획 */
+.myworld-btn-project-overview,
+.myworld-btn-project-plan {
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    vertical-align: middle;
+    color: var(--text-muted);
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.myworld-btn-project-overview:hover,
+.myworld-btn-project-plan:hover {
+    color: var(--color-accent);
+    transform: scale(1.15);
+}
+
+/* Project Overview Cards */
+.myworld-project-overview-card {
+    background-color: var(--background-secondary-alt, var(--background-secondary));
+    border: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.myworld-overview-card-title {
+    margin: 0 0 6px 0 !important;
+    font-size: 1.05em !important;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+/* Period Row */
+.myworld-overview-period-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.myworld-overview-date-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.myworld-overview-date-label {
+    font-size: 0.9em;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.myworld-overview-date-input {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    cursor: pointer;
+}
+
+.myworld-overview-date-separator {
+    font-weight: bold;
+    color: var(--text-muted);
+}
+
+.myworld-overview-dday-badge {
+    margin-top: 4px;
+    font-size: 0.9em;
+}
+
+.myworld-overview-dday-indicator {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+}
+
+/* Overview Goal Badge */
+.myworld-overview-goal-badge {
+    min-width: 24px;
+    font-weight: 700;
+    color: var(--color-accent);
+    text-align: right;
+    margin-right: 4px;
+    user-select: none;
+    font-size: 0.95em;
+}
+
+/* Plan Progress Bar Card */
+.myworld-plan-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.myworld-plan-progress-title {
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.myworld-plan-progress-percent {
+    font-size: 0.95em;
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.myworld-plan-progress-track {
+    width: 100%;
+    height: 10px;
+    background-color: var(--background-primary);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid var(--background-modifier-border);
+}
+
+.myworld-plan-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #44cf6e 0%, #086ddd 100%);
+    border-radius: 5px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Copy to Exec Button in Plan Modal */
+.myworld-todo-copy-exec-btn {
+    background: transparent;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 0.9em;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.myworld-todo-copy-exec-btn:hover {
+    background-color: var(--background-modifier-hover);
+    transform: scale(1.1);
+}
+
+/* Item Date in Plan Modal */
+.myworld-todo-item-date {
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+/* Editor & Reading Mode Copy to Exec Button */
+.myworld-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: 6px;
+    margin-right: 4px;
+    vertical-align: middle;
+    transition: transform 0.15s ease;
+    user-select: none;
+}
+
+.myworld-copy-btn:hover {
+    transform: scale(1.18);
+}
+
+/* Hidden Block ID Styling (완전 은닉) */
+.myworld-hidden-block-id {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    letter-spacing: 0 !important;
+    opacity: 0 !important;
+    display: inline-block !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    user-select: none !important;
+    pointer-events: none !important;
+    vertical-align: middle !important;
+}
+
+
 

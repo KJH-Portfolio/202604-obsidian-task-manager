@@ -25,6 +25,10 @@ import { RoutineSyncEngine } from "./RoutineSyncEngine";
 import { TodoManagerModal, TodoItem } from "./ui/TodoManagerModal";
 import { DocFormatter } from "./DocFormatter";
 import { ProjectTaskManagerModal } from "./ui/ProjectTaskManagerModal";
+import { ProjectOverviewModal } from "./ui/ProjectOverviewModal";
+import { ProjectPlanModal } from "./ui/ProjectPlanModal";
+import { buildProjectHeaderButtonsExtension, ProjectHeaderActionType } from "./ui/ProjectHeaderButtonsWidget";
+import { ProjectOverviewData, ProjectPlanItem } from "./TaskUtils";
 
 import { t, translations } from "./i18n";
 
@@ -489,10 +493,13 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                     (target as HTMLInputElement).checked = desiredChecked;
                 }, 1);
 
-                window.setTimeout(() => {
+                window.setTimeout(async () => {
                     if (targetFile) {
-                        this.modifiedFiles.add(targetFile.path);
-                        void this.triggerAutoSyncForFile(targetFile, true, true);
+                        if (this.utils.isProjectFile(targetFile)) {
+                            const original = await this.fileManager.getActiveViewOrFileText(targetFile);
+                            const synced = this.utils.syncExecutionToPlan(original, targetFile, this.settings.language);
+                            await this.fileManager.saveIfChanged(targetFile, original, synced);
+                        }
                     }
                 }, 50);
                 return;
@@ -589,15 +596,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         }
                     }
 
-                    const newContent = lines.join("\n");
+                    let newContent = lines.join("\n");
+                    if (this.utils.isProjectFile(targetFile)) {
+                        newContent = this.utils.syncExecutionToPlan(newContent, targetFile, this.settings.language);
+                    }
                     await this.fileManager.saveIfChanged(targetFile, fileContent, newContent);
-
-                    window.setTimeout(() => {
-                        if (targetFile) {
-                            this.modifiedFiles.add(targetFile.path);
-                            void this.triggerAutoSyncForFile(targetFile, true, true);
-                        }
-                    }, 50);
                 }
             }
         };
@@ -765,6 +768,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         // CM6: 라이브 프리뷰용 # 실행 헤더 ✏️ 빠른 Task 추가 버튼 (통합 모달 연동)
         this.registerEditorExtension(buildAddExecutionTaskButtonExtension(this.app, () => this, (file) => this.openProjectTaskManagerModal(file)));
 
+        // CM6: 라이브 프리뷰용 프로젝트 노트 헤더 버튼들 (# 개요->개요관리, # 계획->계획관리)
+        this.registerEditorExtension(buildProjectHeaderButtonsExtension(this.app, () => this, (file, action) => this.handleProjectHeaderAction(file, action)));
+
         // CM6: 라이브 프리뷰용 스케줄 헤더 버튼들 (루틴->일간마감, Todo->빠른추가+임시메모, 통계->월간아카이브)
         this.registerEditorExtension(buildScheduleHeaderButtonsExtension(this.app, () => this, (file, action) => this.handleScheduleHeaderAction(file, action)));
 
@@ -823,7 +829,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             });
         });
 
-        // Reading Mode: 프로젝트 노트 # 실행 헤더 ➕ 빠른 Task 추가 버튼
+        // Reading Mode: 프로젝트 노트 # 실행, # 개요, # 계획 헤더 버튼
         this.registerMarkdownPostProcessor((element, context) => {
             const isProject = this.utils.isProjectFile(context.sourcePath);
             if (!isProject) return;
@@ -831,12 +837,14 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const headings = Array.from(element.querySelectorAll("h1, h2, h3, h4, h5, h6")) as HTMLElement[];
             headings.forEach(h => {
                 const text = h.textContent?.trim().toLowerCase() || "";
+                const isKo = this.settings.language === "ko";
+
                 if (text === "실행" || text === "execution") {
                     if (!h.querySelector(".myworld-add-execution-btn")) {
                         const btn = createSpan();
                         btn.className = "myworld-add-execution-btn";
                         setIcon(btn, "pencil");
-                        btn.title = this.settings.language === 'ko' ? "실행 할 일 추가" : "Add Task to Execution";
+                        btn.title = isKo ? "실행 할 일 추가" : "Add Task to Execution";
                         btn.addEventListener("click", (e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -846,6 +854,40 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             }
                         });
                         h.appendChild(btn);
+                    }
+                } else if (text === "개요" || text === "overview") {
+                    if (!h.querySelector(".myworld-btn-project-overview")) {
+                        const btn = createSpan();
+                        btn.className = "myworld-header-action-btn myworld-btn-project-overview";
+                        setIcon(btn, "settings");
+                        btn.title = isKo ? "프로젝트 개요 관리" : "Manage Project Overview";
+                        btn.addEventListener("click", (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
+                            if (file && file instanceof TFile) {
+                                this.handleProjectHeaderAction(file, "overview");
+                            }
+                        });
+                        h.appendChild(btn);
+                        h.addClass("myworld-header-with-btn");
+                    }
+                } else if (text === "계획" || text === "plan") {
+                    if (!h.querySelector(".myworld-btn-project-plan")) {
+                        const btn = createSpan();
+                        btn.className = "myworld-header-action-btn myworld-btn-project-plan";
+                        setIcon(btn, "settings");
+                        btn.title = isKo ? "프로젝트 계획 관리" : "Manage Project Plan";
+                        btn.addEventListener("click", (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
+                            if (file && file instanceof TFile) {
+                                this.handleProjectHeaderAction(file, "plan");
+                            }
+                        });
+                        h.appendChild(btn);
+                        h.addClass("myworld-header-with-btn");
                     }
                 }
             });
@@ -1246,9 +1288,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         });
 
                         const targetContainer = taskEl.querySelector(".list-item-content") || taskEl;
+                        const dateEl = targetContainer.querySelector(".myworld-date-clickable");
                         const childList = Array.from(targetContainer.children).find(c => c.tagName === "UL" || c.tagName === "OL");
                         
-                        if (childList) {
+                        if (dateEl) {
+                            dateEl.parentNode?.insertBefore(btn, dateEl);
+                        } else if (childList) {
                             targetContainer.insertBefore(btn, childList);
                         } else {
                             targetContainer.appendChild(btn);
@@ -1475,6 +1520,34 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             name: t("cmd_quick_capture", this.settings.language),
             callback: () => {
                 void this.openTodoManagerModal();
+            }
+        });
+
+        // 명령어: 프로젝트 개요 관리 모달 (edit-project-overview)
+        this.addCommand({
+            id: "edit-project-overview",
+            name: t("cmd_edit_project_overview", this.settings.language),
+            callback: () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile && this.utils.isProjectFile(activeFile)) {
+                    this.openProjectOverviewModal(activeFile);
+                } else {
+                    new Notice(this.settings.language === "ko" ? "태스크 계획서 노트(00.Tasks)가 아닙니다." : "Not a task plan note.");
+                }
+            }
+        });
+
+        // 명령어: 프로젝트 계획 관리 모달 (edit-project-plan)
+        this.addCommand({
+            id: "edit-project-plan",
+            name: t("cmd_edit_project_plan", this.settings.language),
+            callback: () => {
+                const activeFile = this.app.workspace.getActiveFile();
+                if (activeFile && this.utils.isProjectFile(activeFile)) {
+                    this.openProjectPlanModal(activeFile);
+                } else {
+                    new Notice(this.settings.language === "ko" ? "태스크 계획서 노트(00.Tasks)가 아닙니다." : "Not a task plan note.");
+                }
             }
         });
 
@@ -1984,6 +2057,58 @@ ${checklistTable}
                 // 저장 후 추가 작업
             },
             targetFile
+        ).open();
+    }
+
+    // 7. 프로젝트 헤더 액션 핸들러 (# 개요 ⚙️, # 계획 ⚙️)
+    handleProjectHeaderAction(file: TFile, action: ProjectHeaderActionType): void {
+        if (action === "overview") {
+            this.openProjectOverviewModal(file);
+        } else if (action === "plan") {
+            this.openProjectPlanModal(file);
+        }
+    }
+
+    // 8. 프로젝트 개요 관리 모달
+    openProjectOverviewModal(file: TFile): void {
+        new ProjectOverviewModal(
+            this.app,
+            file,
+            this.utils,
+            this.settings.language,
+            async (data: ProjectOverviewData) => {
+                const original = await this.fileManager.getActiveViewOrFileText(file);
+                const updated = this.utils.updateProjectOverviewSection(original, data, this.settings.language);
+                await this.fileManager.saveIfChanged(file, original, updated);
+                this.modifiedFiles.add(file.path);
+                void this.triggerAutoSyncForFile(file, true, true);
+            }
+        ).open();
+    }
+
+    // 9. 프로젝트 계획 관리 모달 (양방향 동기화 및 진행도 갱신)
+    openProjectPlanModal(file: TFile): void {
+        new ProjectPlanModal(
+            this.app,
+            file,
+            this.utils,
+            this.settings.language,
+            async (items: ProjectPlanItem[]) => {
+                const original = await this.fileManager.getActiveViewOrFileText(file);
+                const updated = this.utils.updateProjectPlanWithSync(original, items, file, this.settings.language);
+                await this.fileManager.saveIfChanged(file, original, updated);
+                this.modifiedFiles.add(file.path);
+                void this.triggerAutoSyncForFile(file, true, true);
+            },
+            async (item: ProjectPlanItem) => {
+                const original = await this.fileManager.getActiveViewOrFileText(file);
+                const { updatedContent, success } = this.utils.copyPlanTaskToExecution(original, item, file, this.settings.language);
+                if (success) {
+                    await this.fileManager.saveIfChanged(file, original, updatedContent);
+                    this.modifiedFiles.add(file.path);
+                    void this.triggerAutoSyncForFile(file, true, true);
+                }
+            }
         ).open();
     }
 

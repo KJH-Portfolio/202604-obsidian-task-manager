@@ -71,15 +71,6 @@ export const buildDDayBadgePlugin = (
         const isProject = activePath.startsWith(dirPrefix);
         if (!isSchedule && !isProject) return builder.finish();
 
-        // 🚀 한글(IME) 조합 및 타이핑 방해 차단: 현재 커서가 위치한 줄(활성 줄) 제외
-        const activeLines = new Set<number>();
-        for (const range of view.state.selection.ranges) {
-            activeLines.add(view.state.doc.lineAt(range.head).number);
-            if (!range.empty) {
-                activeLines.add(view.state.doc.lineAt(range.anchor).number);
-            }
-        }
-
         const todayStr = window.moment().format("YYYY-MM-DD");
         const tabSize = view.state.tabSize || 4;
         
@@ -95,11 +86,6 @@ export const buildDDayBadgePlugin = (
             while (pos <= to) {
                 const line = view.state.doc.lineAt(pos);
                 pos = line.to + 1;
-
-                // 현재 타이핑 중인 활성 줄이면 뱃지 삽입 제외 (IME 버벅거림 방지)
-                if (activeLines.has(line.number)) {
-                    continue;
-                }
                 
                 const taskMatch = line.text.match(/^([\s]*(?:>\s*)*[-*+]\s+\[(.)\])/);
                 if (taskMatch && taskMatch[2] === " ") {

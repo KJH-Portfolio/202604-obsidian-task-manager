@@ -109,6 +109,7 @@ export class TaskUtils {
             else if (sectionName === "# 체크리스트" || sectionName === "# Checklist") escapedSectionName = "# (체크리스트|Checklist)";
             else if (sectionName === "# 계획" || sectionName === "# Plan") escapedSectionName = "# (계획|Plan)";
             else if (sectionName === "# 실행" || sectionName === "# Execution") escapedSectionName = "# (실행|Execution)";
+            else if (sectionName === "# 개요" || sectionName === "# Overview") escapedSectionName = "# (개요|Overview)";
 
             const safeRegex = new RegExp(`(^|\\n)${escapedSectionName}[ \\t]*(?=\\n|$)`, 'i');
             const sMatch = safeRegex.exec(fileOrContent);
@@ -1234,7 +1235,517 @@ ${t("header_stats", this.settings.language)}\n${dashboardStr}\n`;
         return now.clone().date(day);
     }
 
+    // =========================================================================
+    // 4. 프로젝트 개요(Overview) 및 계획(Plan) 관리 모달 전용 헬퍼 엔진
+    // =========================================================================
 
+    /**
+     * 프로젝트 파일 본문에서 기한(시작일, 마감일) 및 계층형 목표 목록 파싱
+     */
+    parseProjectOverview(content: string): ProjectOverviewData {
+        const result: ProjectOverviewData = {
+            startDate: undefined,
+            endDate: undefined,
+            goals: []
+        };
+
+        const range = this.getSectionRange(content, "# 개요") || this.getSectionRange(content, "# Overview");
+        if (!range) return result;
+
+        const overviewText = content.substring((range as { start: number; end: number }).start, (range as { start: number; end: number }).end);
+        const lines = overviewText.split("\n");
+
+        // 1. 기한 파싱 (- 기한 : 📅 2026-07-21 ~ 📅 2026-10-29)
+        const deadlineMatch = overviewText.match(/기한\s*:\s*📅\s*(\d{4}-\d{2}-\d{2})\s*~\s*📅\s*(\d{4}-\d{2}-\d{2})/);
+        if (deadlineMatch) {
+            result.startDate = deadlineMatch[1];
+            result.endDate = deadlineMatch[2];
+        }
+
+        // 2. 목표 파싱
+        let inGoalSection = false;
+        lines.forEach((line, idx) => {
+            const goalHeaderMatch = line.match(/^(\s*)-\s*목표\s*(?::\s*(.*))?$/i) || line.match(/^(\s*)-\s*Goal\s*(?::\s*(.*))?$/i);
+            if (goalHeaderMatch) {
+                inGoalSection = true;
+                const inlineGoal = goalHeaderMatch[2] ? goalHeaderMatch[2].trim() : "";
+                if (inlineGoal) {
+                    // 단일 인라인 목표 (- 목표 : 필기, 실기 합격)
+                    result.goals.push({
+                        id: `goal-${idx}-${Date.now()}`,
+                        content: inlineGoal,
+                        indentLevel: 0
+                    });
+                }
+                return;
+            }
+
+            if (inGoalSection) {
+                // 다른 최상위 항목(- 기한 등) 또는 새 헤더를 만나면 목표 섹션 종료
+                if (/^-\s*(기한|Period|세부|Details)/i.test(line.trim()) || /^#+/.test(line.trim())) {
+                    inGoalSection = false;
+                    return;
+                }
+
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                // 들여쓰기 계산 (탭 = 1단계, 공백 4칸 = 1단계)
+                const rawIndentMatch = line.match(/^(\s*)/);
+                const rawIndent = rawIndentMatch ? rawIndentMatch[1] : "";
+                const tabs = (rawIndent.match(/\t/g) || []).length;
+                const spaces = rawIndent.replace(/\t/g, "").length;
+                let indentLevel = tabs > 0 ? tabs : Math.floor(spaces / 4);
+
+                // 목표 하위 항목들은 기본적으로 최소 4칸 들여쓰기 되어 있으므로 베이스 1레벨 보정
+                // 1. 대목표 (번호 목록 또는 들여쓰기 1레벨 미만) -> indentLevel 0
+                //    - 하위 불릿 (들여쓰기 2레벨 이상) -> indentLevel 1
+                let cleanText = trimmed;
+                const numberedMatch = cleanText.match(/^\d+\.\s*(.*)$/);
+                if (numberedMatch) {
+                    cleanText = numberedMatch[1];
+                    indentLevel = 0;
+                } else if (cleanText.startsWith("- ") || cleanText.startsWith("* ") || cleanText.startsWith("+ ")) {
+                    cleanText = cleanText.replace(/^[-*+]\s*/, "");
+                    // 인라인이 아닌 하위 불릿 목록인데 indentLevel이 1 이하이면 0 or 1로 조정
+                    indentLevel = Math.max(0, indentLevel - 1);
+                }
+
+                result.goals.push({
+                    id: `goal-${idx}-${Date.now()}`,
+                    content: cleanText.trim(),
+                    indentLevel: indentLevel
+                });
+            }
+        });
+
+        return result;
+    }
+
+    /**
+     * 프로젝트 파일 본문의 `# 개요` 섹션을 스마트 포맷팅 양식으로 교체/생성
+     */
+    updateProjectOverviewSection(content: string, data: ProjectOverviewData, lang: string): string {
+        const isKo = lang === "ko";
+        const headerName = isKo ? "# 개요" : "# Overview";
+        const periodLabel = isKo ? "기한" : "Period";
+        const goalLabel = isKo ? "목표" : "Goal";
+
+        const startStr = data.startDate ? `📅 ${data.startDate}` : "📅 2099-12-31";
+        const endStr = data.endDate ? `📅 ${data.endDate}` : "📅 2099-12-31";
+        const periodLine = `- ${periodLabel} : ${startStr} ~ ${endStr}`;
+
+        let goalLines = "";
+        const validGoals = data.goals.filter(g => g.content.trim() !== "");
+        if (validGoals.length === 0) {
+            goalLines = `- ${goalLabel} : `;
+        } else if (validGoals.length === 1 && validGoals[0].indentLevel === 0) {
+            goalLines = `- ${goalLabel} : ${validGoals[0].content.trim()}`;
+        } else {
+            goalLines = `- ${goalLabel} :\n`;
+            let rootGoalCount = 1;
+            validGoals.forEach(g => {
+                if (g.indentLevel === 0) {
+                    goalLines += `    ${rootGoalCount}. ${g.content.trim()}\n`;
+                    rootGoalCount++;
+                } else {
+                    const indentStr = "    ".repeat(g.indentLevel + 1);
+                    goalLines += `${indentStr}- ${g.content.trim()}\n`;
+                }
+            });
+            goalLines = goalLines.trimEnd();
+        }
+
+        const newOverviewSection = `${headerName}\n${periodLine}\n${goalLines}\n`;
+
+        const range = this.getSectionRange(content, "# 개요") || this.getSectionRange(content, "# Overview");
+        if (range) {
+            const startIdx = (range as { start: number; end: number }).start;
+            const endIdx = (range as { start: number; end: number }).end;
+            return content.substring(0, startIdx).trimEnd() + "\n" + newOverviewSection + content.substring(endIdx).trimStart();
+        }
+
+        // 섹션이 없으면 # 실행 뒤나 파일 상단에 삽입
+        const execRange = this.getSectionRange(content, "# 실행") || this.getSectionRange(content, "# Execution");
+        if (execRange) {
+            const endIdx = (execRange as { start: number; end: number }).end;
+            return content.substring(0, endIdx).trimEnd() + "\n" + newOverviewSection + content.substring(endIdx).trimStart();
+        }
+
+        return newOverviewSection + content.trimStart();
+    }
+
+    /**
+     * 프로젝트 파일 본문에서 `# 계획` 섹션 태스크 및 진행도 라인 파싱
+     */
+    parseProjectPlan(content: string): { progressLine?: string; items: ProjectPlanItem[] } {
+        const items: ProjectPlanItem[] = [];
+        let progressLine: string | undefined = undefined;
+
+        const range = this.getSectionRange(content, "# 계획") || this.getSectionRange(content, "# Plan");
+        if (!range) return { items };
+
+        const planText = content.substring((range as { start: number; end: number }).start, (range as { start: number; end: number }).end);
+        const lines = planText.split("\n");
+
+        lines.forEach((line, idx) => {
+            // 진행도 라인 감지 (> **[[...|진행도]]**: 17% (3/18) 또는 > **진행도**: ...)
+            if (/^>\s*\*\*.*?(?:진행도|Progress).*?\*\*:/i.test(line.trim())) {
+                progressLine = line.trim();
+                return;
+            }
+
+            const taskMatch = line.match(/^(\s*)-\s*\[([ xX\-/])\]\s*(.*)$/);
+            if (taskMatch) {
+                const rawIndent = taskMatch[1] || "";
+                const tabs = (rawIndent.match(/\t/g) || []).length;
+                const spaces = rawIndent.replace(/\t/g, "").length;
+                const indentLevel = tabs > 0 ? tabs : Math.floor(spaces / 4);
+                const completed = taskMatch[2] === "x" || taskMatch[2] === "X";
+                let rest = taskMatch[3];
+
+                let blockId: string | undefined;
+                const blockIdMatch = rest.match(/\^([a-zA-Z0-9]+)$/);
+                if (blockIdMatch) {
+                    blockId = "^" + blockIdMatch[1];
+                    rest = rest.replace(/\s*\^([a-zA-Z0-9]+)$/, "").trim();
+                }
+
+                let date: string | undefined;
+                const dateMatch = rest.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                if (dateMatch) {
+                    date = dateMatch[1];
+                    rest = rest.replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").trim();
+                }
+
+                items.push({
+                    id: `plan-item-${idx}-${Date.now()}`,
+                    content: rest.trim(),
+                    completed,
+                    date,
+                    blockId,
+                    rawIndent,
+                    indentLevel
+                });
+            }
+        });
+
+        return { progressLine, items };
+    }
+
+    /**
+     * 계층형 지분 분배(Tree-based Weighted Progress) 방식으로 진행도(% 및 완료수/전체수)를 계산합니다.
+     * - 최상위 항목들을 1/N로 균등 분배
+     * - 각 항목의 하위 태스크들은 부모의 지분을 1/N로 균등 분배
+     */
+    calculateTreeProgress(items: ProjectPlanItem[]): { pct: number; doneCount: number; totalCount: number } {
+        const totalCount = items.length;
+        const doneCount = items.filter(i => i.completed).length;
+
+        if (totalCount === 0) {
+            return { pct: 0, doneCount: 0, totalCount: 0 };
+        }
+
+        interface TreeNode {
+            item: ProjectPlanItem;
+            children: TreeNode[];
+        }
+
+        const rootNodes: TreeNode[] = [];
+        const stack: { node: TreeNode; indent: number }[] = [];
+
+        for (const item of items) {
+            const node: TreeNode = { item, children: [] };
+            const indent = item.indentLevel;
+
+            while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+                stack.pop();
+            }
+
+            if (stack.length === 0) {
+                rootNodes.push(node);
+            } else {
+                stack[stack.length - 1].node.children.push(node);
+            }
+
+            stack.push({ node, indent });
+        }
+
+        if (rootNodes.length === 0) {
+            return { pct: 0, doneCount, totalCount };
+        }
+
+        const computeNodeScore = (node: TreeNode): number => {
+            if (node.item.completed) {
+                return 1.0;
+            }
+            if (node.children.length === 0) {
+                return 0.0;
+            }
+            const childrenSum = node.children.reduce((sum, child) => sum + computeNodeScore(child), 0);
+            return childrenSum / node.children.length;
+        };
+
+        const rootSum = rootNodes.reduce((sum, root) => sum + computeNodeScore(root), 0);
+        const progressRatio = rootSum / rootNodes.length;
+        const pct = Math.round(progressRatio * 100);
+
+        return { pct, doneCount, totalCount };
+    }
+
+    /**
+     * 프로젝트 파일 본문의 `# 계획` 섹션을 업데이트하고,
+     * 진행도(% 및 카운트)를 100% 자동 재계산하며,
+     * 동일 `^blockId`를 가진 `# 실행` 탭 항목들과 양방향 원자적 동기화(수정/체크/삭제)를 수행합니다.
+     */
+    updateProjectPlanWithSync(content: string, planItems: ProjectPlanItem[], file: TFile, lang: string): string {
+        const isKo = lang === "ko";
+        const planHeader = isKo ? "# 계획" : "# Plan";
+        const progressLabel = isKo ? "진행도" : "Progress";
+
+        // 1. 🌟 계층형 지분 분배(Tree Weighted) 진행도 계산
+        const { pct, doneCount: done, totalCount: total } = this.calculateTreeProgress(planItems);
+
+        // 2. 블록 ID가 없는 계획 항목에 유니크 ID 자동 부여
+        const allProjectFiles = this.getProjectFiles();
+        const filesForId = allProjectFiles.length > 0 ? allProjectFiles : [file];
+        planItems.forEach(item => {
+            if (!item.blockId) {
+                const newId = this.generateBlockId(filesForId);
+                item.blockId = "^" + newId;
+            }
+        });
+
+        // 3. 진행도 링크 포맷 구성
+        const linkPath = file.path.replace(/\.md$/, "");
+        const newProgressLine = `> **[[${linkPath}|${progressLabel}]]**: ${pct}% (${done}/${total})`;
+
+        // 4. `# 계획` 마크다운 라인들 조립
+        const planLines: string[] = [];
+        planLines.push(newProgressLine);
+
+        planItems.forEach(item => {
+            const indentStr = "\t".repeat(item.indentLevel);
+            const checkChar = item.completed ? "x" : " ";
+            let line = `${indentStr}- [${checkChar}] ${item.content}`;
+            if (item.date) {
+                line += ` 📅 ${item.date}`;
+            }
+            if (item.blockId) {
+                line += ` ${item.blockId}`;
+            }
+            planLines.push(line);
+        });
+
+        const newPlanSection = `${planHeader}\n${planLines.join("\n")}\n`;
+
+        // 5. 본문 내 `# 계획` 섹션 치환
+        let updatedContent = content;
+        const planRange = this.getSectionRange(content, "# 계획") || this.getSectionRange(content, "# Plan");
+        if (planRange) {
+            const startIdx = (planRange as { start: number; end: number }).start;
+            const endIdx = (planRange as { start: number; end: number }).end;
+            updatedContent = content.substring(0, startIdx).trimEnd() + "\n" + newPlanSection + content.substring(endIdx).trimStart();
+        } else {
+            updatedContent = updatedContent.trimEnd() + "\n" + newPlanSection;
+        }
+
+        // 6. 🔄 `# 실행` 섹션과의 양방향 태스크 동기화 (수정/체크/삭제 정밀 동기 연동)
+        const execRange = this.getSectionRange(updatedContent, "# 실행") || this.getSectionRange(updatedContent, "# Execution");
+        if (execRange) {
+            // 변경 전 원본 마크다운의 # 계획 섹션에 존재하던 blockId 목록 추출
+            const originalPlanParsed = this.parseProjectPlan(content);
+            const originalPlanIds = new Set<string>();
+            originalPlanParsed.items.forEach(item => {
+                if (item.blockId) originalPlanIds.add(item.blockId.replace(/^\^/, ""));
+            });
+
+            // 현재 저장될 계획 탭의 태스크 맵 (blockId -> planItem)
+            const currentPlanMap = new Map<string, ProjectPlanItem>();
+            planItems.forEach(item => {
+                if (item.blockId) {
+                    currentPlanMap.set(item.blockId.replace(/^\^/, ""), item);
+                }
+            });
+
+            const startIdx = (execRange as { start: number; end: number }).start;
+            const endIdx = (execRange as { start: number; end: number }).end;
+            const execSectionText = updatedContent.substring(startIdx, endIdx);
+            const execLines = execSectionText.split("\n");
+
+            const newExecLines: string[] = [];
+            execLines.forEach(line => {
+                const headerMatch = line.match(/^#+\s+(실행|Execution)/i);
+                if (headerMatch) {
+                    newExecLines.push(line);
+                    return;
+                }
+
+                const taskMatch = line.match(/^(\s*)-\s*\[([ xX\-/])\]\s*(.*)$/);
+                if (taskMatch) {
+                    const blockIdMatch = taskMatch[3].match(/\^([a-zA-Z0-9]+)$/);
+                    if (blockIdMatch) {
+                        const rawId = blockIdMatch[1];
+
+                        // 경우 A: 현재 계획 탭에 남아있는 경우 ➔ 텍스트/완료체크/날짜 동기화
+                        if (currentPlanMap.has(rawId)) {
+                            const planItem = currentPlanMap.get(rawId)!;
+                            const indentStr = taskMatch[1] || "";
+                            const checkChar = planItem.completed ? "x" : " ";
+                            let syncedLine = `${indentStr}- [${checkChar}] ${planItem.content}`;
+                            if (planItem.date) {
+                                syncedLine += ` 📅 ${planItem.date}`;
+                            } else {
+                                // 실행 탭에 기존 날짜가 있었다면 보존
+                                const existingDateMatch = taskMatch[3].match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                                if (existingDateMatch) syncedLine += ` 📅 ${existingDateMatch[1]}`;
+                            }
+                            syncedLine += ` ^${rawId}`;
+                            newExecLines.push(syncedLine);
+                            return;
+                        }
+
+                        // 경우 B: 원래 계획 탭에 있었는데 이번에 계획 탭에서 삭제된 경우 ➔ 실행 탭에서도 함께 삭제 (스킵)
+                        if (originalPlanIds.has(rawId) && !currentPlanMap.has(rawId)) {
+                            return;
+                        }
+                    }
+                }
+
+                // 경우 C: 계획 탭과 무관한 일반 실행 태스크는 100% 안전하게 보존
+                newExecLines.push(line);
+            });
+
+            const newExecSection = newExecLines.join("\n").trimEnd() + "\n";
+            updatedContent = updatedContent.substring(0, startIdx).trimEnd() + "\n" + newExecSection + updatedContent.substring(endIdx).trimStart();
+        }
+
+        return updatedContent;
+    }
+
+    /**
+     * 계획 태스크를 `# 실행` 구역으로 복제 삽입 (`⬆️` 버튼 전용)
+     * - 최상위 레벨(들여쓰기 없는 - [ ] ...)로 삽입되어 하위로 종속되지 않습니다.
+     */
+    copyPlanTaskToExecution(content: string, targetPlanItem: ProjectPlanItem, file: TFile, lang: string): { updatedContent: string; success: boolean } {
+        const isKo = lang === "ko";
+        const execHeader = isKo ? "# 실행" : "# Execution";
+
+        // 블록 ID 보장
+        if (!targetPlanItem.blockId) {
+            const allProjectFiles = this.getProjectFiles();
+            const filesForId = allProjectFiles.length > 0 ? allProjectFiles : [file];
+            targetPlanItem.blockId = "^" + this.generateBlockId(filesForId);
+        }
+
+        // 항상 최상위 레벨(들여쓰기 없음)로 생성
+        const checkChar = targetPlanItem.completed ? "x" : " ";
+        let taskLine = `- [${checkChar}] ${targetPlanItem.content}`;
+        if (targetPlanItem.date) {
+            taskLine += ` 📅 ${targetPlanItem.date}`;
+        }
+        taskLine += ` ${targetPlanItem.blockId}`;
+
+        const execRange = this.getSectionRange(content, "# 실행") || this.getSectionRange(content, "# Execution");
+        if (execRange) {
+            const startIdx = (execRange as { start: number; end: number }).start;
+            const endIdx = (execRange as { start: number; end: number }).end;
+            const execSectionText = content.substring(startIdx, endIdx);
+
+            // 이미 동일 blockId가 존재하면 중복 추가 방지
+            if (targetPlanItem.blockId && execSectionText.includes(targetPlanItem.blockId)) {
+                return { updatedContent: content, success: true };
+            }
+
+            const updatedExecSection = execSectionText.trimEnd() + "\n" + taskLine + "\n";
+            const updatedContent = content.substring(0, startIdx).trimEnd() + "\n" + updatedExecSection + content.substring(endIdx).trimStart();
+            return { updatedContent, success: true };
+        } else {
+            // # 실행 섹션이 없으면 파일 상단에 신규 생성
+            const newExecSection = `${execHeader}\n${taskLine}\n`;
+            return { updatedContent: newExecSection + content.trimStart(), success: true };
+        }
+    }
+
+    /**
+     * 실행(# 실행) 섹션의 변경 사항(체크, 내용 수정 등)을 계획(# 계획) 섹션으로 역방향 동기화하고,
+     * 계획 탭의 진행도(% 및 카운트)를 100% 자동 재계산합니다.
+     */
+    syncExecutionToPlan(content: string, file: TFile, lang: string): string {
+        const execRange = this.getSectionRange(content, "# 실행") || this.getSectionRange(content, "# Execution");
+        const planRange = this.getSectionRange(content, "# 계획") || this.getSectionRange(content, "# Plan");
+        if (!execRange || !planRange) return content;
+
+        // 1. # 실행 구역의 태스크 파싱하여 blockId -> { completed, content, date } 맵 생성
+        const execText = content.substring((execRange as { start: number; end: number }).start, (execRange as { start: number; end: number }).end);
+        const execLines = execText.split("\n");
+        const execMap = new Map<string, { completed: boolean; content: string; date?: string }>();
+
+        execLines.forEach(line => {
+            const taskMatch = line.match(/^(\s*)-\s*\[([ xX\-/])\]\s*(.*)$/);
+            if (taskMatch) {
+                const completed = taskMatch[2] === "x" || taskMatch[2] === "X";
+                let rest = taskMatch[3];
+                const blockIdMatch = rest.match(/\^([a-zA-Z0-9]+)$/);
+                if (blockIdMatch) {
+                    const rawId = blockIdMatch[1];
+                    let cleanContent = rest.replace(/\s*\^([a-zA-Z0-9]+)$/, "").trim();
+                    let date: string | undefined;
+                    const dateMatch = cleanContent.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                    if (dateMatch) {
+                        date = dateMatch[1];
+                        cleanContent = cleanContent.replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").trim();
+                    }
+                    execMap.set(rawId, { completed, content: cleanContent, date });
+                }
+            }
+        });
+
+        if (execMap.size === 0) return content;
+
+        // 2. # 계획 구역의 태스크 파싱 및 동기화
+        const parsedPlan = this.parseProjectPlan(content);
+        if (parsedPlan.items.length === 0) return content;
+
+        parsedPlan.items.forEach(item => {
+            if (item.blockId) {
+                const rawId = item.blockId.replace(/^\^/, "");
+                if (execMap.has(rawId)) {
+                    const execItem = execMap.get(rawId)!;
+                    item.completed = execItem.completed;
+                    item.content = execItem.content;
+                    if (execItem.date) {
+                        item.date = execItem.date;
+                    }
+                }
+            }
+        });
+
+        // 3. 동기화된 계획 탭 및 실시간 진행도 일괄 치환 저장
+        return this.updateProjectPlanWithSync(content, parsedPlan.items, file, lang);
+    }
+}
+
+export interface ProjectGoalItem {
+    id: string;
+    content: string;
+    indentLevel: number;
+}
+
+export interface ProjectOverviewData {
+    startDate?: string;
+    endDate?: string;
+    goals: ProjectGoalItem[];
+}
+
+export interface ProjectPlanItem {
+    id: string;
+    content: string;
+    completed: boolean;
+    date?: string;
+    blockId?: string;
+    rawIndent?: string;
+    indentLevel: number;
 }
 
 
