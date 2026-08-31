@@ -29,6 +29,7 @@ import { ProjectOverviewModal } from "./ui/ProjectOverviewModal";
 import { ProjectPlanModal } from "./ui/ProjectPlanModal";
 import { buildProjectHeaderButtonsExtension, ProjectHeaderActionType } from "./ui/ProjectHeaderButtonsWidget";
 import { ProjectOverviewData, ProjectPlanItem } from "./TaskUtils";
+import { MonthlyTransitionModal } from "./ui/MonthlyTransitionModal";
 
 import { t, translations } from "./i18n";
 
@@ -228,7 +229,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         const eventController = new EventController(this.app, this);
         eventController.registerEvents();
 
-        // 강제로 scRender.js 업데이트 (데이터뷰 로직 최신화)
+        // 강제로 scRender.js 업데이트 (데이터뷰 로직 최신화) 및 월 전환 자동 감지
         this.app.workspace.onLayoutReady(async () => {
             try {
                 const folderPath = this.settings.scriptsDirectory || "3. Resource/01.Tools/Obsidian tools/Scripts";
@@ -244,6 +245,9 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             } catch (e) {
                 console.error("Failed to update scRender.js on load:", e);
             }
+
+            // 🗓️ 월 전환(새 달 첫 접속) 자동 감지
+            void this.checkMonthlyTransition();
         });
 
         // DOM 엘리먼트에서 카테고리 헤더 문맥 및 순번(Index)을 정밀 추출하는 헬퍼 함수
@@ -1605,6 +1609,96 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 }
             }
         });
+
+        // 명령어 L: 이달의 체크리스트 아카이브 및 비우기 (myworld-monthly-reset-archive)
+        this.addCommand({
+            id: "myworld-monthly-reset-archive",
+            name: t("cmd_monthly_reset_archive", this.settings.language),
+            callback: async () => {
+                const schedulePath = (this.settings.mainSchedulePath || "1. Project/01.스케줄.md").replace(/\\/g, "/");
+                const scheduleFile = this.app.vault.getAbstractFileByPath(schedulePath);
+                if (!(scheduleFile instanceof TFile)) {
+                    new Notice("❌ 스케줄 파일을 찾을 수 없습니다.");
+                    return;
+                }
+
+                const now = this.utils.getAdjustedNow();
+                const prevMonthMoment = now.clone().subtract(1, "month");
+                const prevMonthLabel = this.settings.language === "ko" 
+                    ? prevMonthMoment.format("YYYY년 M월") 
+                    : prevMonthMoment.format("MMMM YYYY");
+                const currentMonthLabel = this.settings.language === "ko" 
+                    ? now.format("YYYY년 M월") 
+                    : now.format("MMMM YYYY");
+
+                new MonthlyTransitionModal(
+                    this.app,
+                    this.settings.language,
+                    prevMonthLabel,
+                    currentMonthLabel,
+                    async () => {
+                        await this.resetManager.runMonthlyResetAndArchive(scheduleFile, async () => {
+                            await this.saveSettings();
+                        });
+                    },
+                    () => {
+                        // 취소 시 아무 동작 없음
+                    }
+                ).open();
+            }
+        });
+    }
+
+    /**
+     * 월 전환(Month Transition) 자동 감지
+     * - 앱 시작 시 1회 초경량 O(1) 비교 수행
+     * - 마지막 활성 월(lastActiveMonth)과 현재 월이 다르면 사용자 확인 모달 팝업
+     */
+    public async checkMonthlyTransition(): Promise<void> {
+        try {
+            const schedulePath = (this.settings.mainSchedulePath || "1. Project/01.스케줄.md").replace(/\\/g, "/");
+            const scheduleFile = this.app.vault.getAbstractFileByPath(schedulePath);
+            if (!(scheduleFile instanceof TFile)) return;
+
+            const now = this.utils.getAdjustedNow();
+            const currentMonthStr = now.format("YYYY-MM");
+            const lastMonth = this.settings.lastActiveMonth || "";
+
+            // 첫 실행인 경우 현재 월로 초기화만 하고 종료
+            if (!lastMonth) {
+                this.settings.lastActiveMonth = currentMonthStr;
+                await this.saveSettings();
+                return;
+            }
+
+            // 월이 변경된 경우 (예: 8월 -> 9월)
+            if (lastMonth !== currentMonthStr) {
+                const prevMonthMoment = now.clone().subtract(1, "month");
+                const prevMonthLabel = this.settings.language === "ko" 
+                    ? prevMonthMoment.format("YYYY년 M월") 
+                    : prevMonthMoment.format("MMMM YYYY");
+                const currentMonthLabel = this.settings.language === "ko" 
+                    ? now.format("YYYY년 M월") 
+                    : now.format("MMMM YYYY");
+
+                new MonthlyTransitionModal(
+                    this.app,
+                    this.settings.language,
+                    prevMonthLabel,
+                    currentMonthLabel,
+                    async () => {
+                        await this.resetManager.runMonthlyResetAndArchive(scheduleFile, async () => {
+                            await this.saveSettings();
+                        });
+                    },
+                    () => {
+                        // 나중에 하기 선택 시 아무 작업도 하지 않음
+                    }
+                ).open();
+            }
+        } catch (e) {
+            console.error("[MyWorldTaskManager] Error checking monthly transition:", e);
+        }
     }
 
     onunload() {

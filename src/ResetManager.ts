@@ -517,6 +517,113 @@ export class ResetManager {
             this.utils.hideLoadingOverlay();
         }
     }
+
+    /**
+     * 월 전환 시 지난 달 체크리스트 및 통계를 아카이브하고,
+     * 스케줄 노트의 체크리스트 표(1일~말일)를 깨끗하게 '-'로 초기화합니다.
+     */
+    async runMonthlyResetAndArchive(dailyFile: TFile, onSettingsSave?: () => Promise<void>): Promise<boolean> {
+        let originalContent = "";
+        try {
+            this.utils.showLoadingOverlay("⏳ 새 달 맞이 아카이빙 및 체크리스트 초기화 중...");
+            originalContent = await this.fileManager.getActiveViewOrFileText(dailyFile);
+            const content = this.utils.preprocessContent(originalContent);
+            const now = this.utils.getAdjustedNow(); // 현재 기준일
+            const currentMonthStr = now.format("YYYY-MM");
+            const prevMonthMoment = now.clone().subtract(1, "month");
+
+            // 1. 기존 체크리스트 표 및 통계 데이터 추출하여 지난달 아카이브 저장
+            const tableStr = this.utils.getChecklistTable(content);
+            if (tableStr) {
+                const tLines = tableStr.trim().split("\n").filter(l => l.includes("|"));
+                if (tLines.length >= 2) {
+                    const tableHeader = tLines[0];
+                    const dataRows = tLines.filter(l => {
+                        const cols = l.split("|");
+                        return cols.length > 2 && !isNaN(parseInt(cols[1]));
+                    });
+
+                    // 8월(또는 직전 달) 아카이브 생성
+                    const archiveStatsDashboard = this.utils.generateSegmentedDashboards(tableHeader, dataRows);
+                    if (archiveStatsDashboard) {
+                        await this.utils.updateMonthlyArchiveStats(this.app, prevMonthMoment, archiveStatsDashboard);
+                    }
+                }
+            }
+
+            // 2. 스케줄 노트 내 # 체크리스트 섹션 표를 1일~말일까지 '-'로 클린 초기화
+            const chkRange = this.utils.getSectionRange(content, t("header_checklist", this.settings.language)) as { start: number; end: number };
+            let updatedContent = content;
+
+            if (chkRange) {
+                const beforeChk = content.substring(0, chkRange.start);
+                const chkSection = content.substring(chkRange.start, chkRange.end);
+                const afterChk = content.substring(chkRange.end);
+
+                // 기존 표의 헤더 컬럼들 추출 (| 날짜 | Step | 명상 | ... |)
+                const chkLines = chkSection.split("\n");
+                let existingHeaders: string[] = [];
+                for (const line of chkLines) {
+                    const trim = line.trim();
+                    if (trim.startsWith("|")) {
+                        existingHeaders = trim.replace(/^\||\|$/g, "").split("|").map(s => s.trim());
+                        break;
+                    }
+                }
+
+                if (existingHeaders.length === 0) {
+                    existingHeaders = [
+                        this.settings.language === "ko" ? "날짜" : "Date",
+                        "Step", "명상", "몰입", "식단", "운동", "수면"
+                    ];
+                }
+
+                const newHeaderLine = `| ${existingHeaders.join(" | ")} |`;
+                const newSepLine = `| :-: | ${existingHeaders.slice(1).map(() => ":--:").join(" | ")} |`;
+
+                // 1일부터 이번 달 말일(예: 9월은 30일)까지 '-' 채우기
+                const maxDays = now.daysInMonth();
+                const newRows: string[] = [];
+                for (let d = 1; d <= maxDays; d++) {
+                    const blankCols = existingHeaders.slice(1).map(() => " - ");
+                    newRows.push(`| ${d.toString().padStart(2, " ")} | ${blankCols.join(" | ")} |`);
+                }
+
+                const newTableStr = [newHeaderLine, newSepLine, ...newRows].join("\n");
+                const newChkSection = `${t("header_checklist", this.settings.language)}\n${newTableStr}\n`;
+
+                updatedContent = beforeChk + newChkSection + afterChk;
+            }
+
+            // 3. # 통계 섹션도 새 달을 위해 초기화
+            const dailyStatsHeader = t("header_stats", this.settings.language);
+            const fullStatsRange = this.utils.getSectionRange(updatedContent, dailyStatsHeader) as { start: number; end: number };
+            if (fullStatsRange) {
+                const beforeStats = updatedContent.substring(0, fullStatsRange.start);
+                const afterStats = updatedContent.substring(fullStatsRange.end);
+                const newStatsSection = `${dailyStatsHeader}\n\n> (이달의 기록 대기 중)\n`;
+                updatedContent = beforeStats + newStatsSection + afterStats;
+            }
+
+            // 4. 스케줄 파일 저장
+            await this.fileManager.saveIfChanged(dailyFile, originalContent, updatedContent);
+
+            // 5. lastActiveMonth 설정 갱신
+            this.settings.lastActiveMonth = currentMonthStr;
+            if (onSettingsSave) {
+                await onSettingsSave();
+            }
+
+            new Notice(t("notice_monthly_reset_success", this.settings.language));
+            return true;
+        } catch (e) {
+            console.error("Monthly Reset Error:", e);
+            new Notice(t("reset_archive_fail_error", this.settings.language));
+            return false;
+        } finally {
+            this.utils.hideLoadingOverlay();
+        }
+    }
 }
 
 

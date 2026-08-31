@@ -14,6 +14,7 @@ export interface PluginSettings {
     statsDirectory: string;
     midnightOffsetHour: number;
     projectDirectory: string;
+    lastActiveMonth?: string;
     customTemplates: {
         dailySchedule: string;
     };
@@ -29,6 +30,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     statsDirectory: "4. Archive/99.Stats",
     midnightOffsetHour: 4,
     projectDirectory: "1. Project/00.Tasks",
+    lastActiveMonth: "",
     customTemplates: {
         dailySchedule: ""
     }

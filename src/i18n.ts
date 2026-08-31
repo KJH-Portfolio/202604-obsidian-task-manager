@@ -319,7 +319,17 @@ export const translations = {
     help_overview_title: { en: "Keyboard Shortcuts Guide", ko: "단축키 사용 설명서" },
     help_overview_enter: { en: "• Enter : Add new goal in input / Save when empty", ko: "• Enter : 입력창에서 새 목표 추가 / 빈 칸에서 엔터 시 저장" },
     help_overview_indent: { en: "• Tab / Shift+Tab : Indent sub-goal (1., 2. -> Bullet)", ko: "• Tab / Shift+Tab : 하위 목표 들여쓰기 (1., 2. -> 불릿)" },
-    help_overview_move: { en: "• Alt + ↑/↓ : Move goal order", ko: "• Alt + ↑/↓ : 목표 순서 이동" }
+    help_overview_move: { en: "• Alt + ↑/↓ : Move goal order", ko: "• Alt + ↑/↓ : 목표 순서 이동" },
+
+    // ----------------------------------------------------
+    // Monthly Transition & Archive
+    // ----------------------------------------------------
+    modal_monthly_transition_title: { en: "🗓️ A new month has started!", ko: "🗓️ 새로운 달이 시작되었습니다!" },
+    modal_monthly_transition_desc: { en: "Would you like to safely archive last month's checklist and start fresh for this month?", ko: "지난 달의 체크리스트 기록을 월간 아카이브에 안전하게 백업하고, 이번 달 체크리스트를 깨끗하게 비울까요?" },
+    modal_monthly_transition_btn_confirm: { en: "🚀 Archive & Reset", ko: "🚀 아카이브 후 비우기" },
+    modal_monthly_transition_btn_later: { en: "⏳ Later", ko: "⏳ 나중에 하기" },
+    notice_monthly_reset_success: { en: "🗓️ Previous month archived and checklist reset for the new month!", ko: "🗓️ 지난 달 기록이 아카이브되고, 새 달 체크리스트가 초기화되었습니다!" },
+    cmd_monthly_reset_archive: { en: "Archive and reset monthly checklist", ko: "이달의 체크리스트 아카이브 및 비우기" }
 };
 
 export function t(key: keyof typeof translations, language: string, params: Record<string, string | number> = {}): string {
