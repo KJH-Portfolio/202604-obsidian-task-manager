@@ -342,7 +342,10 @@ export class ResetManager {
                     const tableStr = this.utils.getChecklistTable(mainContent);
                     let archiveStatsDashboard = "";
                     const archiveDayLabel = now.format("YYYY-MM-DD (ddd)");
-                    const dailyRecord = (reviewInput.trim() || stepInput.trim()) ? `> [!quote]+ 📅 **${archiveDayLabel}**\n> **Step**: ${stepInput.trim() || dailyMeta.step}\n> **회고**: ${reviewInput || "미작성"}\n` : "";
+                    const isKo = this.settings.language === "ko";
+                    const reviewLabel = isKo ? "회고" : "Review";
+                    const noReviewText = isKo ? "미작성" : "Not written";
+                    const dailyRecord = (reviewInput.trim() || stepInput.trim()) ? `> [!quote]+ 📅 **${archiveDayLabel}**\n> **Step**: ${stepInput.trim() || dailyMeta.step}\n> **${reviewLabel}**: ${reviewInput || noReviewText}\n` : "";
 
                     if (tableStr) {
                         const tableLines = tableStr.trim().split("\n").filter(l => l.includes("|"));

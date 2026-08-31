@@ -6,7 +6,7 @@ class CopyToExecutionWidget extends WidgetType {
     constructor(
         public getView: () => EditorView,
         public lang: string,
-        public fileManager: { getActiveViewOrFileText: (f: TFile) => Promise<string>, pluginWrite: (f: TFile, text: string) => Promise<void> },
+        public fileManager: { getActiveViewOrFileText: (f: TFile) => Promise<string>, saveIfChanged: (f: TFile, original: string, modified: string) => Promise<boolean> },
         public activeFile: TFile
     ) {
         super();
@@ -86,7 +86,7 @@ class CopyToExecutionWidget extends WidgetType {
                         }
 
                         lines.splice(targetIndex, 0, textToCopy);
-                        await this.fileManager.pluginWrite(this.activeFile, lines.join("\n"));
+                        await this.fileManager.saveIfChanged(this.activeFile, rawContent, lines.join("\n"));
                         new Notice(this.lang === 'ko' ? "실행 탭으로 복사 완료!" : "Copied to Execution tab!");
                     } else {
                         new Notice(this.lang === 'ko' ? "# 실행 탭을 찾을 수 없습니다." : "Could not find # Execution tab.");
@@ -103,7 +103,7 @@ class CopyToExecutionWidget extends WidgetType {
 
 const RebuildDecorations = StateEffect.define<null>();
 
-export function buildCopyToExecutionButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string }, fileManager: { getActiveViewOrFileText: (f: TFile) => Promise<string>, pluginWrite: (f: TFile, text: string) => Promise<void> } }) {
+export function buildCopyToExecutionButtonExtension(app: App, getPlugin: () => { settings: { mainSchedulePath: string; projectDirectory: string; language: string }, fileManager: { getActiveViewOrFileText: (f: TFile) => Promise<string>, saveIfChanged: (f: TFile, original: string, modified: string) => Promise<boolean> } }) {
     return ViewPlugin.fromClass(class {
         decorations: DecorationSet;
         currentView: EditorView;

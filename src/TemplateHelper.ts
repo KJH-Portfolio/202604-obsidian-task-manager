@@ -148,6 +148,7 @@ for (let p of pages) {
     projects.push({
         noteName: p.file.name,
         link: p.file.link,
+        filePath: p.file.path,
         planTasksTotal,
         planTasksDone,
         pct,
@@ -213,8 +214,8 @@ if (projects.length > 0) {
         else if (p.sortPri === 4) { calloutType = "info"; color = "#086ddd"; icon = "ℹ️"; }
         else if (p.sortPri === 100) { calloutType = "done"; color = "#10b981"; icon = "🏁"; }
         
-        let linkHtml = \`<a data-href="\${p.link.path}" href="\${p.link.path}" class="internal-link" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">\${p.noteName}</a>\`;
-        let headerHtml = \`<div class="callout" data-callout="\${calloutType}" style="--callout-color: \${color}; background-color: \${color}22; border: 1px solid \${color}66; border-left: 5px solid \${color}; margin-top: 20px; margin-bottom: 10px;">
+        let linkHtml = \`<a data-href="\${p.filePath}" href="\${p.filePath}" class="internal-link" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">\${p.noteName}</a>\`;
+        let headerHtml = \`<div class="callout" data-callout="\${calloutType}" data-project-path="\${p.filePath}" style="--callout-color: \${color}; background-color: \${color}22; border: 1px solid \${color}66; border-left: 5px solid \${color}; margin-top: 20px; margin-bottom: 10px;">
   <div class="callout-title" dir="auto">
     <div class="callout-title-inner" style="color: \${color}; font-weight: 700;">\${icon} \${linkHtml} <span style="font-weight:normal; font-size:0.9em; opacity:0.8; color: var(--text-muted);">(\${p.pct}%)</span></div>
   </div>
@@ -226,6 +227,7 @@ if (projects.length > 0) {
             if (dv.container.lastElementChild) {
                 dv.container.lastElementChild.style.marginLeft = "25px";
                 dv.container.lastElementChild.style.marginBottom = "15px";
+                dv.container.lastElementChild.setAttribute("data-project-path", p.filePath);
             }
         } else {
             dv.span("<div style='margin-left: 25px; margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);'>등록된 실행 항목이 없습니다.</div>");
@@ -255,7 +257,7 @@ if (projects.length > 0) {
                     e.stopImmediatePropagation();
                     
                     const text = dateSpan.textContent || "";
-                    const match = text.match(/\\d{4}-\\d{2}-\\d{2}/);
+                    const match = text.match(/\d{4}-\d{2}-\d{2}/);
                     if (!match) return;
                     const dateStr = match[0];
                     
@@ -268,18 +270,12 @@ if (projects.length > 0) {
                     }
                     return;
                 }
-
-                let li = e.target.closest('.task-list-item');
-                if (li && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A') {
-                    let checkbox = li.querySelector('input.task-list-item-checkbox');
-                    if (checkbox) checkbox.click();
-                }
             }, true);
 
             dv.container.classList.add("myworld-dv-container");
             const style = createEl("style");
             style.innerHTML = \`
-                .myworld-dv-container .task-list-item { cursor: pointer; transition: background-color 0.2s ease; border-radius: 4px; padding-right: 5px; }
+                .myworld-dv-container .task-list-item { transition: background-color 0.2s ease; border-radius: 4px; padding-right: 5px; }
                 .myworld-dv-container .task-list-item:hover { background-color: var(--background-modifier-hover); }
                 .myworld-date-clickable { cursor: pointer !important; padding: 2px 4px; border-radius: 4px; transition: background-color 0.15s ease; }
                 .myworld-date-clickable:hover { background-color: var(--background-modifier-hover); }

@@ -131,11 +131,11 @@ export class TodoManagerModal extends Modal {
     private moveItem(index: number, direction: -1 | 1) {
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= this.items.length) return;
-        const item = this.items[index];
+        const focusItem = this.items[index];
         const temp = this.items[index];
         this.items[index] = this.items[newIndex];
         this.items[newIndex] = temp;
-        this.render(item.id);
+        this.render(focusItem.id);
     }
 
     private changeIndent(index: number, direction: -1 | 1) {
@@ -145,6 +145,11 @@ export class TodoManagerModal extends Modal {
         item.indentLevel = newIndent;
         item.rawIndent = "\t".repeat(newIndent);
         this.render(item.id);
+    }
+
+    private async submitAndClose(): Promise<void> {
+        await this.onSaveCallback(this.items);
+        this.close();
     }
 
     private render(focusedItemId?: string) {
@@ -222,12 +227,12 @@ export class TodoManagerModal extends Modal {
         inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
-                saveBtn.click();
+                void this.submitAndClose();
             } else if (e.key === "Enter") {
                 e.preventDefault();
                 if (!inputEl.value.trim()) {
                     // 빈 칸에서 엔터 시 저장 확정 및 닫기
-                    saveBtn.click();
+                    void this.submitAndClose();
                 } else {
                     submitNewTask();
                 }
@@ -309,9 +314,7 @@ export class TodoManagerModal extends Modal {
         });
 
         saveBtn.addEventListener("click", () => {
-            void this.onSaveCallback(this.items).then(() => {
-                this.close();
-            });
+            void this.submitAndClose();
         });
 
         if (focusedItemId && focusedItemId !== "ADD_INPUT_FOCUS") {
@@ -398,7 +401,7 @@ export class TodoManagerModal extends Modal {
         textInput.addEventListener("keydown", (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
-                saveBtn.click();
+                void this.submitAndClose();
             } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
                 e.preventDefault();
                 this.moveItem(idx, e.key === "ArrowUp" ? -1 : 1);

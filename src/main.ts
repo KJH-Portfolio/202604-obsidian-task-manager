@@ -149,8 +149,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
     modifiedFiles: Set<string> = new Set<string>();
     lastActiveFile: TFile | null = null;
-    // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
-    // 타임스탬프 방식(1초 임계값)은 클라우드 동기화 환경에서 이벤트 지연으로 무력화될 수 있어 콘텐츠 해시 비교로 전환
+    // 플러그인이 직접 수정한 파일 경로와 콘텐츠 해시를 기록하여 vault.on('modify') 이중 동기화 방지
     pluginWritingFiles: Map<string, string> = new Map<string, string>();
     // BUG-02: Race Condition 방지를 위한 파일별 직렬화 쓰기 큐
     private fileWriteQueue: Map<string, Promise<void>> = new Map();
@@ -321,6 +320,12 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const view = cmEditorEl ? EditorView.findFromDOM(cmEditorEl as HTMLElement) : null;
 
             const { cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout } = extractTaskContextFromDOM(target);
+
+            // 🚀 핵심 판정 개선: 루틴 콜아웃 내부가 아닌 일반 태스크에서는 오직 체크박스(INPUT)를 직접 클릭했을 때만 동작!
+            // 텍스트/여백을 클릭했을 때는 정상적인 커서 진입 및 텍스트 편집이 가능하도록 이벤트를 가로채지 않고 통과시킵니다.
+            if (!isInsideRoutineCallout && !isCheckbox) {
+                return;
+            }
 
             // ── [1. 라이브 프리뷰 (CM6) 모드] ──
             if (view) {
@@ -985,30 +990,42 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
                             // 대상 파일 찾기: Dataview 콜아웃/링크로부터 원본 프로젝트 파일 탐색
                             let writeTargetFile = clickFile;
-                            const taskUl = taskEl.closest("ul, ol");
-                            let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
-                            while (prevEl) {
-                                const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
-                                if (link && link.dataset.href) {
-                                    const resolved = this.app.metadataCache.getFirstLinkpathDest(link.dataset.href, context.sourcePath);
-                                    if (resolved instanceof TFile) {
-                                        writeTargetFile = resolved;
+                            const projectContainer = taskEl.closest("[data-project-path]");
+                            let projectPath = projectContainer ? projectContainer.getAttribute("data-project-path") : null;
+
+                            if (!projectPath) {
+                                const taskUl = taskEl.closest("ul, ol");
+                                let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
+                                while (prevEl) {
+                                    const customPath = prevEl.getAttribute("data-project-path");
+                                    if (customPath) {
+                                        projectPath = customPath;
                                         break;
                                     }
+                                    const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
+                                    if (link && link.dataset.href) {
+                                        projectPath = link.dataset.href;
+                                        break;
+                                    }
+                                    prevEl = prevEl.previousElementSibling;
                                 }
-                                prevEl = prevEl.previousElementSibling;
+                            }
+
+                            if (projectPath) {
+                                const resolved = this.resolveProjectFile(projectPath, context.sourcePath);
+                                if (resolved) writeTargetFile = resolved;
                             }
 
                             const taskClone = taskEl.cloneNode(true) as HTMLElement;
                             taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                            const cleanTextForMatch = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                            const cleanTextForMatch = this.normalizeTaskTextForMatch(taskClone.textContent || "");
                             const container = taskEl.closest(".markdown-reading-view, .cm-embed-block, .block-language-dataviewjs") || doc.body;
                             const allTasks = Array.from((container as HTMLElement).querySelectorAll(isTaskItem ? ".task-list-item" : "li:not(.task-list-item)"));
                             let occurrenceIndex = 0;
                             for (const t of allTasks) {
                                 const tCloned = t.cloneNode(true);
                                 (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                const tClean = this.normalizeTaskTextForMatch(tCloned.textContent || "");
                                 if (tClean === cleanTextForMatch) {
                                     if (t === taskEl) break;
                                     occurrenceIndex++;
@@ -1035,7 +1052,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                             const isLineList = /^\s*(?:>\s*)*[-*+]\s+/.test(lines[i]);
 
                                             if ((isTaskItem && isLineTask) || (!isTaskItem && isLineList && !isLineTask)) {
-                                                let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/\uD83D\uDCC5.*/, "").trim();
+                                                const lineClean = this.normalizeTaskTextForMatch(lines[i]);
                                                 if (lineClean === cleanTextForMatch) {
                                                     if (matchCount === occurrenceIndex || writeTargetFile !== clickFile) {
                                                         targetLineIndex = i;
@@ -1048,16 +1065,20 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                                     }
                                     
                                     if (targetLineIndex !== -1) {
-                                        let dateOccurrence = 0;
-                                        lines[targetLineIndex] = lines[targetLineIndex].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
-                                            if (dateOccurrence === currentTargetIndex || writeTargetFile !== clickFile) {
+                                        if (writeTargetFile !== clickFile) {
+                                            lines[targetLineIndex] = this.updateTaskLineDate(lines[targetLineIndex], newDate);
+                                        } else {
+                                            let dateOccurrence = 0;
+                                            lines[targetLineIndex] = lines[targetLineIndex].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
+                                                if (dateOccurrence === currentTargetIndex) {
+                                                    dateOccurrence++;
+                                                    if (newDate === null) return "";
+                                                    return m.replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/, `\uD83D\uDCC5 ${newDate}`);
+                                                }
                                                 dateOccurrence++;
-                                                if (newDate === null) return "";
-                                                return m.replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/, `\uD83D\uDCC5 ${newDate}`);
-                                            }
-                                            dateOccurrence++;
-                                            return m;
-                                        });
+                                                return m;
+                                            });
+                                        }
                                         await this.fileManager.saveIfChanged(writeTargetFile, rawContent, lines.join("\n"));
                                     }
                                 });
@@ -1517,24 +1538,114 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         this.taskQueue.clear();
     }
 
+    /**
+     * 프로젝트 파일 경로 또는 위키링크 문자열로부터 대상 TFile을 안전하게 확인합니다.
+     */
+    public resolveProjectFile(pathOrLink: string, sourcePath = ""): TFile | null {
+        if (!pathOrLink) return null;
+        const normalized = pathOrLink.replace(/\\/g, "/").trim();
+
+        // 1. Vault 전체 경로로 직접 검색 (예: "1. Project/00.Tasks/프로젝트.md")
+        let file = this.app.vault.getAbstractFileByPath(normalized);
+        if (file instanceof TFile) return file;
+
+        // 2. .md 확장자 추가 검색
+        if (!normalized.endsWith(".md")) {
+            file = this.app.vault.getAbstractFileByPath(`${normalized}.md`);
+            if (file instanceof TFile) return file;
+        }
+
+        // 3. metadataCache의 getFirstLinkpathDest로 검색
+        const resolved = this.app.metadataCache.getFirstLinkpathDest(normalized, sourcePath);
+        if (resolved instanceof TFile) return resolved;
+
+        // 4. 프로젝트 폴더 내 파일명 비교 검색
+        const baseName = normalized.split("/").pop()?.replace(/\.md$/, "");
+        if (baseName) {
+            const projectFiles = this.utils.getProjectFiles();
+            const found = projectFiles.find(f => f.basename === baseName || f.name === baseName || f.path === normalized);
+            if (found) return found;
+        }
+
+        return null;
+    }
+
+    /**
+     * DOM 텍스트와 마크다운 파일 원본 줄을 비교하기 위한 태스크 텍스트 정규화
+     */
+    public normalizeTaskTextForMatch(text: string): string {
+        return text
+            .replace(/<[^>]+>/g, "") // HTML 태그 제거
+            .replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "") // 체크박스/리스트 마커 제거
+            .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2") // [[경로|표시텍스트]] -> 표시텍스트
+            .replace(/\[\[([^\]]+)\]\]/g, "$1") // [[노트명]] -> 노트명
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [표시텍스트](링크) -> 표시텍스트
+            .replace(/\s*\^[a-zA-Z0-9]+$/, "") // 블록 ID 제거
+            .replace(/📅\s*\d{4}-\d{2}-\d{2}/g, "") // 날짜 제거
+            .replace(/📅/g, "") // 📅 이모지 단독 제거
+            .replace(/[*_~=]+/g, "") // 마크다운 서식 제거
+            .replace(/\s+/g, " ") // 공백 단일화
+            .trim();
+    }
+
+    /**
+     * 특정 태스크 라인의 날짜(📅 YYYY-MM-DD)를 교체/추가/삭제합니다. 블록 ID(^blockid)를 보존합니다.
+     */
+    public updateTaskLineDate(line: string, newDate: string | null): string {
+        const blockIdMatch = line.match(/\s+(\^[a-zA-Z0-9]+)$/);
+        const blockId = blockIdMatch ? blockIdMatch[1] : "";
+        const lineWithoutBlock = blockIdMatch ? line.slice(0, blockIdMatch.index) : line;
+
+        let updatedWithoutBlock = lineWithoutBlock;
+
+        if (newDate) {
+            if (/📅\s*\d{4}-\d{2}-\d{2}/.test(lineWithoutBlock)) {
+                updatedWithoutBlock = lineWithoutBlock.replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
+            } else if (/📅/.test(lineWithoutBlock)) {
+                updatedWithoutBlock = lineWithoutBlock.replace(/📅/, `📅 ${newDate}`);
+            } else {
+                updatedWithoutBlock = `${lineWithoutBlock.trimEnd()} 📅 ${newDate}`;
+            }
+        } else {
+            updatedWithoutBlock = lineWithoutBlock.replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s*📅/, "");
+        }
+
+        return blockId ? `${updatedWithoutBlock.trimEnd()} ${blockId}` : updatedWithoutBlock;
+    }
+
     public openCalendarPopupForElement(dateSpan: HTMLElement, initialDate: string, taskEl: HTMLElement) {
         const rect = dateSpan.getBoundingClientRect();
         let targetFile: TFile | null = null;
 
-        const taskUl = taskEl.closest("ul, ol");
-        let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
-        while (prevEl) {
-            const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
-            if (link && link.dataset.href) {
-                const resolved = this.app.metadataCache.getFirstLinkpathDest(link.dataset.href, "");
-                if (resolved instanceof TFile) {
-                    targetFile = resolved;
+        // 1. data-project-path 속성 탐색 (직접 속성 또는 상위 컨테이너)
+        const projectContainer = taskEl.closest("[data-project-path]");
+        let projectPath = projectContainer ? projectContainer.getAttribute("data-project-path") : null;
+
+        // 2. data-project-path가 없으면 형제 요소에서 링크 탐색 (fallback)
+        if (!projectPath) {
+            const taskUl = taskEl.closest("ul, ol");
+            let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
+            while (prevEl) {
+                const customPath = prevEl.getAttribute("data-project-path");
+                if (customPath) {
+                    projectPath = customPath;
                     break;
                 }
+                const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
+                if (link && link.dataset.href) {
+                    projectPath = link.dataset.href;
+                    break;
+                }
+                prevEl = prevEl.previousElementSibling;
             }
-            prevEl = prevEl.previousElementSibling;
         }
 
+        // 3. TFile 객체 찾기
+        if (projectPath) {
+            targetFile = this.resolveProjectFile(projectPath);
+        }
+
+        // Fallback: 현재 활성 파일
         if (!targetFile) {
             const activeFile = this.app.workspace.getActiveFile();
             if (activeFile instanceof TFile) targetFile = activeFile;
@@ -1545,10 +1656,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         const writeTargetFile = targetFile;
         const taskClone = taskEl.cloneNode(true) as HTMLElement;
         taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-        const cleanTextForMatch = (taskClone.textContent?.trim() || "")
-            .replace(/^(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "")
-            .replace(/📅.*/, "")
-            .trim();
+        const cleanTextForMatch = this.normalizeTaskTextForMatch(taskClone.textContent || "");
 
         buildCalendarPopup(initialDate, rect.left, rect.bottom + 5, (newDate) => {
             this.enqueueFileWrite(writeTargetFile.path, async () => {
@@ -1559,7 +1667,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 for (let i = 0; i < lines.length; i++) {
                     const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
                     if (isLineTask) {
-                        const lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "").replace(/📅.*/, "").trim();
+                        const lineClean = this.normalizeTaskTextForMatch(lines[i]);
                         if (lineClean === cleanTextForMatch) {
                             targetLineIndex = i;
                             break;
@@ -1568,16 +1676,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 }
 
                 if (targetLineIndex !== -1) {
-                    const line = lines[targetLineIndex];
-                    if (newDate) {
-                        if (/📅\s*\d{4}-\d{2}-\d{2}/.test(line)) {
-                            lines[targetLineIndex] = line.replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
-                        } else {
-                            lines[targetLineIndex] = line + ` 📅 ${newDate}`;
-                        }
-                    } else {
-                        lines[targetLineIndex] = line.replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "");
-                    }
+                    lines[targetLineIndex] = this.updateTaskLineDate(lines[targetLineIndex], newDate);
                     await this.fileManager.saveIfChanged(writeTargetFile, rawContent, lines.join("\n"));
                 }
             });
@@ -1659,7 +1758,7 @@ Modified: "2000-01-01T00:00"
 - [ ] Task due today 📅 {{date}}
 # Project
 \`\`\`dataviewjs
-dv.view("\${this.settings.templatesDirectory || '3. Resource/01.Tools/Obsidian tools/01.Templater'}/scRender");
+dv.view("\${this.settings.scriptsDirectory || '3. Resource/01.Tools/Obsidian tools/Scripts'}/scRender");
 \`\`\`
 
 # Checklist
@@ -1712,7 +1811,7 @@ Step : 계획 따라 움직이기. 1:30 취침하기.
 - [ ] 오늘 마감인 작업 📅 {{date}}
 # Project
 \`\`\`dataviewjs
-dv.view("\${this.settings.templatesDirectory || '3. Resource/01.Tools/Obsidian tools/01.Templater'}/scRender");
+dv.view("\${this.settings.scriptsDirectory || '3. Resource/01.Tools/Obsidian tools/Scripts'}/scRender");
 \`\`\`
 
 # 체크리스트
@@ -1783,7 +1882,7 @@ ${checklistTable}
                     line += ` 📅 ${item.date}`;
                 }
                 if (item.blockId) {
-                    line += ` ^${item.blockId}`;
+                    line += item.blockId.startsWith("^") ? ` ${item.blockId}` : ` ^${item.blockId}`;
                 }
                 return line;
             });
@@ -1836,7 +1935,9 @@ ${checklistTable}
                         text = before + "\n" + newTaskLine + after;
                     } else {
                         // 섹션이 존재하지 않을 경우 파일 상단에 신규 생성
-                        text = `# 실행\n${newTaskLine}\n\n` + text;
+                        const isKo = this.settings.language === "ko";
+                        const execHeader = isKo ? "# 실행" : "# Execution";
+                        text = `${execHeader}\n${newTaskLine}\n\n` + text;
                     }
 
                     await this.fileManager.saveIfChanged(projectFile, original, text);

@@ -3,16 +3,16 @@
    Performance impact is acceptable in the plugin context. */
 
 /* ========================================================
-   [而ㅼ뒪? 留덉빱 湲곕낯 ?숈옉 ?ㅼ젙]
-   ?듭떆?붿뼵 湲곕낯 ?뚮쭏媛 而ㅼ뒪? 泥댄겕諛뺤뒪(0,1,2,3,7,!)瑜?
-   '?꾨즺???묒뾽'?쇰줈 媛꾩＜?섏뿬 痍⑥냼?좎쓣 湲뗫뒗 ?꾩긽 諛⑹?
+   [커스텀 마커 기본 동작 설정]
+   옵시디언 기본 테마가 커스텀 체크박스(0,1,2,3,7,!)를
+   '완료된 작업'으로 간주하여 취소선을 긋는 현상 방지
    ======================================================== */
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="3"],
 body .workspace-leaf-content .markdown-rendered li.is-checked[data-task="7"],
-/* 湲곕낯 ?곹깭 蹂듦뎄 (?먮젮吏?諛⑹?, ?곗꽑?쒖쐞 洹밸??? */
+/* 기본 상태 복구 (흐려짐 방지, 우선순위 극대화) */
 body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="0"],
 body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="1"],
 body .workspace-leaf-content.workspace-leaf-content .markdown-rendered li.is-checked[data-task="2"],
@@ -29,7 +29,7 @@ body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[d
     opacity: 1;
     color: var(--text-normal);
 }
-/* 泥댄겕諛뺤뒪 吏꾪뻾 ?곹깭???곕Ⅸ ?됱긽 (肄쒖븘???대??먯꽌???좊챸?섍쾶) */
+/* 체크박스 진행 상태에 따른 색상 (콜아웃 내부에서도 선명하게) */
 body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
     background-color: rgba(255, 60, 80, 0.5);
@@ -67,7 +67,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     background-image: none;
 }
 
-/* 泥댄겕留덊겕(V) ?꾨꼍?섍쾶 ?④? 泥섎━ */
+/* 체크마크(V) 완벽하게 숨김 처리 */
 .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked::after,
 .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked::after,
 .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked::after,
@@ -106,8 +106,19 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 .myworld-date-clickable:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
 .myworld-date-clickable.myworld-overdue { color: var(--text-error); opacity: 0.75; }
 
+/* 블록 식별자(^blockid) 비활성 시 화면 숨김 처리 */
+.myworld-hidden-block-id {
+    display: none;
+}
+.cm-line:hover .myworld-hidden-block-id {
+    display: inline;
+    opacity: 0.25;
+    font-size: 0.85em;
+    user-select: none;
+}
+
 /* ========================================================
-   ?? ?щ젰 ?앹뾽 ??
+   달력 팝업 스타일
    ======================================================== */
 .myworld-cal-popup {
     background: var(--background-primary);

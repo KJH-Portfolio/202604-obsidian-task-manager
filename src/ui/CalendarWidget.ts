@@ -254,8 +254,16 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
         const isProject = activePath.startsWith(dirPrefix);
         if (!isSchedule && !isProject) return builder.finish();
 
+        const activeLines = new Set<number>();
+        for (const range of view.state.selection.ranges) {
+            activeLines.add(view.state.doc.lineAt(range.head).number);
+            if (!range.empty) {
+                activeLines.add(view.state.doc.lineAt(range.anchor).number);
+            }
+        }
+
         const processedLines = new Set<number>();
-        const marks: { start: number; end: number; isOverdue: boolean }[] = [];
+        const marks: { start: number; end: number; className: string }[] = [];
         const todayStr = window.moment().format("YYYY-MM-DD");
 
         for (const { from, to } of view.visibleRanges) {
@@ -263,14 +271,27 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
                 const line = view.state.doc.lineAt(pos);
                 if (!processedLines.has(line.number)) {
                     processedLines.add(line.number);
-                    // 라인 형식 제한 없이 전체 텍스트에서 매칭
+                    
+                    // 1. 날짜 텍스트 마킹 (클릭 가능 및 연체 표시)
                     const regex = /📅\s*(\d{4}-\d{2}-\d{2})/g;
                     let match;
                     while ((match = regex.exec(line.text)) !== null) {
                         const start = line.from + match.index;
                         const end = start + match[0].length;
                         const dateStr = match[1];
-                        marks.push({ start, end, isOverdue: dateStr < todayStr });
+                        let cls = "myworld-date-clickable-text";
+                        if (dateStr < todayStr) cls += " myworld-overdue";
+                        marks.push({ start, end, className: cls });
+                    }
+
+                    // 2. 비활성 줄의 블록 ID 자동 숨김 마킹
+                    if (!activeLines.has(line.number)) {
+                        const blockIdMatch = line.text.match(/\s+(\^[a-zA-Z0-9]+)$/);
+                        if (blockIdMatch && blockIdMatch.index !== undefined) {
+                            const start = line.from + blockIdMatch.index;
+                            const end = line.to;
+                            marks.push({ start, end, className: "myworld-hidden-block-id" });
+                        }
                     }
                 }
                 pos = line.to + 1;
@@ -279,9 +300,7 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
 
         marks.sort((a, b) => a.start - b.start);
         for (const m of marks) {
-            let cls = "myworld-date-clickable-text";
-            if (m.isOverdue) cls += " myworld-overdue";
-            builder.add(m.start, m.end, Decoration.mark({ class: cls }));
+            builder.add(m.start, m.end, Decoration.mark({ class: m.className }));
         }
         return builder.finish();
     }

@@ -76,11 +76,6 @@ export class DateManager {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
         return dateMoment.format(DATE_FORMATS.ARCHIVE_WEEK);
     }
-
-    getYearWeek(dateMoment: moment.Moment): string {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Type inference limitation
-        return dateMoment.format("gggg");
-    }
 }
 
 /* eslint-enable @typescript-eslint/no-unsafe-assignment -- Re-enable strict rules */

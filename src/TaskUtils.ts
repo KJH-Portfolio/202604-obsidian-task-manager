@@ -1131,10 +1131,23 @@ export class TaskUtils {
 
             await this.fileManager.saveIfChanged(wFile, wContent, updatedWContent);
         } else {
+            const nowStr = this.dateManager.getAdjustedNow().format("YYYY-MM-DDTHH:mm");
             const chkSectionText = `${t("header_checklist", this.settings.language)}\n\n${weeklyTableStr.trim()}\n\n`;
-            const initialContent = `---
-작성일: "2000-01-01T00:00"
-수정일: "2000-01-01T00:00"
+            const initialContent = this.settings.language === 'en'
+                ? `---
+Created: "${nowStr}"
+Modified: "${nowStr}"
+---
+# ${weeklyInfo.fileName.replace('.md','')}
+
+${t("header_record", this.settings.language)}
+
+${dailyRecord ? dailyRecord.trim() + '\n\n' : ''}${chkSectionText}${t("header_stats", this.settings.language)}
+${weeklyStatsDashboard.trim()}
+`
+                : `---
+작성일: "${nowStr}"
+수정일: "${nowStr}"
 ---
 # ${weeklyInfo.fileName.replace('.md','')}
 
@@ -1181,9 +1194,20 @@ ${weeklyStatsDashboard.trim()}
                 console.error("[TaskUtils] Failed to write monthly stats file:", err);
             }
         } else {
-            const initialMonthlyText = `---
-작성일: "2000-01-01T00:00"
-수정일: "2000-01-01T00:00"
+            const nowStr = this.dateManager.getAdjustedNow().format("YYYY-MM-DDTHH:mm");
+            const initialMonthlyText = this.settings.language === 'en'
+                ? `---
+Created: "${nowStr}"
+Modified: "${nowStr}"
+---
+# ${mTitle}
+
+${t("header_record", this.settings.language)}
+
+${t("header_stats", this.settings.language)}\n${dashboardStr}\n`
+                : `---
+작성일: "${nowStr}"
+수정일: "${nowStr}"
 ---
 # ${mTitle}
 

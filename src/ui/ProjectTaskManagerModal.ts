@@ -51,7 +51,7 @@ export class ProjectTaskManagerModal extends Modal {
         const loadedSections: ProjectSectionData[] = [];
 
         for (const file of projectFiles) {
-            const content = await this.app.vault.read(file);
+            const content = await this.utils.fileManager.getActiveViewOrFileText(file);
             
             // 1. 기한 필터링 (Dataview JS와 100% 동일 원리)
             let isWithinDate = true;
@@ -70,7 +70,7 @@ export class ProjectTaskManagerModal extends Modal {
             if (!isWithinDate) continue;
 
             // 2. `# 계획` 태스크 진행도 산정
-            const planSectionMatch = content.match(/#(?: 계획| 📅 계획)([\s\S]*?)(?=\n#|$)/);
+            const planSectionMatch = content.match(/#(?: 계획| 📅 계획| Plan| 📅 Plan)([\s\S]*?)(?=\n#|$)/i);
             let planTotal = 0;
             let planDone = 0;
             if (planSectionMatch) {
@@ -88,7 +88,7 @@ export class ProjectTaskManagerModal extends Modal {
             const pct = planTotal > 0 ? Math.round((planDone / planTotal) * 100) : 0;
 
             // 3. `# 실행` 탭 태스크 파싱 및 Dataview 동일 우선순위(sortPri) 산정
-            const execSectionMatch = content.match(/#(?: 실행| 🏃‍♂️ 실행)([\s\S]*?)(?=\n#|$)/);
+            const execSectionMatch = content.match(/#(?: 실행| 🏃‍♂️ 실행| Execution| 🏃‍♂️ Execution)([\s\S]*?)(?=\n#|$)/i);
             if (!execSectionMatch) continue;
 
             const execLines = execSectionMatch[1].split("\n");
@@ -229,11 +229,11 @@ export class ProjectTaskManagerModal extends Modal {
         const newIndex = itemIndex + direction;
         if (newIndex < 0 || newIndex >= section.items.length) return;
 
-        const targetItem = section.items[itemIndex];
+        const focusItem = section.items[itemIndex];
         const temp = section.items[itemIndex];
         section.items[itemIndex] = section.items[newIndex];
         section.items[newIndex] = temp;
-        this.render(targetItem.id);
+        this.render(focusItem.id);
     }
 
     private changeIndent(sectionIndex: number, itemIndex: number, direction: -1 | 1) {
@@ -246,6 +246,11 @@ export class ProjectTaskManagerModal extends Modal {
         item.indentLevel = newIndent;
         item.rawIndent = "\t".repeat(newIndent);
         this.render(item.id);
+    }
+
+    private async submitAndClose(): Promise<void> {
+        await this.saveAllProjectSections();
+        this.close();
     }
 
     async onOpen() {
@@ -351,11 +356,11 @@ export class ProjectTaskManagerModal extends Modal {
                 inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
                     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                         e.preventDefault();
-                        saveBtn.click();
+                        void this.submitAndClose();
                     } else if (e.key === "Enter") {
                         e.preventDefault();
                         if (!inputEl.value.trim()) {
-                            saveBtn.click();
+                            void this.submitAndClose();
                         } else {
                             submitNewTask();
                         }
@@ -409,9 +414,7 @@ export class ProjectTaskManagerModal extends Modal {
         });
 
         saveBtn.addEventListener("click", () => {
-            void this.saveAllProjectSections().then(() => {
-                this.close();
-            });
+            void this.submitAndClose();
         });
 
         // 5. 포커스 복원 제어
@@ -509,9 +512,7 @@ export class ProjectTaskManagerModal extends Modal {
         textInput.addEventListener("keydown", (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
-                void this.saveAllProjectSections().then(() => {
-                    this.close();
-                });
+                void this.submitAndClose();
             } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
                 e.preventDefault();
                 this.moveItem(sIdx, itemIdx, e.key === "ArrowUp" ? -1 : 1);
@@ -550,7 +551,7 @@ export class ProjectTaskManagerModal extends Modal {
     private async saveAllProjectSections() {
         for (const section of this.projectSections) {
             let fileContent = await this.utils.fileManager.getActiveViewOrFileText(section.file);
-            const execMatch = fileContent.match(/#(?: 실행| 🏃‍♂️ 실행)([\s\S]*?)(?=\n#|$)/);
+            const execMatch = fileContent.match(/#(?: 실행| 🏃‍♂️ 실행| Execution| 🏃‍♂️ Execution)([\s\S]*?)(?=\n#|$)/i);
             if (!execMatch) continue;
 
             const newExecLines: string[] = [];
@@ -562,14 +563,16 @@ export class ProjectTaskManagerModal extends Modal {
                     lineText += ` 📅 ${item.date}`;
                 }
                 if (item.blockId) {
-                    lineText += ` ${item.blockId}`;
+                    lineText += item.blockId.startsWith("^") ? ` ${item.blockId}` : ` ^${item.blockId}`;
                 }
                 newExecLines.push(lineText);
             }
 
-            const newExecSection = `# 실행\n${newExecLines.join("\n")}\n`;
-            fileContent = fileContent.replace(/#(?: 실행| 🏃‍♂️ 실행)[\s\S]*?(?=\n#|$)/, newExecSection);
-            await this.utils.fileManager.pluginWrite(section.file, fileContent);
+            const isKo = this.language === "ko";
+            const execHeader = isKo ? "# 실행" : "# Execution";
+            const newExecSection = `${execHeader}\n${newExecLines.join("\n")}\n`;
+            const updatedContent = fileContent.replace(/#(?: 실행| 🏃‍♂️ 실행| 🏃\u200d♂️ 실행| Execution| 🏃‍♂️ Execution)[\s\S]*?(?=\n#|$)/i, newExecSection);
+            await this.utils.fileManager.saveIfChanged(section.file, fileContent, updatedContent);
         }
 
         new Notice(this.language === "ko" ? "✅ 모든 프로젝트 실행 항목 동기화 완료!" : "✅ All Project Tasks Synced Successfully!");

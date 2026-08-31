@@ -50,10 +50,6 @@ export class MyWorldTaskManagerSettingTab extends PluginSettingTab {
         this.renderSettings();
     }
 
-    getSettingDefinitions() {
-        return [];
-    }
-
     private renderSettings(): void {
         const { containerEl } = this;
         containerEl.empty();
