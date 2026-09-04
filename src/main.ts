@@ -298,7 +298,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                 }
 
                 if (categoryName) {
-                    categoryName = categoryName.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
+                    categoryName = categoryName.replace(/<[^>]+>/g, "").replace(/==/g, "").replace(/\s*\(누적형\)/g, "").trim();
                 }
             }
 
@@ -366,10 +366,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             const catMatch = l.text.match(/^>\s*##\s+(.*)$/);
                             if (catMatch) {
                                 const headerRaw = catMatch[1];
-                                const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
+                                const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").replace(/\s*\(누적형\)/g, "").trim();
                                 if (headerClean.toLowerCase() === categoryName.toLowerCase()) {
                                     foundCategory = true;
-                                    isCumulativeCategory = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(headerRaw);
+                                    isCumulativeCategory = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(headerRaw) || headerRaw.includes("(누적형)");
                                     catTasks.length = 0;
                                     continue;
                                 } else if (foundCategory) {
@@ -452,7 +452,15 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         }
                     }
 
-                    const targetCheckLevel = isFullUpToK ? k - 1 : k;
+                    let targetCheckLevel = k;
+                    if (isFullUpToK) {
+                        // 1, 2, 3 다 선택된 상태에서 다시 3(마지막)을 클릭하면 1, 2, 3 다 없어지도록(-1) 처리!
+                        if (k === cumulativeCatTasks.length - 1) {
+                            targetCheckLevel = -1;
+                        } else {
+                            targetCheckLevel = k - 1;
+                        }
+                    }
 
                     const changes: Array<{ from: number; to: number; insert: string }> = [];
                     for (let i = 0; i < cumulativeCatTasks.length; i++) {
@@ -540,10 +548,10 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                         const catMatch = l.match(/^>\s*##\s+(.*)$/);
                         if (catMatch) {
                             const headerRaw = catMatch[1];
-                            const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").trim();
+                            const headerClean = headerRaw.replace(/<[^>]+>/g, "").replace(/==/g, "").replace(/\s*\(누적형\)/g, "").trim();
                             if (headerClean.toLowerCase() === categoryName.toLowerCase()) {
                                 foundCat = true;
-                                isCumulative = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(headerRaw);
+                                isCumulative = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(headerRaw) || headerRaw.includes("(누적형)");
                                 catTaskLineIndices.length = 0;
                                 continue;
                             } else if (foundCat) {
@@ -576,7 +584,15 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
                             }
                         }
 
-                        const targetCheckLevel = isFullUpToK ? k - 1 : k;
+                        let targetCheckLevel = k;
+                        if (isFullUpToK) {
+                            // 1, 2, 3 다 선택된 상태에서 다시 3(마지막)을 클릭하면 1, 2, 3 다 없어지도록(-1) 처리!
+                            if (k === catTaskLineIndices.length - 1) {
+                                targetCheckLevel = -1;
+                            } else {
+                                targetCheckLevel = k - 1;
+                            }
+                        }
 
                         for (let i = 0; i < catTaskLineIndices.length; i++) {
                             const lineIdx = catTaskLineIndices[i];

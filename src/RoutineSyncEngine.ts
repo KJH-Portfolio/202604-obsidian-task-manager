@@ -86,12 +86,15 @@ export class RoutineSyncEngine {
                     }
 
                     // HTML 태그 및 == 하이라이트 제거하여 순수 이름 추출
-                    const catName = rawHeader
+                    let catName = rawHeader
                         .replace(/<[^>]+>/g, "")
                         .replace(/==/g, "")
                         .trim();
 
-                    const isCumulative = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(rawHeader);
+                    const isCumulative = /data-mode=["']step["']|data-cumulative=["']true["']/i.test(rawHeader) || catName.includes("(누적형)");
+                    if (isCumulative) {
+                        catName = catName.replace(/\s*\(누적형\)/g, "").trim();
+                    }
 
                     currentCat = {
                         id: catName.toLowerCase().replace(/\s+/g, "-") + "_" + Math.random().toString(36).substring(2, 7),
@@ -210,14 +213,15 @@ export class RoutineSyncEngine {
         for (const cat of structure.categories) {
             const cleanDesc = cat.description ? cat.description.replace(/^(?:💡|\uD83D\uDCA1|\uFFFD|\?|\s)+/u, "").trim() : "";
             const stepAttr = cat.isCumulative ? ' data-mode="step"' : "";
+            const displayName = cat.isCumulative ? `${cat.name} (누적형)` : cat.name;
             if (cleanDesc) {
                 // 옵시디언 네이티브 툴팁 속성 적용
                 const safeDesc = cleanDesc.replace(/"/g, "&quot;");
-                lines.push(`> ## <span aria-label="${safeDesc}"${stepAttr}>${cat.name}</span>`);
+                lines.push(`> ## <span aria-label="${safeDesc}"${stepAttr}>${displayName}</span>`);
             } else if (cat.isCumulative) {
-                lines.push(`> ## <span${stepAttr}>${cat.name}</span>`);
+                lines.push(`> ## <span${stepAttr}>${displayName}</span>`);
             } else {
-                lines.push(`> ## ${cat.name}`);
+                lines.push(`> ## ${displayName}`);
             }
 
             const catKey = cat.name.toLowerCase();
@@ -307,6 +311,7 @@ export class RoutineSyncEngine {
                     currentCatName = rawHeader
                         .replace(/<[^>]+>/g, "")
                         .replace(/==/g, "")
+                        .replace(/\s*\(누적형\)/g, "")
                         .trim();
                     continue;
                 }
