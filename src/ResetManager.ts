@@ -402,20 +402,10 @@ export class ResetManager {
                     // 빈 컬럼 제거 (루틴에서 삭제된 항목 정리 - 일간 리셋 시)
                     mainContent = this.utils.formatChecklistTable(mainContent);
 
-                    // 완료된 Task 개수 카운트
-                    const completedMatches = latestOriginalContent.match(/^(\s*(?:>\s*)*[-*+]\s+\[[xX]\])/gm);
-                    const todayCompletedTasksCount = completedMatches ? completedMatches.length : 0;
-
                     // 최종 파일 저장
                     const newContent = mainContent + statsSection + tailContent;
                     await this.fileManager.saveIfChanged(dailyFile, latestOriginalContent, newContent);
-
-                    const isKoLang = this.settings.language === 'ko';
-                    const taskMsg = isKoLang
-                      ? `\n🎯 오늘 완료한 Task: 총 ${todayCompletedTasksCount}개`
-                      : `\n🎯 Completed Tasks Today: ${todayCompletedTasksCount}`;
-
-                    new Notice(t("reset_complete", this.settings.language) + taskMsg, 8000);
+                    new Notice(t("reset_complete", this.settings.language));
                 } catch (innerErr) {
                     console.error("Daily Reset Execution Error:", innerErr);
 
