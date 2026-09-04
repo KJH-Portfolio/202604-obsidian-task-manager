@@ -454,12 +454,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
                     let targetCheckLevel = k;
                     if (isFullUpToK) {
-                        // 1, 2, 3 다 선택된 상태에서 다시 3(마지막)을 클릭하면 1, 2, 3 다 없어지도록(-1) 처리!
-                        if (k === cumulativeCatTasks.length - 1) {
-                            targetCheckLevel = -1;
-                        } else {
-                            targetCheckLevel = k - 1;
-                        }
+                        // 현재 체크되어 있는 단계(1이든 2든 3이든)를 다시 클릭하면 전부 취소(0단계 리셋)!
+                        targetCheckLevel = -1;
                     }
 
                     const changes: Array<{ from: number; to: number; insert: string }> = [];
@@ -586,12 +582,8 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
                         let targetCheckLevel = k;
                         if (isFullUpToK) {
-                            // 1, 2, 3 다 선택된 상태에서 다시 3(마지막)을 클릭하면 1, 2, 3 다 없어지도록(-1) 처리!
-                            if (k === catTaskLineIndices.length - 1) {
-                                targetCheckLevel = -1;
-                            } else {
-                                targetCheckLevel = k - 1;
-                            }
+                            // 현재 체크되어 있는 단계(1이든 2든 3이든)를 다시 클릭하면 전부 취소(0단계 리셋)!
+                            targetCheckLevel = -1;
                         }
 
                         for (let i = 0; i < catTaskLineIndices.length; i++) {
