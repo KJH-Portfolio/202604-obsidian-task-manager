@@ -2049,6 +2049,12 @@ body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] 
     pointer-events: none !important;
     vertical-align: middle !important;
 }
-
-
-
+/* Routine Cumulative Badge Styling */
+.routine-cumulative-badge {
+    font-size: 0.72em !important;
+    opacity: 0.55 !important;
+    font-weight: normal !important;
+    margin-left: 4px !important;
+    vertical-align: middle !important;
+    letter-spacing: normal !important;
+}

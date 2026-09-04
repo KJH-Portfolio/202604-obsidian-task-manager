@@ -213,7 +213,8 @@ export class RoutineSyncEngine {
         for (const cat of structure.categories) {
             const cleanDesc = cat.description ? cat.description.replace(/^(?:💡|\uD83D\uDCA1|\uFFFD|\?|\s)+/u, "").trim() : "";
             const stepAttr = cat.isCumulative ? ' data-mode="step"' : "";
-            const displayName = cat.isCumulative ? `${cat.name} (누적형)` : cat.name;
+            const badge = `<span class="routine-cumulative-badge" style="font-size: 0.72em; opacity: 0.55; font-weight: normal; margin-left: 4px;">(누적형)</span>`;
+            const displayName = cat.isCumulative ? `${cat.name} ${badge}` : cat.name;
             if (cleanDesc) {
                 // 옵시디언 네이티브 툴팁 속성 적용
                 const safeDesc = cleanDesc.replace(/"/g, "&quot;");
