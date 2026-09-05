@@ -168,7 +168,100 @@ export class ProjectTaskManagerModal extends Modal {
             return a.title.localeCompare(b.title);
         });
 
+        // 각 프로젝트 실행 항목들을 날짜 오름차순 및 계층형 트리 보존 정렬
+        for (const section of loadedSections) {
+            this.sortProjectItems(section);
+        }
+
         this.projectSections = loadedSections;
+    }
+
+    /**
+     * 프로젝트 실행 항목들을 계층 구조(부모-자식 트리)를 100% 보존하면서 날짜 오름차순으로 자동 정렬합니다.
+     */
+    private sortProjectItems(section: ProjectSectionData): void {
+        if (!section.items || section.items.length <= 1) return;
+
+        interface TaskNode {
+            item: ProjectTaskItem;
+            children: TaskNode[];
+            effectiveDate: string;
+            originalIndex: number;
+        }
+
+        // 1. 계층형 트리 빌드 (들여쓰기 스택 기반)
+        const rootNodes: TaskNode[] = [];
+        const stack: TaskNode[] = [];
+
+        section.items.forEach((item, idx) => {
+            const node: TaskNode = {
+                item,
+                children: [],
+                effectiveDate: item.date || "9999-99-99",
+                originalIndex: idx
+            };
+
+            while (stack.length > 0 && stack[stack.length - 1].item.indentLevel >= item.indentLevel) {
+                stack.pop();
+            }
+
+            if (stack.length === 0) {
+                rootNodes.push(node);
+            } else {
+                stack[stack.length - 1].children.push(node);
+            }
+            stack.push(node);
+        });
+
+        // 2. 유효 날짜(Effective Date) 산출
+        // - 본인에게 날짜가 있으면 본인 날짜 우선
+        // - 본인에게 날짜가 없더라도 자식들에게 빠른 날짜가 있다면 해당 날짜를 상향 전파
+        const computeEffectiveDate = (node: TaskNode): string => {
+            let bestDate = node.item.date || "9999-99-99";
+            for (const child of node.children) {
+                const childDate = computeEffectiveDate(child);
+                if (childDate < bestDate) {
+                    bestDate = childDate;
+                }
+            }
+            node.effectiveDate = bestDate;
+            return bestDate;
+        };
+        rootNodes.forEach(computeEffectiveDate);
+
+        // 3. 재귀 정렬 (미완료 우선 -> 날짜 오름차순 -> 원래 순서 보존)
+        const sortNodes = (nodes: TaskNode[]) => {
+            nodes.sort((a, b) => {
+                if (a.item.completed !== b.item.completed) {
+                    return a.item.completed ? 1 : -1;
+                }
+                if (a.effectiveDate !== b.effectiveDate) {
+                    return a.effectiveDate.localeCompare(b.effectiveDate);
+                }
+                return a.originalIndex - b.originalIndex;
+            });
+
+            for (const node of nodes) {
+                if (node.children.length > 0) {
+                    sortNodes(node.children);
+                }
+            }
+        };
+        sortNodes(rootNodes);
+
+        // 4. 평탄화(Flatten)하여 items 배열로 안전하게 복원
+        const flattened: ProjectTaskItem[] = [];
+        const flatten = (nodes: TaskNode[]) => {
+            for (const node of nodes) {
+                flattened.push(node.item);
+                if (node.children.length > 0) {
+                    flatten(node.children);
+                }
+            }
+        };
+        flatten(rootNodes);
+
+        section.items = flattened;
     }
 
     private getEffectiveDate(section: ProjectSectionData, index: number): string | undefined {
@@ -329,6 +422,7 @@ export class ProjectTaskManagerModal extends Modal {
                         rawIndent: "",
                         indentLevel: 0
                     });
+                    this.sortProjectItems(section);
                     this.render(`add-input-proj-${sIdx}`);
                 };
 
@@ -481,6 +575,7 @@ export class ProjectTaskManagerModal extends Modal {
         checkbox.checked = item.completed;
         checkbox.addEventListener("change", () => {
             item.completed = checkbox.checked;
+            this.sortProjectItems(section);
             this.render(item.id);
         });
 
@@ -519,6 +614,7 @@ export class ProjectTaskManagerModal extends Modal {
 
         this.setupDatePickerClick(dateInput, (val) => {
             item.date = val || undefined;
+            this.sortProjectItems(section);
             this.render(item.id);
         });
 
@@ -536,6 +632,7 @@ export class ProjectTaskManagerModal extends Modal {
 
     private async saveAllProjectSections() {
         for (const section of this.projectSections) {
+            this.sortProjectItems(section);
             let fileContent = await this.utils.fileManager.getActiveViewOrFileText(section.file);
             const execMatch = fileContent.match(/#(?: 실행| 🏃‍♂️ 실행| Execution| 🏃‍♂️ Execution)([\s\S]*?)(?=\n#|$)/i);
             if (!execMatch) continue;
