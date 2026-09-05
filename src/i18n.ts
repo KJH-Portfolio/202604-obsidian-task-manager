@@ -149,6 +149,8 @@ export const translations = {
     todo_modal_help_indent: { en: "• Tab / Shift+Tab (or Alt + → / ←) : Indent (make child) / Outdent", ko: "• Tab / Shift+Tab (또는 Alt + → / ←) : 들여쓰기(자식화) / 내어쓰기" },
     todo_modal_help_enter: { en: "• Enter : Add new task in top input", ko: "• Enter : 상단 입력창에서 새 할 일 추가" },
     todo_modal_help_date: { en: "• Click Date Box : Open calendar picker", ko: "• 날짜 박스 클릭 : 달력 팝업 오픈" },
+    todo_modal_help_star: { en: "• Alt + S : Toggle Important (⭐)", ko: "• Alt + S : 중요(⭐) 항목 토글" },
+    todo_modal_star_tooltip: { en: "Toggle Important (Alt+S)", ko: "중요 표시 토글 (Alt+S)" },
     todo_modal_input_placeholder: { en: "Add new todo task... (Enter)", ko: "새 할 일 추가... (Enter)" },
 
     // ----------------------------------------------------

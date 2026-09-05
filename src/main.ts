@@ -658,12 +658,22 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             const items = element.querySelectorAll(".task-list-item, input[type='checkbox']");
             items.forEach((item) => {
                 const handler = (e: Event) => {
+                    const target = e.target as HTMLElement;
+                    if (!target) return;
+
+                    const isCheckbox = target.tagName === "INPUT" && (target as HTMLInputElement).type === "checkbox";
+                    const { cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout } = extractTaskContextFromDOM(target);
+
+                    // 🚀 핵심 판정 개선: 루틴 콜아웃 내부가 아닌 일반 태스크에서는 오직 체크박스(INPUT)를 직접 클릭했을 때만 동작!
+                    // 텍스트/여백을 클릭했을 때는 정상적인 커서 진입 및 텍스트 편집/선택이 가능하도록 이벤트를 가로채지 않고 통과시킵니다.
+                    if (!isInsideRoutineCallout && !isCheckbox) {
+                        return;
+                    }
+
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
 
-                    const target = e.target as HTMLElement;
-                    const { cleanText, categoryName, itemIndexInCat, isInsideRoutineCallout } = extractTaskContextFromDOM(target);
                     const taskEl = (target.closest(".task-list-item") || item.closest(".task-list-item")) as HTMLElement | null;
                     if (!taskEl) return;
 
@@ -920,514 +930,591 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
             listItems.forEach(taskEl => {
                 try {
-                const isTaskItem = taskEl.classList.contains("task-list-item");
-                // [x] / [X] 만 스킵 — [1],[0],[!] 등 커스텀 마커는 처리 대상
-                if (isTaskItem && /^[xX]$/.test(taskEl.getAttribute("data-task") ?? "")) return;
-
-                const cloned = taskEl.cloneNode(true) as HTMLElement;
-                cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
-                const rawText = cloned.textContent?.trim() || "";
-                const rawHtml = cloned.innerHTML;
-
-                const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText) || /\d{4}-\d{2}-\d{2}/.test(rawHtml);
-                const hasDateAttr = isTaskItem ? Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value)) : false;
-
-                const taskTextSpan = taskEl.querySelector(".tasks-list-text");
-                const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
-
-                const doc = element.ownerDocument;
-
-                // ── D-Day 가상 뱃지 주입 (Reading Mode) ─────────────────────────
-                if (isTaskItem && !taskEl.querySelector(".dday-virtual-badge-rm")) {
-                    const clonedForDate = taskEl.cloneNode(true) as HTMLElement;
-                    clonedForDate.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
-                    const rawTextForBadge = clonedForDate.textContent?.trim() || "";
-                    const dateMatchForBadge = rawTextForBadge.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
-                    let dateStr = dateMatchForBadge ? dateMatchForBadge[1] : null;
-
-                    if (!dateStr) {
-                        // Check ancestors
-                        let parentEl = taskEl.parentElement?.closest("li.task-list-item");
-                        while (parentEl) {
-                            const pCloned = parentEl.cloneNode(true) as HTMLElement;
-                            pCloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
-                            const pMatch = pCloned.textContent?.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
-                            if (pMatch) {
-                                dateStr = pMatch[1];
-                                break;
-                            }
-                            parentEl = parentEl.parentElement?.closest("li.task-list-item");
-                        }
-                    }
-
+                    const isTaskItem = taskEl.classList.contains("task-list-item");
                     const dataTask = taskEl.getAttribute("data-task") ?? "";
-                    // 완료 체크박스는 스킵
-                    if (dateStr && !/^[xX]$/.test(dataTask)) {
-                        // @ts-ignore
-                        const targetDate = window.moment(dateStr, "YYYY-MM-DD", true);
-                        // @ts-ignore
-                        const today = window.moment().startOf('day');
-                        if (targetDate.isValid()) {
-                            const diff = targetDate.diff(today, 'days');
-                            let badge = "";
-                            let color = "";
-                            if (diff < 0) { badge = "[!]"; color = "#8c0028"; }
-                            else if (diff === 0) { badge = "[D]"; color = "#e93147"; }
-                            else if (diff === 1) { badge = "[D]"; color = "#ffd200"; }
-                            else if (diff === 2) { badge = "[D]"; color = "#44cf6e"; }
-                            else if (diff === 3) { badge = "[D]"; color = "#086ddd"; }
-                            else { badge = "[D]"; color = "#969696"; }
+                    const isCompleted = isTaskItem && /^[xX]$/.test(dataTask);
 
-                            const badgeSpan = createSpan({ cls: "dday-virtual-badge dday-virtual-badge-rm" });
-                            badgeSpan.textContent = badge;
-                            badgeSpan.style.color = color;
+                    if (isCompleted) {
+                        // 완료된 태스크: 별(⭐)과 날짜(📅)를 화면에서 완전히 은닉 처리하여 순수 텍스트만 취소선으로 노출
+                        const doc = element.ownerDocument;
+                        const walker = doc.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
+                            acceptNode: (node) => {
+                                let p = node.parentElement;
+                                while (p && p !== taskEl) {
+                                    if (p.classList.contains("task-list-item") || p.tagName === "LI") {
+                                        if (p !== taskEl) return NodeFilter.FILTER_REJECT;
+                                    }
+                                    p = p.parentElement;
+                                }
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                        });
+                        const nodesToProcess: Text[] = [];
+                        let tn: Text | null;
+                        while ((tn = walker.nextNode() as Text | null)) {
+                            if (/⭐|\[중요\]|📅\s*\d{4}-\d{2}-\d{2}|📅/.test(tn.textContent || "")) {
+                                nodesToProcess.push(tn);
+                            }
+                        }
+                        for (const node of nodesToProcess) {
+                            const txt = node.textContent || "";
+                            const regex = /(\s*(?:⭐|\[중요\]))|(\s*📅\s*\d{4}-\d{2}-\d{2})|(\s*📅)/g;
+                            if (regex.test(txt) && node.parentNode) {
+                                const frag = createFragment();
+                                let lastIdx = 0;
+                                regex.lastIndex = 0;
+                                let m: RegExpExecArray | null;
+                                while ((m = regex.exec(txt)) !== null) {
+                                    if (m.index > lastIdx) {
+                                        frag.appendChild(doc.createTextNode(txt.slice(lastIdx, m.index)));
+                                    }
+                                    const hiddenSpan = createSpan({ cls: "myworld-hidden-completed-item" });
+                                    hiddenSpan.textContent = m[0];
+                                    frag.appendChild(hiddenSpan);
+                                    lastIdx = m.index + m[0].length;
+                                }
+                                if (lastIdx < txt.length) {
+                                    frag.appendChild(doc.createTextNode(txt.slice(lastIdx)));
+                                }
+                                node.parentNode.replaceChild(frag, node);
+                            }
+                        }
+                        return;
+                    }
 
-                            const checkbox = taskEl.querySelector("input[type='checkbox']");
-                            if (checkbox && checkbox.nextSibling && checkbox.parentNode) {
-                                checkbox.parentNode.insertBefore(badgeSpan, checkbox.nextSibling);
-                            } else if (checkbox && checkbox.parentNode) {
-                                checkbox.parentNode.appendChild(badgeSpan);
-                            } else {
-                                taskEl.appendChild(badgeSpan);
+                    const cloned = taskEl.cloneNode(true) as HTMLElement;
+                    cloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                    const rawText = cloned.textContent?.trim() || "";
+                    const rawHtml = cloned.innerHTML;
+
+                    const hasDateText = /\d{4}-\d{2}-\d{2}/.test(rawText) || /\d{4}-\d{2}-\d{2}/.test(rawHtml);
+                    const hasDateAttr = isTaskItem ? Array.from(taskEl.attributes).some(attr => attr.name.startsWith("data-task-") && /\d{4}-\d{2}-\d{2}/.test(attr.value)) : false;
+
+                    const taskTextSpan = taskEl.querySelector(".tasks-list-text");
+                    const hasButton = taskTextSpan ? !!taskTextSpan.querySelector(".myworld-today-btn") : Array.from(taskEl.children).some(c => c.classList.contains("myworld-today-btn"));
+
+                    const doc = element.ownerDocument;
+
+                    // ── 중요 태스크 처리 (Reading Mode: ⭐ 은닉 및 골드 포인트 바 부여) ───
+                    const isImportantTask = /⭐|\[중요\]/.test(rawText) || /⭐|\[중요\]/.test(rawHtml);
+                    if (isImportantTask) {
+                        taskEl.classList.add("myworld-task-important");
+                        const starWalker = doc.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
+                            acceptNode: (node) => {
+                                let p = node.parentElement;
+                                while (p && p !== taskEl) {
+                                    if (p.classList.contains("task-list-item") || p.tagName === "LI") {
+                                        if (p !== taskEl) return NodeFilter.FILTER_REJECT;
+                                    }
+                                    p = p.parentElement;
+                                }
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                        });
+                        const starNodes: Text[] = [];
+                        let sn: Text | null;
+                        while ((sn = starWalker.nextNode() as Text | null)) {
+                            if (/⭐|\[중요\]/.test(sn.textContent || "")) {
+                                starNodes.push(sn);
+                            }
+                        }
+                        for (const node of starNodes) {
+                            const txt = node.textContent || "";
+                            const m = txt.match(/⭐|\[중요\]/);
+                            if (m && m.index !== undefined && node.parentNode) {
+                                const before = txt.slice(0, m.index);
+                                const after = txt.slice(m.index + m[0].length);
+                                const frag = createFragment();
+                                if (before) frag.appendChild(doc.createTextNode(before));
+                                const hiddenSpan = createSpan({ cls: "myworld-hidden-star" });
+                                hiddenSpan.textContent = m[0];
+                                frag.appendChild(hiddenSpan);
+                                if (after) frag.appendChild(doc.createTextNode(after));
+                                node.parentNode.replaceChild(frag, node);
                             }
                         }
                     }
-                }
-                // ──────────────────────────────────────────────────────────────────
 
-                if (hasDateText && !taskEl.querySelector(".myworld-date-clickable")) {
-                    const walker = doc.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
-                        acceptNode: (node) => {
-                            let p = node.parentElement;
-                            while (p && p !== taskEl) {
-                                if (p.classList.contains("task-list-item") || p.tagName === "LI") {
-                                    if (p !== taskEl) return NodeFilter.FILTER_REJECT;
+                    // ── D-Day 가상 뱃지 주입 (Reading Mode) ─────────────────────────
+                    if (isTaskItem && !taskEl.querySelector(".dday-virtual-badge-rm")) {
+                        const clonedForDate = taskEl.cloneNode(true) as HTMLElement;
+                        clonedForDate.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                        const rawTextForBadge = clonedForDate.textContent?.trim() || "";
+                        const dateMatchForBadge = rawTextForBadge.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                        let dateStr = dateMatchForBadge ? dateMatchForBadge[1] : null;
+
+                        if (!dateStr) {
+                            // Check ancestors
+                            let parentEl = taskEl.parentElement?.closest("li.task-list-item");
+                            while (parentEl) {
+                                const pCloned = parentEl.cloneNode(true) as HTMLElement;
+                                pCloned.querySelectorAll("ul, ol, .myworld-today-btn").forEach(e => e.remove());
+                                const pMatch = pCloned.textContent?.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+                                if (pMatch) {
+                                    dateStr = pMatch[1];
+                                    break;
                                 }
-                                p = p.parentElement;
+                                parentEl = parentEl.parentElement?.closest("li.task-list-item");
                             }
-                            return NodeFilter.FILTER_ACCEPT;
                         }
-                    });
-                    const nodesToProcess: Text[] = [];
-                    let n: Text | null;
-                    while ((n = walker.nextNode() as Text | null)) {
-                        if (/📅\s*\d{4}-\d{2}-\d{2}/.test(n.textContent || "")) {
-                            nodesToProcess.push(n);
+
+                        const dataTask = taskEl.getAttribute("data-task") ?? "";
+                        // 완료 체크박스는 스킵
+                        if (dateStr && !/^[xX]$/.test(dataTask)) {
+                            // @ts-ignore
+                            const targetDate = window.moment(dateStr, "YYYY-MM-DD", true);
+                            // @ts-ignore
+                            const today = window.moment().startOf('day');
+                            if (targetDate.isValid()) {
+                                const diff = targetDate.diff(today, 'days');
+                                let badge = "";
+                                let color = "";
+                                if (diff < 0) { badge = "[!]"; color = "#8c0028"; }
+                                else if (diff === 0) { badge = "[D]"; color = "#e93147"; }
+                                else if (diff === 1) { badge = "[D]"; color = "#ffd200"; }
+                                else if (diff === 2) { badge = "[D]"; color = "#44cf6e"; }
+                                else if (diff === 3) { badge = "[D]"; color = "#086ddd"; }
+                                else { badge = "[D]"; color = "#969696"; }
+
+                                const badgeCls = "dday-virtual-badge dday-virtual-badge-rm" + (isImportantTask ? " is-important" : "");
+                                const badgeSpan = createSpan({ cls: badgeCls });
+                                badgeSpan.textContent = badge;
+                                badgeSpan.style.color = color;
+
+                                const checkbox = taskEl.querySelector("input[type='checkbox']");
+                                if (checkbox && checkbox.nextSibling && checkbox.parentNode) {
+                                    checkbox.parentNode.insertBefore(badgeSpan, checkbox.nextSibling);
+                                } else if (checkbox && checkbox.parentNode) {
+                                    checkbox.parentNode.appendChild(badgeSpan);
+                                } else {
+                                    taskEl.appendChild(badgeSpan);
+                                }
+                            }
                         }
                     }
-                    let globalDateIndex = 0;
+                    // ──────────────────────────────────────────────────────────────────
 
-                    const processTextNode = (textNode: Text) => {
-                        const text = textNode.textContent || "";
-                        const match = text.match(/(\uD83D\uDCC5\s*)(\d{4}-\d{2}-\d{2})/);
-                        if (!match || match.index === undefined) return;
-
-                        const currentTargetIndex = globalDateIndex++;
-                        const dateStr = match[2];
-                        const before = text.slice(0, match.index);
-                        const after = text.slice(match.index + match[0].length);
-
-                        const frag = createFragment();
-                        if (before) frag.appendChild(doc.createTextNode(before));
-
-                        const dateSpan = createSpan();
-                        dateSpan.className = "myworld-date-clickable";
-                        dateSpan.textContent = "\uD83D\uDCC5 " + dateStr;
-
-                        const todayStr = this.dateManager?.getAdjustedNow().format("YYYY-MM-DD") || window.moment().format("YYYY-MM-DD");
-                        if (dateStr < todayStr) dateSpan.classList.add("myworld-overdue");
-
-                        dateSpan.addEventListener("mousedown", (ev) => {
-                            ev.preventDefault();
-                            ev.stopPropagation();
-                            const rect = dateSpan.getBoundingClientRect();
-
-                            // 대상 파일 찾기: Dataview 콜아웃/링크로부터 원본 프로젝트 파일 탐색
-                            let writeTargetFile = clickFile;
-                            const projectContainer = taskEl.closest("[data-project-path]");
-                            let projectPath = projectContainer ? projectContainer.getAttribute("data-project-path") : null;
-
-                            if (!projectPath) {
-                                const taskUl = taskEl.closest("ul, ol");
-                                let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
-                                while (prevEl) {
-                                    const customPath = prevEl.getAttribute("data-project-path");
-                                    if (customPath) {
-                                        projectPath = customPath;
-                                        break;
+                    if (hasDateText && !taskEl.querySelector(".myworld-date-clickable")) {
+                        const walker = doc.createTreeWalker(taskEl, NodeFilter.SHOW_TEXT, {
+                            acceptNode: (node) => {
+                                let p = node.parentElement;
+                                while (p && p !== taskEl) {
+                                    if (p.classList.contains("task-list-item") || p.tagName === "LI") {
+                                        if (p !== taskEl) return NodeFilter.FILTER_REJECT;
                                     }
-                                    const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
-                                    if (link && link.dataset.href) {
-                                        projectPath = link.dataset.href;
-                                        break;
-                                    }
-                                    prevEl = prevEl.previousElementSibling;
+                                    p = p.parentElement;
                                 }
+                                return NodeFilter.FILTER_ACCEPT;
                             }
-
-                            if (projectPath) {
-                                const resolved = this.resolveProjectFile(projectPath, context.sourcePath);
-                                if (resolved) writeTargetFile = resolved;
+                        });
+                        const nodesToProcess: Text[] = [];
+                        let n: Text | null;
+                        while ((n = walker.nextNode() as Text | null)) {
+                            if (/📅\s*\d{4}-\d{2}-\d{2}/.test(n.textContent || "")) {
+                                nodesToProcess.push(n);
                             }
+                        }
+                        let globalDateIndex = 0;
 
-                            const taskClone = taskEl.cloneNode(true) as HTMLElement;
-                            taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                            const cleanTextForMatch = this.normalizeTaskTextForMatch(taskClone.textContent || "");
-                            const container = taskEl.closest(".markdown-reading-view, .cm-embed-block, .block-language-dataviewjs") || doc.body;
-                            const allTasks = Array.from((container as HTMLElement).querySelectorAll(isTaskItem ? ".task-list-item" : "li:not(.task-list-item)"));
-                            let occurrenceIndex = 0;
-                            for (const t of allTasks) {
-                                const tCloned = t.cloneNode(true);
-                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                                const tClean = this.normalizeTaskTextForMatch(tCloned.textContent || "");
-                                if (tClean === cleanTextForMatch) {
-                                    if (t === taskEl) break;
-                                    occurrenceIndex++;
-                                }
-                            }
+                        const processTextNode = (textNode: Text) => {
+                            const text = textNode.textContent || "";
+                            const match = text.match(/(\uD83D\uDCC5\s*)(\d{4}-\d{2}-\d{2})/);
+                            if (!match || match.index === undefined) return;
 
-                            buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate) => {
-                                this.enqueueFileWrite(writeTargetFile.path, async () => {
-                                    const rawContent = await this.fileManager.getActiveViewOrFileText(writeTargetFile);
-                                    const lines = rawContent.split("\n");
-                                    let targetLineIndex = -1;
-                                    const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
-                                    if (dataLineNode && (dataLineNode as HTMLElement).dataset.line && writeTargetFile === clickFile) {
-                                        const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
-                                        if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+/.test(lines[lineNum])) {
-                                            targetLineIndex = lineNum;
+                            const currentTargetIndex = globalDateIndex++;
+                            const dateStr = match[2];
+                            const before = text.slice(0, match.index);
+                            const after = text.slice(match.index + match[0].length);
+
+                            const frag = createFragment();
+                            if (before) frag.appendChild(doc.createTextNode(before));
+
+                            const dateSpan = createSpan();
+                            dateSpan.className = "myworld-date-clickable";
+                            dateSpan.textContent = "\uD83D\uDCC5 " + dateStr;
+
+                            const todayStr = this.dateManager?.getAdjustedNow().format("YYYY-MM-DD") || window.moment().format("YYYY-MM-DD");
+                            if (dateStr < todayStr) dateSpan.classList.add("myworld-overdue");
+
+                            dateSpan.addEventListener("mousedown", (ev) => {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                const rect = dateSpan.getBoundingClientRect();
+
+                                // 대상 파일 찾기: Dataview 콜아웃/링크로부터 원본 프로젝트 파일 탐색
+                                let writeTargetFile = clickFile;
+                                const projectContainer = taskEl.closest("[data-project-path]");
+                                let projectPath = projectContainer ? projectContainer.getAttribute("data-project-path") : null;
+
+                                if (!projectPath) {
+                                    const taskUl = taskEl.closest("ul, ol");
+                                    let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
+                                    while (prevEl) {
+                                        const customPath = prevEl.getAttribute("data-project-path");
+                                        if (customPath) {
+                                            projectPath = customPath;
+                                            break;
                                         }
+                                        const link = prevEl.querySelector("a.internal-link[data-href]") as HTMLElement;
+                                        if (link && link.dataset.href) {
+                                            projectPath = link.dataset.href;
+                                            break;
+                                        }
+                                        prevEl = prevEl.previousElementSibling;
                                     }
-                                    
-                                    if (targetLineIndex === -1) {
-                                        let matchCount = 0;
-                                        for (let i = 0; i < lines.length; i++) {
-                                            const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
-                                            const isLineList = /^\s*(?:>\s*)*[-*+]\s+/.test(lines[i]);
+                                }
 
-                                            if ((isTaskItem && isLineTask) || (!isTaskItem && isLineList && !isLineTask)) {
-                                                const lineClean = this.normalizeTaskTextForMatch(lines[i]);
-                                                if (lineClean === cleanTextForMatch) {
-                                                    if (matchCount === occurrenceIndex || writeTargetFile !== clickFile) {
-                                                        targetLineIndex = i;
-                                                        break;
+                                if (projectPath) {
+                                    const resolved = this.resolveProjectFile(projectPath, context.sourcePath);
+                                    if (resolved) writeTargetFile = resolved;
+                                }
+
+                                const taskClone = taskEl.cloneNode(true) as HTMLElement;
+                                taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+                                const cleanTextForMatch = this.normalizeTaskTextForMatch(taskClone.textContent || "");
+                                const container = taskEl.closest(".markdown-reading-view, .cm-embed-block, .block-language-dataviewjs") || doc.body;
+                                const allTasks = Array.from((container as HTMLElement).querySelectorAll(isTaskItem ? ".task-list-item" : "li:not(.task-list-item)"));
+                                let occurrenceIndex = 0;
+                                for (const t of allTasks) {
+                                    const tCloned = t.cloneNode(true);
+                                    (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+                                    const tClean = this.normalizeTaskTextForMatch(tCloned.textContent || "");
+                                    if (tClean === cleanTextForMatch) {
+                                        if (t === taskEl) break;
+                                        occurrenceIndex++;
+                                    }
+                                }
+
+                                buildCalendarPopup(dateStr, rect.left, rect.bottom + 5, (newDate, isImportant) => {
+                                    this.enqueueFileWrite(writeTargetFile.path, async () => {
+                                        const rawContent = await this.fileManager.getActiveViewOrFileText(writeTargetFile);
+                                        const lines = rawContent.split("\n");
+                                        let targetLineIndex = -1;
+                                        const dataLineNode = taskEl.dataset.line ? taskEl : taskEl.closest("[data-line]");
+                                        if (dataLineNode && (dataLineNode as HTMLElement).dataset.line && writeTargetFile === clickFile) {
+                                            const lineNum = parseInt((dataLineNode as HTMLElement).dataset.line!, 10);
+                                            if (lineNum >= 0 && lineNum < lines.length && /^\s*(?:>\s*)*[-*+]\s+/.test(lines[lineNum])) {
+                                                targetLineIndex = lineNum;
+                                            }
+                                        }
+
+                                        if (targetLineIndex === -1) {
+                                            let matchCount = 0;
+                                            for (let i = 0; i < lines.length; i++) {
+                                                const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
+                                                const isLineList = /^\s*(?:>\s*)*[-*+]\s+/.test(lines[i]);
+
+                                                if ((isTaskItem && isLineTask) || (!isTaskItem && isLineList && !isLineTask)) {
+                                                    const lineClean = this.normalizeTaskTextForMatch(lines[i]);
+                                                    if (lineClean === cleanTextForMatch) {
+                                                        if (matchCount === occurrenceIndex || writeTargetFile !== clickFile) {
+                                                            targetLineIndex = i;
+                                                            break;
+                                                        }
+                                                        matchCount++;
                                                     }
-                                                    matchCount++;
                                                 }
                                             }
                                         }
-                                    }
-                                    
-                                    if (targetLineIndex !== -1) {
-                                        if (writeTargetFile !== clickFile) {
-                                            lines[targetLineIndex] = this.updateTaskLineDate(lines[targetLineIndex], newDate);
-                                        } else {
-                                            let dateOccurrence = 0;
-                                            lines[targetLineIndex] = lines[targetLineIndex].replace(/\s*\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/g, (m) => {
-                                                if (dateOccurrence === currentTargetIndex) {
-                                                    dateOccurrence++;
-                                                    if (newDate === null) return "";
-                                                    return m.replace(/\uD83D\uDCC5\s*\d{4}-\d{2}-\d{2}/, `\uD83D\uDCC5 ${newDate}`);
-                                                }
-                                                dateOccurrence++;
-                                                return m;
-                                            });
+
+                                        if (targetLineIndex !== -1) {
+                                            lines[targetLineIndex] = this.updateTaskLineDate(lines[targetLineIndex], newDate, isImportant);
+                                            await this.fileManager.saveIfChanged(writeTargetFile, rawContent, lines.join("\n"));
+                                            void this.triggerAutoSyncForFile(writeTargetFile, true, true);
                                         }
-                                        await this.fileManager.saveIfChanged(writeTargetFile, rawContent, lines.join("\n"));
+                                    });
+                                }, activeDocument, this.settings.language, isImportantTask);
+                            });
+
+                            frag.appendChild(dateSpan);
+
+                            const afterNode = doc.createTextNode(after);
+                            frag.appendChild(afterNode);
+
+                            if (textNode.parentNode) {
+                                textNode.parentNode.replaceChild(frag, textNode);
+                            }
+
+                            processTextNode(afterNode);
+                        };
+
+                        nodesToProcess.forEach(processTextNode);
+                    }
+
+                    const taskStatus = taskEl.getAttribute("data-task") ?? "";
+
+                    const isUnchecked = taskStatus === " " || taskStatus === "";
+
+                    if (isTaskItem && !taskEl.querySelector(".myworld-copy-btn") && isUnchecked) {
+                        let shouldShowCopy = false;
+                        let foundHeader = "";
+                        if (isProject || isSchedule) {
+                            const cache = this.app.metadataCache.getCache(context.sourcePath);
+                            const sectionInfo = context.getSectionInfo(element);
+                            const lineNum = sectionInfo ? sectionInfo.lineStart : -1;
+
+                            if (lineNum !== -1 && cache && cache.headings) {
+                                let nearestHeading = null;
+                                for (const h of cache.headings) {
+                                    if (h.position.start.line <= lineNum) {
+                                        if (h.level === 1) {
+                                            nearestHeading = h;
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                if (nearestHeading) foundHeader = nearestHeading.heading.trim().toLowerCase();
+                            } else if (sectionInfo) {
+                                const sourceLines = sectionInfo.text.split('\n');
+                                for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                    const m = sourceLines[i]?.match(/^#\s+(.+)$/);
+                                    if (m) {
+                                        foundHeader = m[1].trim().toLowerCase();
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (isProject && (foundHeader === '계획' || foundHeader === 'plan')) shouldShowCopy = true;
+                        }
+
+                        if (shouldShowCopy) {
+                            const btn = createSpan();
+                            btn.className = "myworld-copy-btn";
+                            btn.textContent = "⬆️";
+                            btn.title = this.settings.language === 'ko' ? "실행 탭으로 복사" : "Copy to Execution";
+
+                            btn.addEventListener("mousedown", (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const taskClone = taskEl.cloneNode(true) as HTMLElement;
+                                taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+                                let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                if (!cleanText) return;
+
+                                const container = taskEl.closest(".markdown-reading-view") || doc.body;
+                                const allTasks = Array.from((container as HTMLElement).querySelectorAll(".task-list-item"));
+                                let occurrenceIndex = 0;
+                                for (const t of allTasks) {
+                                    const tCloned = t.cloneNode(true) as HTMLElement;
+                                    (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
+                                    const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                    if (tClean === cleanText) {
+                                        if (t === taskEl) break;
+                                        occurrenceIndex++;
+                                    }
+                                }
+
+                                this.enqueueFileWrite(clickFile.path, async () => {
+                                    const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                    const lines = rawContent.split("\n");
+
+                                    let taskText = "";
+                                    let taskLineNum = -1;
+                                    let matchCount = 0;
+                                    for (let i = 0; i < lines.length; i++) {
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                                            const lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                            if (lineClean === cleanText) {
+                                                if (matchCount === occurrenceIndex) {
+                                                    taskText = lines[i];
+                                                    taskLineNum = i;
+                                                    break;
+                                                }
+                                                matchCount++;
+                                            }
+                                        }
+                                    }
+
+                                    if (!taskText) return;
+
+                                    const getIndent = (s: string) => {
+                                        const m = s.match(/^([\s\t]*)/);
+                                        if (!m) return 0;
+                                        return m[1].replace(/\t/g, "    ").length;
+                                    }
+                                    const baseIndentMatch = taskText.match(/^([\s\t]*)/);
+                                    const baseIndentStr = baseIndentMatch ? baseIndentMatch[1] : "";
+                                    const baseIndent = getIndent(taskText);
+
+                                    if (baseIndentStr) {
+                                        taskText = taskText.substring(baseIndentStr.length);
+                                    }
+
+                                    let nextLine = taskLineNum + 1;
+                                    while (nextLine < lines.length) {
+                                        let nextText = lines[nextLine];
+                                        if (nextText.trim() === "") {
+                                            nextLine++;
+                                            continue;
+                                        }
+                                        if (getIndent(nextText) <= baseIndent) {
+                                            break;
+                                        }
+                                        if (nextText.startsWith(baseIndentStr)) {
+                                            nextText = nextText.substring(baseIndentStr.length);
+                                        }
+                                        taskText += "\n" + nextText;
+                                        nextLine++;
+                                    }
+
+                                    let targetIndex = -1;
+                                    for (let i = 0; i < lines.length; i++) {
+                                        const h = lines[i].trim().toLowerCase();
+                                        if (h === "# 실행" || h === "# execution") {
+                                            targetIndex = i + 1;
+                                            while (targetIndex < lines.length) {
+                                                if (lines[targetIndex].startsWith("#")) {
+                                                    while (targetIndex > i + 1 && lines[targetIndex - 1].trim() === "") {
+                                                        targetIndex--;
+                                                    }
+                                                    break;
+                                                }
+                                                targetIndex++;
+                                            }
+                                            break;
+                                        }
+                                    }
+
+                                    if (targetIndex !== -1) {
+                                        lines.splice(targetIndex, 0, taskText);
+                                        await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
+                                        new Notice(this.settings.language === 'ko' ? "실행 탭으로 복사 완료!" : "Copied to Execution tab!");
                                     }
                                 });
-                            }, activeDocument, this.settings.language);
-                        });
-
-                        frag.appendChild(dateSpan);
-
-                        const afterNode = doc.createTextNode(after);
-                        frag.appendChild(afterNode);
-
-                        if (textNode.parentNode) {
-                            textNode.parentNode.replaceChild(frag, textNode);
-                        }
-
-                        processTextNode(afterNode);
-                    };
-
-                    nodesToProcess.forEach(processTextNode);
-                }
-
-                const taskStatus = taskEl.getAttribute("data-task") ?? "";
-
-                const isUnchecked = taskStatus === " " || taskStatus === "";
-
-                if (isTaskItem && !taskEl.querySelector(".myworld-copy-btn") && isUnchecked) {
-                    let shouldShowCopy = false;
-                    let foundHeader = "";
-                    if (isProject || isSchedule) {
-                        const cache = this.app.metadataCache.getCache(context.sourcePath);
-                        const sectionInfo = context.getSectionInfo(element);
-                        const lineNum = sectionInfo ? sectionInfo.lineStart : -1;
-
-                        if (lineNum !== -1 && cache && cache.headings) {
-                            let nearestHeading = null;
-                            for (const h of cache.headings) {
-                                if (h.position.start.line <= lineNum) {
-                                    if (h.level === 1) {
-                                        nearestHeading = h;
-                                    }
-                                } else {
-                                    break;
-                                }
-                            }
-                            if (nearestHeading) foundHeader = nearestHeading.heading.trim().toLowerCase();
-                        } else if (sectionInfo) {
-                            const sourceLines = sectionInfo.text.split('\n');
-                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
-                                const m = sourceLines[i]?.match(/^#\s+(.+)$/);
-                                if (m) {
-                                    foundHeader = m[1].trim().toLowerCase();
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (isProject && (foundHeader === '계획' || foundHeader === 'plan')) shouldShowCopy = true;
-                    }
-
-                    if (shouldShowCopy) {
-                        const btn = createSpan();
-                        btn.className = "myworld-copy-btn";
-                        btn.textContent = "⬆️";
-                        btn.title = this.settings.language === 'ko' ? "실행 탭으로 복사" : "Copy to Execution";
-                        
-                        btn.addEventListener("mousedown", (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            const taskClone = taskEl.cloneNode(true) as HTMLElement;
-                            taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
-                            if (!cleanText) return;
-
-                            const container = taskEl.closest(".markdown-reading-view") || doc.body;
-                            const allTasks = Array.from((container as HTMLElement).querySelectorAll(".task-list-item"));
-                            let occurrenceIndex = 0;
-                            for (const t of allTasks) {
-                                const tCloned = t.cloneNode(true) as HTMLElement;
-                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
-                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
-                                if (tClean === cleanText) {
-                                    if (t === taskEl) break;
-                                    occurrenceIndex++;
-                                }
-                            }
-
-                            this.enqueueFileWrite(clickFile.path, async () => {
-                                const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                const lines = rawContent.split("\n");
-                                
-                                let taskText = "";
-                                let taskLineNum = -1;
-                                let matchCount = 0;
-                                for (let i = 0; i < lines.length; i++) {
-                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
-                                        const lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
-                                        if (lineClean === cleanText) {
-                                            if (matchCount === occurrenceIndex) {
-                                                taskText = lines[i];
-                                                taskLineNum = i;
-                                                break;
-                                            }
-                                            matchCount++;
-                                        }
-                                    }
-                                }
-                                
-                                if (!taskText) return;
-
-                                const getIndent = (s: string) => {
-                                    const m = s.match(/^([\s\t]*)/);
-                                    if (!m) return 0;
-                                    return m[1].replace(/\t/g, "    ").length;
-                                }
-                                const baseIndentMatch = taskText.match(/^([\s\t]*)/);
-                                const baseIndentStr = baseIndentMatch ? baseIndentMatch[1] : "";
-                                const baseIndent = getIndent(taskText);
-                                
-                                if (baseIndentStr) {
-                                    taskText = taskText.substring(baseIndentStr.length);
-                                }
-
-                                let nextLine = taskLineNum + 1;
-                                while (nextLine < lines.length) {
-                                    let nextText = lines[nextLine];
-                                    if (nextText.trim() === "") {
-                                        nextLine++;
-                                        continue;
-                                    }
-                                    if (getIndent(nextText) <= baseIndent) {
-                                        break;
-                                    }
-                                    if (nextText.startsWith(baseIndentStr)) {
-                                        nextText = nextText.substring(baseIndentStr.length);
-                                    }
-                                    taskText += "\n" + nextText;
-                                    nextLine++;
-                                }
-
-                                let targetIndex = -1;
-                                for (let i = 0; i < lines.length; i++) {
-                                    const h = lines[i].trim().toLowerCase();
-                                    if (h === "# 실행" || h === "# execution") {
-                                        targetIndex = i + 1;
-                                        while (targetIndex < lines.length) {
-                                            if (lines[targetIndex].startsWith("#")) {
-                                                while(targetIndex > i + 1 && lines[targetIndex - 1].trim() === "") {
-                                                    targetIndex--;
-                                                }
-                                                break;
-                                            }
-                                            targetIndex++;
-                                        }
-                                        break;
-                                    }
-                                }
-                                
-                                if (targetIndex !== -1) {
-                                    lines.splice(targetIndex, 0, taskText);
-                                    await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
-                                    new Notice(this.settings.language === 'ko' ? "실행 탭으로 복사 완료!" : "Copied to Execution tab!");
-                                }
                             });
-                        });
 
-                        const targetContainer = taskEl.querySelector(".list-item-content") || taskEl;
-                        const dateEl = targetContainer.querySelector(".myworld-date-clickable");
-                        const childList = Array.from(targetContainer.children).find(c => c.tagName === "UL" || c.tagName === "OL");
-                        
-                        if (dateEl) {
-                            dateEl.parentNode?.insertBefore(btn, dateEl);
-                        } else if (childList) {
-                            targetContainer.insertBefore(btn, childList);
-                        } else {
-                            targetContainer.appendChild(btn);
-                        }
-                    }
-                }
+                            const targetContainer = taskEl.querySelector(".list-item-content") || taskEl;
+                            const dateEl = targetContainer.querySelector(".myworld-date-clickable");
+                            const childList = Array.from(targetContainer.children).find(c => c.tagName === "UL" || c.tagName === "OL");
 
-                if (isTaskItem && !hasDateText && !hasDateAttr && !hasButton) {
-                    let shouldShow = false;
-                    let foundHeader = "";
-                    if (isSchedule || isProject) {
-                        const cache = this.app.metadataCache.getCache(context.sourcePath);
-                        const sectionInfo = context.getSectionInfo(element);
-                        const lineNum = sectionInfo ? sectionInfo.lineStart : -1;
-
-                        if (lineNum !== -1 && cache && cache.headings) {
-                            let nearestHeading = null;
-                            for (const h of cache.headings) {
-                                if (h.position.start.line <= lineNum) {
-                                    if (h.level === 1) {
-                                        nearestHeading = h;
-                                    }
-                                } else {
-                                    break;
-                                }
-                            }
-                            if (nearestHeading) foundHeader = nearestHeading.heading.trim().toLowerCase();
-                        } else if (sectionInfo) {
-                            const sourceLines = sectionInfo.text.split('\n');
-                            for (let i = sectionInfo.lineStart; i >= 0; i--) {
-                                const m = sourceLines[i]?.match(/^#\s+(.+)$/);
-                                if (m) {
-                                    foundHeader = m[1].trim().toLowerCase();
-                                    break;
-                                }
+                            if (dateEl) {
+                                dateEl.parentNode?.insertBefore(btn, dateEl);
+                            } else if (childList) {
+                                targetContainer.insertBefore(btn, childList);
+                            } else {
+                                targetContainer.appendChild(btn);
                             }
                         }
                     }
 
-                    if (isSchedule) {
-                        if (foundHeader === 'todo' || foundHeader === 'project') shouldShow = true;
-                    } else if (isProject) {
-                        shouldShow = true;
-                    }
+                    if (isTaskItem && !hasDateText && !hasDateAttr && !hasButton) {
+                        let shouldShow = false;
+                        let foundHeader = "";
+                        if (isSchedule || isProject) {
+                            const cache = this.app.metadataCache.getCache(context.sourcePath);
+                            const sectionInfo = context.getSectionInfo(element);
+                            const lineNum = sectionInfo ? sectionInfo.lineStart : -1;
 
-                    if (shouldShow) {
-                        const btn = createSpan();
-                        btn.className = "myworld-today-btn";
-                        btn.textContent = "📅";
-                        btn.title = t("cal_tooltip", this.settings.language);
-                        btn.addEventListener("mousedown", (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-
-                            const taskClone = taskEl.cloneNode(true) as HTMLElement;
-                            taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
-                            let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
-                            if (!cleanText) return;
-
-                            const container = taskEl.closest(".markdown-reading-view") || doc.body;
-                            const allTasks = Array.from((container as HTMLElement).querySelectorAll(".task-list-item"));
-                            let occurrenceIndex = 0;
-                            for (const t of allTasks) {
-                                const tCloned = t.cloneNode(true) as HTMLElement;
-                                (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
-                                const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
-                                if (tClean === cleanText) {
-                                    if (t === taskEl) break;
-                                    occurrenceIndex++;
-                                }
-                            }
-
-                            // 팝업 없이 오늘 날짜 즉시 삽입 (Live Preview의 TodayEmojiWidget과 동일한 동작)
-                            const todayStr = window.moment().format("YYYY-MM-DD");
-                            this.enqueueFileWrite(clickFile.path, async () => {
-                                const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
-                                const lines = rawContent.split("\n");
-                                let modified = false;
-
-                                let targetLineIndex = -1;
-                                let matchCount = 0;
-                                for (let i = 0; i < lines.length; i++) {
-                                    if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
-                                        let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
-                                        if (lineClean === cleanText) {
-                                            if (matchCount === occurrenceIndex) {
-                                                targetLineIndex = i;
-                                                break;
-                                            }
-                                            matchCount++;
+                            if (lineNum !== -1 && cache && cache.headings) {
+                                let nearestHeading = null;
+                                for (const h of cache.headings) {
+                                    if (h.position.start.line <= lineNum) {
+                                        if (h.level === 1) {
+                                            nearestHeading = h;
                                         }
-                                    }
-                                }
-
-                                if (targetLineIndex !== -1) {
-                                    const text = lines[targetLineIndex];
-                                    const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
-                                    if (idMatch) {
-                                        lines[targetLineIndex] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${todayStr}` + idMatch[0];
                                     } else {
-                                        lines[targetLineIndex] = text + ` 📅 ${todayStr}`;
+                                        break;
                                     }
-                                    modified = true;
+                                }
+                                if (nearestHeading) foundHeader = nearestHeading.heading.trim().toLowerCase();
+                            } else if (sectionInfo) {
+                                const sourceLines = sectionInfo.text.split('\n');
+                                for (let i = sectionInfo.lineStart; i >= 0; i--) {
+                                    const m = sourceLines[i]?.match(/^#\s+(.+)$/);
+                                    if (m) {
+                                        foundHeader = m[1].trim().toLowerCase();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (isSchedule) {
+                            if (foundHeader === 'todo' || foundHeader === 'project') shouldShow = true;
+                        } else if (isProject) {
+                            shouldShow = true;
+                        }
+
+                        if (shouldShow) {
+                            const btn = createSpan();
+                            btn.className = "myworld-today-btn";
+                            btn.textContent = "📅";
+                            btn.title = t("cal_tooltip", this.settings.language);
+                            btn.addEventListener("mousedown", (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const taskClone = taskEl.cloneNode(true) as HTMLElement;
+                                taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
+                                let cleanText = (taskClone.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                if (!cleanText) return;
+
+                                const container = taskEl.closest(".markdown-reading-view") || doc.body;
+                                const allTasks = Array.from((container as HTMLElement).querySelectorAll(".task-list-item"));
+                                let occurrenceIndex = 0;
+                                for (const t of allTasks) {
+                                    const tCloned = t.cloneNode(true) as HTMLElement;
+                                    (tCloned as HTMLElement).querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(el => el.remove());
+                                    const tClean = (tCloned.textContent?.trim() || "").replace(/^(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                    if (tClean === cleanText) {
+                                        if (t === taskEl) break;
+                                        occurrenceIndex++;
+                                    }
                                 }
 
-                                if (modified) {
-                                    await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
-                                    btn.remove();
-                                }
+                                // 팝업 없이 오늘 날짜 즉시 삽입 (Live Preview의 TodayEmojiWidget과 동일한 동작)
+                                const todayStr = window.moment().format("YYYY-MM-DD");
+                                this.enqueueFileWrite(clickFile.path, async () => {
+                                    const rawContent = await this.fileManager.getActiveViewOrFileText(clickFile);
+                                    const lines = rawContent.split("\n");
+                                    let modified = false;
+
+                                    let targetLineIndex = -1;
+                                    let matchCount = 0;
+                                    for (let i = 0; i < lines.length; i++) {
+                                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                                            let lineClean = lines[i].replace(/^\s*(?:>\s*)*[-*+]\s+\[.\]\s*/, "").replace(/\uD83D\uDCC5.*/, "").replace(/\s*\^[a-zA-Z0-9]+$/, "").trim();
+                                            if (lineClean === cleanText) {
+                                                if (matchCount === occurrenceIndex) {
+                                                    targetLineIndex = i;
+                                                    break;
+                                                }
+                                                matchCount++;
+                                            }
+                                        }
+                                    }
+
+                                    if (targetLineIndex !== -1) {
+                                        const text = lines[targetLineIndex];
+                                        const idMatch = text.match(/\s+\^[a-zA-Z0-9]+$/);
+                                        if (idMatch) {
+                                            lines[targetLineIndex] = text.substring(0, text.length - idMatch[0].length) + ` 📅 ${todayStr}` + idMatch[0];
+                                        } else {
+                                            lines[targetLineIndex] = text + ` 📅 ${todayStr}`;
+                                        }
+                                        modified = true;
+                                    }
+
+                                    if (modified) {
+                                        await this.fileManager.saveIfChanged(clickFile, rawContent, lines.join("\n"));
+                                        btn.remove();
+                                    }
+                                });
                             });
-                        });
 
-                        const targetContainer = taskEl.querySelector(".list-item-content") || taskEl;
-                        const childList = Array.from(targetContainer.children).find(c => c.tagName === "UL" || c.tagName === "OL");
-                        
-                        if (childList) {
-                            targetContainer.insertBefore(btn, childList);
-                        } else {
-                            targetContainer.appendChild(btn);
+                            const targetContainer = taskEl.querySelector(".list-item-content") || taskEl;
+                            const childList = Array.from(targetContainer.children).find(c => c.tagName === "UL" || c.tagName === "OL");
+
+                            if (childList) {
+                                targetContainer.insertBefore(btn, childList);
+                            } else {
+                                targetContainer.appendChild(btn);
+                            }
                         }
                     }
-                }
                 } catch (e) {
                     console.warn("MyWorld 플러그인: 특정 Task 렌더링 실패 (스킵함)", e, taskEl);
                 }
@@ -1632,11 +1719,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
                 const now = this.utils.getAdjustedNow();
                 const prevMonthMoment = now.clone().subtract(1, "month");
-                const prevMonthLabel = this.settings.language === "ko" 
-                    ? prevMonthMoment.format("YYYY년 M월") 
+                const prevMonthLabel = this.settings.language === "ko"
+                    ? prevMonthMoment.format("YYYY년 M월")
                     : prevMonthMoment.format("MMMM YYYY");
-                const currentMonthLabel = this.settings.language === "ko" 
-                    ? now.format("YYYY년 M월") 
+                const currentMonthLabel = this.settings.language === "ko"
+                    ? now.format("YYYY년 M월")
                     : now.format("MMMM YYYY");
 
                 new MonthlyTransitionModal(
@@ -1682,11 +1769,11 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             // 월이 변경된 경우 (예: 8월 -> 9월)
             if (lastMonth !== currentMonthStr) {
                 const prevMonthMoment = now.clone().subtract(1, "month");
-                const prevMonthLabel = this.settings.language === "ko" 
-                    ? prevMonthMoment.format("YYYY년 M월") 
+                const prevMonthLabel = this.settings.language === "ko"
+                    ? prevMonthMoment.format("YYYY년 M월")
                     : prevMonthMoment.format("MMMM YYYY");
-                const currentMonthLabel = this.settings.language === "ko" 
-                    ? now.format("YYYY년 M월") 
+                const currentMonthLabel = this.settings.language === "ko"
+                    ? now.format("YYYY년 M월")
                     : now.format("MMMM YYYY");
 
                 new MonthlyTransitionModal(
@@ -1752,6 +1839,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
         return text
             .replace(/<[^>]+>/g, "") // HTML 태그 제거
             .replace(/^\s*(?:>\s*)*[-*+]\s*(?:\[.\]\s*)?/, "") // 체크박스/리스트 마커 제거
+            .replace(/\s*(⭐|\[중요\])/g, "") // 중요 식별자 제거
             .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2") // [[경로|표시텍스트]] -> 표시텍스트
             .replace(/\[\[([^\]]+)\]\]/g, "$1") // [[노트명]] -> 노트명
             .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [표시텍스트](링크) -> 표시텍스트
@@ -1764,15 +1852,28 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
     }
 
     /**
-     * 특정 태스크 라인의 날짜(📅 YYYY-MM-DD)를 교체/추가/삭제합니다. 블록 ID(^blockid)를 보존합니다.
+     * 특정 태스크 라인의 날짜(📅 YYYY-MM-DD) 및 중요 식별자(⭐)를 교체/추가/삭제합니다. 블록 ID(^blockid)를 보존합니다.
      */
-    public updateTaskLineDate(line: string, newDate: string | null): string {
+    public updateTaskLineDate(line: string, newDate: string | null, isImportant?: boolean): string {
         const blockIdMatch = line.match(/\s+(\^[a-zA-Z0-9]+)$/);
         const blockId = blockIdMatch ? blockIdMatch[1] : "";
-        const lineWithoutBlock = blockIdMatch ? line.slice(0, blockIdMatch.index) : line;
+        let lineWithoutBlock = blockIdMatch ? line.slice(0, blockIdMatch.index) : line;
 
+        // 1. 중요 식별자(⭐) 처리
+        if (isImportant === true) {
+            if (!/⭐|\[중요\]/.test(lineWithoutBlock)) {
+                if (/📅/.test(lineWithoutBlock)) {
+                    lineWithoutBlock = lineWithoutBlock.replace(/\s*📅/, " ⭐ 📅");
+                } else {
+                    lineWithoutBlock = `${lineWithoutBlock.trimEnd()} ⭐`;
+                }
+            }
+        } else if (isImportant === false) {
+            lineWithoutBlock = lineWithoutBlock.replace(/\s*(⭐|\[중요\])/g, "");
+        }
+
+        // 2. 날짜(📅) 처리
         let updatedWithoutBlock = lineWithoutBlock;
-
         if (newDate) {
             if (/📅\s*\d{4}-\d{2}-\d{2}/.test(lineWithoutBlock)) {
                 updatedWithoutBlock = lineWithoutBlock.replace(/📅\s*\d{4}-\d{2}-\d{2}/, `📅 ${newDate}`);
@@ -1781,7 +1882,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             } else {
                 updatedWithoutBlock = `${lineWithoutBlock.trimEnd()} 📅 ${newDate}`;
             }
-        } else {
+        } else if (newDate === null) {
             updatedWithoutBlock = lineWithoutBlock.replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "").replace(/\s*📅/, "");
         }
 
@@ -1790,11 +1891,15 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
 
     public openCalendarPopupForElement(dateSpan: HTMLElement, initialDate: string, taskEl: HTMLElement) {
         const rect = dateSpan.getBoundingClientRect();
-        let targetFile: TFile | null = null;
 
-        // 1. data-project-path 속성 탐색 (직접 속성 또는 상위 컨테이너)
-        const projectContainer = taskEl.closest("[data-project-path]");
-        let projectPath = projectContainer ? projectContainer.getAttribute("data-project-path") : null;
+        // 1. data-project-path 속성 탐색 (dateSpan 자체 -> taskEl -> 상위 컨테이너)
+        let projectPath = dateSpan.getAttribute("data-project-path")
+            || taskEl.getAttribute("data-project-path")
+            || taskEl.closest("[data-project-path]")?.getAttribute("data-project-path");
+
+        if (projectPath === "undefined" || projectPath === "null" || !projectPath) {
+            projectPath = null;
+        }
 
         // 2. data-project-path가 없으면 형제 요소에서 링크 탐색 (fallback)
         if (!projectPath) {
@@ -1802,7 +1907,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             let prevEl = taskUl ? taskUl.previousElementSibling : taskEl.previousElementSibling;
             while (prevEl) {
                 const customPath = prevEl.getAttribute("data-project-path");
-                if (customPath) {
+                if (customPath && customPath !== "undefined" && customPath !== "null") {
                     projectPath = customPath;
                     break;
                 }
@@ -1815,47 +1920,93 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             }
         }
 
-        // 3. TFile 객체 찾기
+        let targetFile: TFile | null = null;
         if (projectPath) {
             targetFile = this.resolveProjectFile(projectPath);
         }
 
-        // Fallback: 현재 활성 파일
-        if (!targetFile) {
-            const activeFile = this.app.workspace.getActiveFile();
-            if (activeFile instanceof TFile) targetFile = activeFile;
-        }
-
-        if (!targetFile) return;
-
-        const writeTargetFile = targetFile;
         const taskClone = taskEl.cloneNode(true) as HTMLElement;
         taskClone.querySelectorAll("ul, ol, .myworld-today-btn, .dday-virtual-badge, .myworld-copy-btn").forEach(e => e.remove());
         const cleanTextForMatch = this.normalizeTaskTextForMatch(taskClone.textContent || "");
+        const initialImportant = /⭐|\[중요\]/.test(taskEl.textContent || "") || !!taskEl.querySelector(".myworld-hidden-star") || taskEl.classList.contains("myworld-task-important");
 
-        buildCalendarPopup(initialDate, rect.left, rect.bottom + 5, (newDate) => {
-            this.enqueueFileWrite(writeTargetFile.path, async () => {
-                const rawContent = await this.fileManager.getActiveViewOrFileText(writeTargetFile);
-                const lines = rawContent.split("\n");
+        buildCalendarPopup(initialDate, rect.left, rect.bottom + 5, (newDate, isImportant) => {
+            this.enqueueFileWrite("calendar-update", async () => {
+                let finalTargetFile = targetFile;
                 let targetLineIndex = -1;
+                let rawContent = "";
+                let lines: string[] = [];
 
-                for (let i = 0; i < lines.length; i++) {
-                    const isLineTask = /^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i]);
-                    if (isLineTask) {
-                        const lineClean = this.normalizeTaskTextForMatch(lines[i]);
-                        if (lineClean === cleanTextForMatch) {
-                            targetLineIndex = i;
-                            break;
+                // 1순위: 특정된 targetFile에서 라인 매칭
+                if (finalTargetFile) {
+                    rawContent = await this.fileManager.getActiveViewOrFileText(finalTargetFile);
+                    lines = rawContent.split("\n");
+                    for (let i = 0; i < lines.length; i++) {
+                        if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(lines[i])) {
+                            const lineClean = this.normalizeTaskTextForMatch(lines[i]);
+                            if (lineClean === cleanTextForMatch || (cleanTextForMatch && lineClean.includes(cleanTextForMatch)) || (lineClean && cleanTextForMatch.includes(lineClean))) {
+                                targetLineIndex = i;
+                                break;
+                            }
                         }
                     }
                 }
 
-                if (targetLineIndex !== -1) {
-                    lines[targetLineIndex] = this.updateTaskLineDate(lines[targetLineIndex], newDate);
-                    await this.fileManager.saveIfChanged(writeTargetFile, rawContent, lines.join("\n"));
+                // 2순위: 만약 못 찾았거나 finalTargetFile이 없으면, 전체 프로젝트 파일들을 순회하여 cleanTextForMatch가 포함된 실제 프로젝트 파일을 직접 찾아냄!
+                if (targetLineIndex === -1) {
+                    const projectFiles = this.utils.getProjectFiles();
+                    for (const pf of projectFiles) {
+                        if (finalTargetFile && pf.path === finalTargetFile.path) continue;
+                        const pfContent = await this.fileManager.getActiveViewOrFileText(pf);
+                        const pfLines = pfContent.split("\n");
+                        for (let i = 0; i < pfLines.length; i++) {
+                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(pfLines[i])) {
+                                const lineClean = this.normalizeTaskTextForMatch(pfLines[i]);
+                                if (lineClean === cleanTextForMatch || (cleanTextForMatch && lineClean.includes(cleanTextForMatch)) || (lineClean && cleanTextForMatch.includes(lineClean))) {
+                                    finalTargetFile = pf;
+                                    rawContent = pfContent;
+                                    lines = pfLines;
+                                    targetLineIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                        if (targetLineIndex !== -1) break;
+                    }
+                }
+
+                // 3순위: 그래도 못 찾았으면 현재 활성 파일(스케줄 파일 등)에서 탐색
+                if (targetLineIndex === -1) {
+                    const activeFile = this.app.workspace.getActiveFile();
+                    if (activeFile instanceof TFile) {
+                        const afContent = await this.fileManager.getActiveViewOrFileText(activeFile);
+                        const afLines = afContent.split("\n");
+                        for (let i = 0; i < afLines.length; i++) {
+                            if (/^\s*(?:>\s*)*[-*+]\s+\[.\]/.test(afLines[i])) {
+                                const lineClean = this.normalizeTaskTextForMatch(afLines[i]);
+                                if (lineClean === cleanTextForMatch || (cleanTextForMatch && lineClean.includes(cleanTextForMatch)) || (lineClean && cleanTextForMatch.includes(lineClean))) {
+                                    finalTargetFile = activeFile;
+                                    rawContent = afContent;
+                                    lines = afLines;
+                                    targetLineIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 원본 파일에 정밀 업데이트 및 저장
+                if (finalTargetFile && targetLineIndex !== -1) {
+                    lines[targetLineIndex] = this.updateTaskLineDate(lines[targetLineIndex], newDate, isImportant);
+                    await this.fileManager.saveIfChanged(finalTargetFile, rawContent, lines.join("\n"));
+                    void this.triggerAutoSyncForFile(finalTargetFile, true, true);
+                    new Notice(`[MyWorld] 날짜/중요도 저장 완료: ${finalTargetFile.basename}`);
+                } else {
+                    console.warn("[MyWorldTaskManager] 저장 대상 태스크를 찾을 수 없습니다:", cleanTextForMatch);
                 }
             });
-        }, activeDocument, this.settings.language);
+        }, dateSpan.ownerDocument || activeDocument, this.settings.language, initialImportant);
     }
 
 
@@ -1878,7 +2029,7 @@ export default class MyWorldTaskManagerPlugin extends Plugin {
             // 템플릿 가져오기
             let templateText = this.settings.customTemplates.dailySchedule;
             if (!templateText) {
-                const defaultPath = this.settings.language === 'en' 
+                const defaultPath = this.settings.language === 'en'
                     ? `${this.settings.templatesDirectory}/01.Daily Schedule Template.md`
                     : `${this.settings.templatesDirectory}/01.데일리 스케줄 템플릿.md`;
                 const defaultFile = this.app.vault.getAbstractFileByPath(defaultPath);
@@ -2053,6 +2204,9 @@ ${checklistTable}
             const taskLines = updatedItems.map(item => {
                 const check = item.completed ? "x" : " ";
                 let line = `${item.rawIndent || ""}- [${check}] ${item.content}`;
+                if (item.isImportant) {
+                    line += " ⭐";
+                }
                 if (item.date) {
                     line += ` 📅 ${item.date}`;
                 }

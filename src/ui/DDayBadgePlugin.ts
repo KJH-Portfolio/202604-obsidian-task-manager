@@ -3,14 +3,15 @@ import { ViewPlugin, DecorationSet, Decoration, EditorView, ViewUpdate, WidgetTy
 import { RangeSetBuilder, StateEffect } from "@codemirror/state";
 
 class DDayBadgeWidget extends WidgetType {
-    constructor(public badge: string, public color: string) {
+    constructor(public badge: string, public color: string, public isImportant: boolean = false) {
         super();
     }
     eq(other: DDayBadgeWidget) {
-        return other.badge === this.badge && other.color === this.color;
+        return other.badge === this.badge && other.color === this.color && other.isImportant === this.isImportant;
     }
     toDOM() {
-        const span = createSpan({ cls: "dday-virtual-badge" });
+        const cls = "dday-virtual-badge" + (this.isImportant ? " is-important" : "");
+        const span = createSpan({ cls });
         span.textContent = this.badge;
         span.style.color = this.color;
         return span;
@@ -137,8 +138,9 @@ export const buildDDayBadgePlugin = (
                             else if (diff === 3) { badge = "[D]"; color = "#086ddd"; }
                             else { badge = "[D]"; color = "#969696"; }
 
+                            const isImportant = /\s*(⭐|\[중요\])/.test(line.text);
                             const deco = Decoration.widget({
-                                widget: new DDayBadgeWidget(badge, color),
+                                widget: new DDayBadgeWidget(badge, color, isImportant),
                                 side: 1
                             });
                             

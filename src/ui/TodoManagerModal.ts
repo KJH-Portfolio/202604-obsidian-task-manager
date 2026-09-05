@@ -5,6 +5,7 @@ export interface TodoItem {
     id: string;
     content: string;
     completed: boolean;
+    isImportant?: boolean;
     date?: string; // YYYY-MM-DD
     blockId?: string; // ^id
     rawIndent: string;
@@ -16,6 +17,7 @@ export class TodoManagerModal extends Modal {
     private language: string;
     private items: TodoItem[] = [];
     private showHelp: boolean = false;
+    private isNewImportant: boolean = false;
     private onSaveCallback: (updatedItems: TodoItem[]) => Promise<void>;
 
     constructor(
@@ -63,10 +65,17 @@ export class TodoManagerModal extends Modal {
                     rest = rest.replace(/📅\s*\d{4}-\d{2}-\d{2}/, "").trim();
                 }
 
+                let isImportant = false;
+                if (/⭐|\[중요\]/.test(rest)) {
+                    isImportant = true;
+                    rest = rest.replace(/\s*(⭐|\[중요\])/g, "").trim();
+                }
+
                 parsedItems.push({
                     id: `item-${idx}-${Date.now()}`,
                     content: rest.trim(),
                     completed,
+                    isImportant,
                     date,
                     blockId,
                     rawIndent,
@@ -184,6 +193,7 @@ export class TodoManagerModal extends Modal {
             helpBox.createDiv({ text: t("todo_modal_help_indent", this.language) });
             helpBox.createDiv({ text: t("todo_modal_help_enter", this.language) });
             helpBox.createDiv({ text: t("todo_modal_help_date", this.language) });
+            helpBox.createDiv({ text: t("todo_modal_help_star", this.language) });
         }
 
         // 3. 상단 빠른 추가 입력 바
@@ -200,6 +210,17 @@ export class TodoManagerModal extends Modal {
         });
         this.setupDatePickerClick(dateInputEl, () => {});
 
+        const starBtn = addSection.createEl("button", {
+            text: this.isNewImportant ? "⭐" : "☆",
+            title: t("todo_modal_star_tooltip", this.language),
+            cls: `myworld-todo-star-btn ${this.isNewImportant ? "is-active" : ""}`
+        });
+        starBtn.addEventListener("click", () => {
+            this.isNewImportant = !this.isNewImportant;
+            starBtn.textContent = this.isNewImportant ? "⭐" : "☆";
+            starBtn.classList.toggle("is-active", this.isNewImportant);
+        });
+
         const submitNewTask = () => {
             const textVal = inputEl.value.trim();
             if (!textVal) return;
@@ -208,12 +229,14 @@ export class TodoManagerModal extends Modal {
                 id: `item-new-${Date.now()}`,
                 content: textVal,
                 completed: false,
+                isImportant: this.isNewImportant,
                 date: dateInputEl.value || undefined,
                 rawIndent: "",
                 indentLevel: 0
             };
 
             this.items.push(newItem);
+            this.isNewImportant = false;
             // 연속 입력을 위해 상단 입력창 포커스 유지 플래그로 렌더링
             this.render("ADD_INPUT_FOCUS");
         };
@@ -225,7 +248,10 @@ export class TodoManagerModal extends Modal {
         addBtn.addEventListener("click", submitNewTask);
 
         inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            if (e.altKey && (e.key === "s" || e.key === "S" || e.code === "KeyS")) {
+                e.preventDefault();
+                starBtn.click();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
                 void this.submitAndClose();
             } else if (e.key === "Enter") {
@@ -368,7 +394,7 @@ export class TodoManagerModal extends Modal {
     private renderTaskRow(container: HTMLElement, item: TodoItem, idx: number, isKo: boolean) {
         const isChild = item.indentLevel > 0;
         const row = container.createDiv({
-            cls: `myworld-todo-item-row ${item.completed ? "is-completed" : ""} ${isChild ? "is-child-task" : ""}`
+            cls: `myworld-todo-item-row ${item.completed ? "is-completed" : ""} ${item.isImportant ? "is-important" : ""} ${isChild ? "is-child-task" : ""}`
         });
 
         const borderColor = this.getItemBorderColor(idx);
@@ -398,8 +424,35 @@ export class TodoManagerModal extends Modal {
             item.content = textInput.value;
         });
 
+        const dateInput = row.createEl("input", {
+            type: "date",
+            value: item.date || "",
+            cls: "myworld-todo-item-date"
+        });
+
+        this.setupDatePickerClick(dateInput, (val) => {
+            item.date = val || undefined;
+            this.render(item.id);
+        });
+
+        const starBtn = row.createEl("button", {
+            text: item.isImportant ? "⭐" : "☆",
+            title: t("todo_modal_star_tooltip", this.language),
+            cls: `myworld-todo-star-btn ${item.isImportant ? "is-active" : ""}`
+        });
+
+        starBtn.addEventListener("click", () => {
+            item.isImportant = !item.isImportant;
+            starBtn.textContent = item.isImportant ? "⭐" : "☆";
+            starBtn.classList.toggle("is-active", !!item.isImportant);
+            row.classList.toggle("is-important", !!item.isImportant);
+        });
+
         textInput.addEventListener("keydown", (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            if (e.altKey && (e.key === "s" || e.key === "S" || e.code === "KeyS")) {
+                e.preventDefault();
+                starBtn.click();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
                 void this.submitAndClose();
             } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
@@ -412,17 +465,6 @@ export class TodoManagerModal extends Modal {
                 e.preventDefault();
                 this.changeIndent(idx, -1);
             }
-        });
-
-        const dateInput = row.createEl("input", {
-            type: "date",
-            value: item.date || "",
-            cls: "myworld-todo-item-date"
-        });
-
-        this.setupDatePickerClick(dateInput, (val) => {
-            item.date = val || undefined;
-            this.render(item.id);
         });
 
         const deleteBtn = row.createEl("button", {

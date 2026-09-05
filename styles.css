@@ -29,6 +29,7 @@ body .workspace-leaf-content.workspace-leaf-content .cm-line.HyperMD-task-line[d
     opacity: 1;
     color: var(--text-normal);
 }
+
 /* 체크박스 진행 상태에 따른 색상 (콜아웃 내부에서도 선명하게) */
 body .workspace-leaf-content .markdown-rendered li[data-task="0"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[type="checkbox"] {
@@ -36,30 +37,35 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="0"] input[typ
     border-color: rgba(255, 60, 80, 1);
     background-image: none;
 }
+
 body .workspace-leaf-content .markdown-rendered li[data-task="1"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="1"] input[type="checkbox"] {
     background-color: rgba(255, 210, 0, 0.5);
     border-color: rgba(255, 210, 0, 1);
     background-image: none;
 }
+
 body .workspace-leaf-content .markdown-rendered li[data-task="2"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="2"] input[type="checkbox"] {
     background-color: rgba(68, 225, 120, 0.5);
     border-color: rgba(68, 225, 120, 1);
     background-image: none;
 }
+
 body .workspace-leaf-content .markdown-rendered li[data-task="3"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="3"] input[type="checkbox"] {
     background-color: rgba(50, 150, 255, 0.5);
     border-color: rgba(50, 150, 255, 1);
     background-image: none;
 }
+
 body .workspace-leaf-content .markdown-rendered li[data-task="7"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="7"] input[type="checkbox"] {
     background-color: rgba(180, 180, 180, 0.4);
     border-color: rgba(180, 180, 180, 1);
     background-image: none;
 }
+
 body .workspace-leaf-content .markdown-rendered li[data-task="!"]>input[type="checkbox"]:checked,
 body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[type="checkbox"] {
     background-color: rgba(255, 40, 100, 0.5);
@@ -83,8 +89,26 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     display: none;
     content: none;
 }
-.myworld-today-btn { cursor: pointer; font-size: 0.8em; padding: 2px 6px; margin-left: 6px; background: var(--interactive-accent); color: var(--text-on-accent); border-radius: 4px; opacity: 0.7; transition: opacity 0.2s, transform 0.1s; vertical-align: baseline; position: relative; top: -1px; }
-.myworld-today-btn:hover { opacity: 1; transform: scale(1.05); }
+
+.myworld-today-btn {
+    cursor: pointer;
+    font-size: 0.8em;
+    padding: 2px 6px;
+    margin-left: 6px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-radius: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s, transform 0.1s;
+    vertical-align: baseline;
+    position: relative;
+    top: -1px;
+}
+
+.myworld-today-btn:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
 
 .myworld-date-clickable-text {
     opacity: 0.5;
@@ -93,8 +117,17 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     border-radius: 3px;
     padding: 0 2px;
 }
-.myworld-date-clickable-text:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
-.myworld-date-clickable-text.myworld-overdue { color: var(--text-error); opacity: 0.75; }
+
+.myworld-date-clickable-text:hover {
+    opacity: 1;
+    background: var(--background-modifier-hover);
+    transition: opacity 0.15s;
+}
+
+.myworld-date-clickable-text.myworld-overdue {
+    color: var(--text-error);
+    opacity: 0.75;
+}
 
 .myworld-date-clickable {
     opacity: 0.5;
@@ -103,13 +136,23 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     border-radius: 3px;
     padding: 0 2px;
 }
-.myworld-date-clickable:hover { opacity: 1; background: var(--background-modifier-hover); transition: opacity 0.15s; }
-.myworld-date-clickable.myworld-overdue { color: var(--text-error); opacity: 0.75; }
+
+.myworld-date-clickable:hover {
+    opacity: 1;
+    background: var(--background-modifier-hover);
+    transition: opacity 0.15s;
+}
+
+.myworld-date-clickable.myworld-overdue {
+    color: var(--text-error);
+    opacity: 0.75;
+}
 
 /* 블록 식별자(^blockid) 비활성 시 화면 숨김 처리 */
 .myworld-hidden-block-id {
     display: none;
 }
+
 .cm-line:hover .myworld-hidden-block-id {
     display: inline;
     opacity: 0.25;
@@ -124,61 +167,110 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     border-radius: 10px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-    padding: 10px;
-    width: 250px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    padding: 8px 10px;
+    width: 235px;
+    min-width: 235px;
+    box-sizing: border-box;
     font-family: var(--font-interface);
     color: var(--text-normal);
-    z-index: 1000;
+    z-index: 10000;
 }
+
 .myworld-cal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
-.myworld-cal-month { font-weight: 600; font-size: 0.95em; }
-.myworld-cal-nav {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2em;
-    color: var(--text-muted);
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: background 0.15s;
-    box-shadow: none;
-}
-.myworld-cal-nav:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
 
-.myworld-cal-dow {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
+.myworld-cal-title,
+.myworld-cal-month {
+    font-weight: 700;
+    font-size: 0.92em;
+    color: var(--text-normal);
+}
+
+.myworld-cal-nav,
+.myworld-cal-nav-btn {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    cursor: pointer;
+    font-size: 1.1em;
+    color: var(--text-muted);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    transition: background 0.15s, color 0.15s;
+    box-shadow: none;
+    line-height: 1;
+}
+
+.myworld-cal-nav:hover,
+.myworld-cal-nav-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+/* 요일 헤더: 7열 가로 그리드 */
+.myworld-cal-dows {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
     text-align: center;
     font-size: 0.72em;
+    font-weight: 600;
     color: var(--text-muted);
     margin-bottom: 4px;
 }
 
+.myworld-cal-dow {
+    text-align: center;
+    padding: 1px 0;
+}
+
+/* 날짜 그리드: 7열 그리드 */
 .myworld-cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
     gap: 2px;
 }
+
 .myworld-cal-day {
     text-align: center;
-    padding: 4px 2px;
+    padding: 3px 0;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 0.84em;
+    font-size: 0.82em;
     color: var(--text-normal);
-    opacity: 1;
     transition: background 0.1s, color 0.1s, opacity 0.1s;
     user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    box-sizing: border-box;
 }
-.myworld-cal-day:hover { background: var(--interactive-accent); color: var(--text-on-accent) !important; opacity: 1 !important; }
-.myworld-cal-day.myworld-cal-past { opacity: 0.88; color: var(--text-normal); }
-.myworld-cal-day.myworld-cal-other-month { opacity: 0.35 !important; color: var(--text-muted) !important; }
+
+.myworld-cal-day:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent) !important;
+    opacity: 1 !important;
+}
+
+.myworld-cal-day.myworld-cal-past {
+    opacity: 0.88;
+    color: var(--text-normal);
+}
+
+.myworld-cal-day.myworld-cal-other-month {
+    opacity: 0.35 !important;
+    color: var(--text-muted) !important;
+}
+
 .myworld-cal-day.myworld-cal-past:hover,
 .myworld-cal-day.myworld-cal-other-month:hover {
     cursor: pointer !important;
@@ -186,32 +278,118 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     background: var(--background-modifier-hover);
     color: var(--text-normal) !important;
 }
-.myworld-cal-today { font-weight: 700; color: var(--interactive-accent); border: 1px solid var(--interactive-accent); border-radius: 5px; }
-.myworld-cal-selected { background: var(--interactive-accent) !important; color: var(--text-on-accent) !important; opacity: 1 !important; border-radius: 5px; }
-.myworld-cal-sat { color: var(--color-blue, #4b8ef0); }
-.myworld-cal-sun { color: var(--color-red, #e93147); }
+
+.myworld-cal-today {
+    font-weight: 700;
+    color: var(--interactive-accent);
+    border: 1px solid var(--interactive-accent);
+    border-radius: 5px;
+}
+
+.myworld-cal-selected {
+    background: var(--interactive-accent) !important;
+    color: var(--text-on-accent) !important;
+    opacity: 1 !important;
+    border-radius: 5px;
+}
+
+.myworld-cal-sat {
+    color: var(--color-blue, #4b8ef0) !important;
+}
+
+.myworld-cal-sun {
+    color: var(--color-red, #e93147) !important;
+}
 
 .myworld-cal-footer {
     display: flex;
     justify-content: space-between;
     margin-top: 8px;
-    gap: 6px;
+    gap: 5px;
 }
+
 .myworld-cal-foot-btn {
     flex: 1;
-    padding: 4px 0;
+    padding: 5px 0;
     border: 1px solid var(--background-modifier-border);
     border-radius: 5px;
     background: var(--background-secondary);
     color: var(--text-muted);
     cursor: pointer;
     font-size: 0.8em;
-    transition: background 0.15s;
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s;
     box-shadow: none;
+    text-align: center;
 }
-.myworld-cal-foot-btn:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
-.myworld-cal-today-btn { background: var(--interactive-accent); color: var(--text-on-accent); border-color: transparent; }
-.myworld-cal-today-btn:hover { background: var(--interactive-accent-hover, var(--interactive-accent)); opacity: 0.85; }
+
+.myworld-cal-foot-btn:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.myworld-cal-today-btn {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+}
+
+.myworld-cal-today-btn:hover {
+    background: var(--interactive-accent-hover, var(--interactive-accent));
+    opacity: 0.9;
+}
+
+.myworld-cal-important-btn {
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.myworld-cal-important-btn.is-active {
+    background: #f59e0b !important;
+    color: #ffffff !important;
+    border-color: #d97706 !important;
+    font-weight: 700 !important;
+}
+
+.myworld-cal-important-btn.is-active:hover {
+    background: #d97706 !important;
+}
+
+.myworld-cal-popup.is-important {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.5), 0 10px 32px rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(245, 158, 11, 0.7) !important;
+}
+
+/* ── 중요 할 일 (시안 1: [D] 뱃지 네온 골드 빛남) ─────────────────────────── */
+.dday-virtual-badge.is-important {
+    text-shadow: 0 0 6px #f59e0b, 0 0 12px rgba(245, 158, 11, 0.7), 0 0 18px rgba(245, 158, 11, 0.4) !important;
+    font-weight: 800 !important;
+    filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.8));
+    display: inline-block;
+    transition: text-shadow 0.2s ease, filter 0.2s ease;
+}
+
+/* 체크박스 겹침 방지를 위해 좌측 border-left 골드 바 제거 */
+body .cm-line.myworld-task-important,
+body .markdown-source-view.mod-cm6 .cm-line.myworld-task-important,
+body .markdown-reading-view .task-list-item.myworld-task-important,
+body .task-list-item.myworld-task-important,
+body li.task-list-item.myworld-task-important,
+.myworld-task-important {
+    border-left: none !important;
+    padding-left: 0 !important;
+}
+
+/* 중요 식별자(⭐) 화면 완전 은닉 */
+.myworld-hidden-star,
+.myworld-hidden-completed-item {
+    display: none !important;
+    font-size: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    visibility: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
 
 /* ========================================================
    StartupSyncModal (遺???뺤씤 ?앹뾽)
@@ -220,28 +398,38 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     width: 380px;
     border-radius: 14px;
 }
+
 .myworld-startup-modal .modal-content {
     padding: 28px 28px 22px 28px;
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
+
 .myworld-startup-header {
     display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 2px;
 }
+
 .myworld-startup-icon {
     font-size: 2em;
     line-height: 1;
     animation: myworld-spin 1.5s linear infinite;
     display: inline-block;
 }
+
 @keyframes myworld-spin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
+
 .myworld-startup-title {
     margin: 0;
     font-size: 1.25em;
@@ -249,12 +437,14 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     color: var(--text-normal);
     line-height: 1.2;
 }
+
 .myworld-startup-desc p {
     margin: 0;
     font-size: 0.92em;
     color: var(--text-muted);
     line-height: 1.5;
 }
+
 .myworld-startup-date {
     display: inline-flex;
     align-items: center;
@@ -267,8 +457,9 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     font-weight: 600;
     color: var(--text-accent);
 }
+
 .myworld-startup-notice {
-    background: var(--background-modifier-message, rgba(255,200,80,0.08));
+    background: var(--background-modifier-message, rgba(255, 200, 80, 0.08));
     border-left: 3px solid var(--color-yellow, #f5c842);
     border-radius: 0 6px 6px 0;
     padding: 8px 12px;
@@ -276,12 +467,14 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     color: var(--text-muted);
     line-height: 1.5;
 }
+
 .myworld-startup-btn-area {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
     margin-top: 6px;
 }
+
 .myworld-copy-btn.myworld-copy-btn {
     cursor: pointer;
     margin-left: 8px;
@@ -313,6 +506,7 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     text-align: left;
     margin-right: 12px;
 }
+
 .myworld-startup-btn-skip {
     padding: 8px 18px;
     border-radius: 8px;
@@ -324,10 +518,12 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     transition: background 0.15s, color 0.15s;
     box-shadow: none;
 }
+
 .myworld-startup-btn-skip:hover {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
 }
+
 .myworld-startup-btn-sync {
     padding: 8px 20px;
     border-radius: 8px;
@@ -338,12 +534,14 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.15s, transform 0.1s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+
 .myworld-startup-btn-sync:hover {
     opacity: 0.88;
     transform: translateY(-1px);
 }
+
 .myworld-startup-btn-sync:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -381,8 +579,13 @@ body .workspace-leaf-content .cm-line.HyperMD-task-line[data-task="!"] input[typ
 }
 
 @keyframes myworld-plugin-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Date Picker Button styling to remove ugly backgrounds from themes */
@@ -399,6 +602,7 @@ body .workspace-leaf-content .cm-line span.myworld-today-btn {
     opacity: 0.6;
     transition: opacity 0.2s ease;
 }
+
 body .workspace-leaf-content .markdown-rendered li button.myworld-today-btn:hover,
 body .workspace-leaf-content .cm-line button.myworld-today-btn:hover,
 body .workspace-leaf-content .markdown-rendered li span.myworld-today-btn:hover,
@@ -408,9 +612,19 @@ body .workspace-leaf-content .cm-line span.myworld-today-btn:hover {
     opacity: 1;
 }
 
-body .myworld-cal-popup .myworld-cal-past { opacity: 0.3; cursor: not-allowed; }
-body .myworld-cal-popup .myworld-cal-past:hover { background-color: transparent; color: inherit; }
-body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
+body .myworld-cal-popup .myworld-cal-past {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+body .myworld-cal-popup .myworld-cal-past:hover {
+    background-color: transparent;
+    color: inherit;
+}
+
+body .myworld-cal-popup .myworld-cal-other-month {
+    opacity: 0.6;
+}
 
 /* ── D-Day 가상 뱃지 ([!] / [D]) ──────────────────── */
 .dday-virtual-badge {
@@ -424,6 +638,7 @@ body .myworld-cal-popup .myworld-cal-other-month { opacity: 0.6; }
     user-select: none;
     pointer-events: none;
 }
+
 /* 뱃지 폰트 높이 보정 */
 
 /* ========================================================
@@ -587,7 +802,7 @@ body .callout[data-callout="routine"] .callout-content {
 
 /* 2. 확언(Affirmation) 라인: 담백한 1줄 텍스트 */
 body .callout[data-callout="routine"] p:first-of-type,
-body .callout[data-callout="routine"] .callout-content > p:first-child,
+body .callout[data-callout="routine"] .callout-content>p:first-child,
 body .callout[data-callout="routine"] .cm-line:not(.HyperMD-header):not(.HyperMD-task-line):not(.HyperMD-list-line):first-of-type {
     border-left: none;
     background: transparent;
@@ -688,9 +903,9 @@ body .callout[data-callout="routine"] .cm-line input[type="checkbox"] {
 }
 
 /* 6. 체크 완료 시 (Active 토글) - 원래의 화려하고 선명한 보라/블루 네온 글로우 불빛 */
-body .markdown-rendered .callout[data-callout="routine"] ul > li.task-list-item.is-checked,
-body .markdown-rendered .callout[data-callout="routine"] ul > li.task-list-item[data-task="x"],
-body .markdown-rendered .callout[data-callout="routine"] ul > li.task-list-item[data-task="X"],
+body .markdown-rendered .callout[data-callout="routine"] ul>li.task-list-item.is-checked,
+body .markdown-rendered .callout[data-callout="routine"] ul>li.task-list-item[data-task="x"],
+body .markdown-rendered .callout[data-callout="routine"] ul>li.task-list-item[data-task="X"],
 body .cm-editor .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="x"],
 body .cm-editor .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"],
 body .callout[data-callout="routine"] ul>li.task-list-item.is-checked,
@@ -1081,6 +1296,41 @@ body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] 
     transform: scale(1.15);
     background-color: var(--background-modifier-hover);
     color: var(--interactive-accent-hover, var(--text-accent));
+}
+
+.myworld-todo-star-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 1.2em;
+    line-height: 1;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-muted, rgba(128, 128, 128, 0.6));
+    transition: all 0.15s ease-in-out;
+}
+
+.myworld-todo-star-btn:hover {
+    background-color: var(--background-modifier-hover);
+    color: #ffd200;
+    transform: scale(1.15);
+}
+
+.myworld-todo-star-btn.is-active {
+    color: #ffd200;
+    background-color: rgba(255, 210, 0, 0.12);
+    border: 1px solid rgba(255, 210, 0, 0.35);
+    text-shadow: 0 0 6px rgba(255, 210, 0, 0.6);
+}
+
+.myworld-todo-item-row.is-important {
+    background: linear-gradient(90deg, rgba(255, 210, 0, 0.08) 0%, var(--background-primary) 65%);
+    border-color: rgba(255, 210, 0, 0.35);
 }
 
 /* Align header action buttons - position daily reset sun button at the absolute rightmost edge of the line */
@@ -2049,6 +2299,7 @@ body .callout[data-callout="routine"] .cm-line.HyperMD-task-line[data-task="X"] 
     pointer-events: none !important;
     vertical-align: middle !important;
 }
+
 /* Routine Cumulative Badge Styling */
 .routine-cumulative-badge {
     font-size: 0.72em !important;

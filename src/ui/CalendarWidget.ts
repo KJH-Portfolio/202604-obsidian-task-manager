@@ -13,9 +13,10 @@ export function buildCalendarPopup(
     initialDate: string,
     posLeft: number,
     posTop: number,
-    onSelect: (date: string | null) => void,
+    onSelect: (date: string | null, isImportant: boolean) => void,
     doc: Document = activeDocument,
-    lang: string = "en"
+    lang: string = "en",
+    initialImportant: boolean = false
 ) {
     // @ts-ignore
     const today = window.moment();
@@ -30,13 +31,15 @@ export function buildCalendarPopup(
         baseDate = today.clone();
     }
 
+    let currentImportant = initialImportant;
+    let currentSelectedDate: string | null = initialDate;
     let monthOffset = 0;
 
     // 기존 팝업 제거
     doc.querySelectorAll(".myworld-cal-popup").forEach(el => el.remove());
 
     const popup = createDiv();
-    popup.className = "myworld-cal-popup";
+    popup.className = "myworld-cal-popup" + (currentImportant ? " is-important" : "");
     popup.setCssStyles({
         position: "fixed",
         left: `${posLeft}px`,
@@ -58,78 +61,76 @@ export function buildCalendarPopup(
     };
 
     const render = () => {
-        popup.innerHTML = "";
-
-        const todayStr = today.format("YYYY-MM-DD");
-        // @ts-ignore
-        const currentMonthStart = baseDate.clone().add(monthOffset, 'months').startOf('month');
-        // @ts-ignore
-        const currentMonthEnd = currentMonthStart.clone().endOf('month');
-        // @ts-ignore
-        const startDate = currentMonthStart.clone().startOf('week');
-        // @ts-ignore
-        const endDate = currentMonthEnd.clone().endOf('week');
-
-        const primaryMonthNum = currentMonthStart.month();
-        const monthLabel = lang === 'ko' ? `${currentMonthStart.format('YYYY년 M월')}` : `${currentMonthStart.format('MMMM YYYY')}`;
-        const DAYS = [t("cal_sun", lang), t("cal_mon", lang), t("cal_tue", lang), t("cal_wed", lang), t("cal_thu", lang), t("cal_fri", lang), t("cal_sat", lang)];
+        popup.empty();
 
         // Header
         const header = createDiv();
         header.className = "myworld-cal-header";
 
         const btnPrev = createEl("button");
-        btnPrev.className = "myworld-cal-nav";
+        btnPrev.className = "myworld-cal-nav-btn";
         btnPrev.textContent = "‹";
         btnPrev.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            monthOffset -= 1;
+            monthOffset--;
             render();
         });
 
-        const spanMonth = createSpan();
-        spanMonth.className = "myworld-cal-month";
-        spanMonth.textContent = monthLabel;
+        const title = createDiv();
+        title.className = "myworld-cal-title";
+        // @ts-ignore
+        const displayDate = baseDate.clone().add(monthOffset, 'months');
+        const formatStr = lang === "ko" ? "YYYY년 M월" : "MMMM YYYY";
+        title.textContent = displayDate.format(formatStr);
 
         const btnNext = createEl("button");
-        btnNext.className = "myworld-cal-nav";
+        btnNext.className = "myworld-cal-nav-btn";
         btnNext.textContent = "›";
         btnNext.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            monthOffset += 1;
+            monthOffset++;
             render();
         });
 
         header.appendChild(btnPrev);
-        header.appendChild(spanMonth);
+        header.appendChild(title);
         header.appendChild(btnNext);
         popup.appendChild(header);
 
-        // Day of week row
-        const dowRow = createDiv();
-        dowRow.className = "myworld-cal-dow";
-        DAYS.forEach(d => {
-            const cell = createDiv();
-            cell.textContent = d;
-            dowRow.appendChild(cell);
+        // Days of week
+        const dows = createDiv();
+        dows.className = "myworld-cal-dows";
+        const dowNames = lang === "ko" ? ["일", "월", "화", "수", "목", "금", "토"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+        dowNames.forEach((name, i) => {
+            const d = createDiv();
+            d.className = "myworld-cal-dow";
+            if (i === 0) d.classList.add("myworld-cal-sun");
+            if (i === 6) d.classList.add("myworld-cal-sat");
+            d.textContent = name;
+            dows.appendChild(d);
         });
-        popup.appendChild(dowRow);
+        popup.appendChild(dows);
 
-        // Grid
+        // Grid (날짜 그리드)
         const grid = createDiv();
         grid.className = "myworld-cal-grid";
 
         // @ts-ignore
-        const totalDays = Math.max(35, endDate.diff(startDate, 'days') + 1);
+        const firstDayOfMonth = displayDate.clone().startOf('month');
+        const startDayOfWeek = firstDayOfMonth.day(); // 0-6
+        // @ts-ignore
+        const startDate = firstDayOfMonth.clone().subtract(startDayOfWeek, 'days');
+        const primaryMonthNum = displayDate.month();
+        const todayStr = today.format("YYYY-MM-DD");
 
-        for (let i = 0; i < totalDays; i++) {
+        for (let i = 0; i < 42; i++) {
             // @ts-ignore
             const currentCellDate = startDate.clone().add(i, 'days');
             const ds = currentCellDate.format("YYYY-MM-DD");
-            
+
             const cell = createDiv();
             cell.className = "myworld-cal-day";
-            
+
             if (currentCellDate.month() !== primaryMonthNum) {
                 cell.classList.add("myworld-cal-other-month");
             }
@@ -139,7 +140,7 @@ export function buildCalendarPopup(
 
             cell.addEventListener("mousedown", (e) => {
                 e.preventDefault(); e.stopPropagation();
-                onSelect(ds);
+                onSelect(ds, currentImportant);
                 cleanupAndClose();
             });
 
@@ -150,12 +151,12 @@ export function buildCalendarPopup(
             if (dow === 6) cell.classList.add("myworld-cal-sat");
             cell.textContent = currentCellDate.format('D');
             cell.setAttribute("data-date", ds);
-            
+
             grid.appendChild(cell);
         }
         popup.appendChild(grid);
 
-        // Footer
+        // Footer (3버튼: 삭제, 중요, 오늘)
         const footer = createDiv();
         footer.className = "myworld-cal-footer";
 
@@ -164,8 +165,19 @@ export function buildCalendarPopup(
         btnDelete.textContent = t("cal_delete", lang);
         btnDelete.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            onSelect(null);
+            onSelect(null, currentImportant);
             cleanupAndClose();
+        });
+
+        const btnImportant = createEl("button");
+        btnImportant.className = "myworld-cal-foot-btn myworld-cal-important-btn" + (currentImportant ? " is-active" : "");
+        btnImportant.textContent = lang === "ko" ? "중요" : "Important";
+        btnImportant.addEventListener("mousedown", (e) => {
+            e.preventDefault(); e.stopPropagation();
+            currentImportant = !currentImportant;
+            btnImportant.classList.toggle("is-active", currentImportant);
+            popup.classList.toggle("is-important", currentImportant);
+            onSelect(currentSelectedDate, currentImportant);
         });
 
         const btnToday = createEl("button");
@@ -173,11 +185,12 @@ export function buildCalendarPopup(
         btnToday.textContent = t("cal_today", lang);
         btnToday.addEventListener("mousedown", (e) => {
             e.preventDefault(); e.stopPropagation();
-            onSelect(todayStr);
+            onSelect(todayStr, currentImportant);
             cleanupAndClose();
         });
 
         footer.appendChild(btnDelete);
+        footer.appendChild(btnImportant);
         footer.appendChild(btnToday);
         popup.appendChild(footer);
     };
@@ -262,7 +275,7 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
         if (!isSchedule && !isProject) return builder.finish();
 
         const processedLines = new Set<number>();
-        const marks: { start: number; end: number; className: string }[] = [];
+        const decoEntries: { from: number; to: number; deco: Decoration }[] = [];
         const todayStr = window.moment().format("YYYY-MM-DD");
 
         for (const { from, to } of view.visibleRanges) {
@@ -270,17 +283,23 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
                 const line = view.state.doc.lineAt(pos);
                 if (!processedLines.has(line.number)) {
                     processedLines.add(line.number);
-                    
-                    // 1. 날짜 텍스트 마킹 (클릭 가능 및 연체 표시)
+
+                    const isCompletedTask = /^[\s]*(?:>\s*)*[-*+]\s+\[[xX]\]/.test(line.text);
+
+                    // 1. 날짜 텍스트 마킹 (완료된 항목은 은닉, 미완료는 클릭 가능 및 연체 표시)
                     const regex = /📅\s*(\d{4}-\d{2}-\d{2})/g;
                     let match;
                     while ((match = regex.exec(line.text)) !== null) {
                         const start = line.from + match.index;
                         const end = start + match[0].length;
-                        const dateStr = match[1];
-                        let cls = "myworld-date-clickable-text";
-                        if (dateStr < todayStr) cls += " myworld-overdue";
-                        marks.push({ start, end, className: cls });
+                        if (isCompletedTask) {
+                            decoEntries.push({ from: start, to: end, deco: Decoration.mark({ class: "myworld-hidden-completed-item" }) });
+                        } else {
+                            const dateStr = match[1];
+                            let cls = "myworld-date-clickable-text";
+                            if (dateStr < todayStr) cls += " myworld-overdue";
+                            decoEntries.push({ from: start, to: end, deco: Decoration.mark({ class: cls }) });
+                        }
                     }
 
                     // 2. 블록 ID 완전 은닉 마킹
@@ -288,16 +307,36 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
                     if (blockIdMatch && blockIdMatch.index !== undefined) {
                         const start = line.from + blockIdMatch.index;
                         const end = line.to;
-                        marks.push({ start, end, className: "myworld-hidden-block-id" });
+                        decoEntries.push({ from: start, to: end, deco: Decoration.mark({ class: "myworld-hidden-block-id" }) });
+                    }
+
+                    // 3. 중요 식별자(⭐ / [중요]) 완전 은닉 마킹
+                    const starMatch = line.text.match(/\s*(⭐|\[중요\])/);
+                    if (starMatch && starMatch.index !== undefined) {
+                        const start = line.from + starMatch.index;
+                        const end = start + starMatch[0].length;
+                        decoEntries.push({ from: start, to: end, deco: Decoration.mark({ class: "myworld-hidden-star" }) });
                     }
                 }
                 pos = line.to + 1;
             }
         }
 
-        marks.sort((a, b) => a.start - b.start);
-        for (const m of marks) {
-            builder.add(m.start, m.end, Decoration.mark({ class: m.className }));
+        // line 데코레이션(to === from)이 마크 데코레이션보다 먼저 등록되도록 정렬
+        decoEntries.sort((a, b) => {
+            if (a.from !== b.from) return a.from - b.from;
+            const aIsLine = a.to === a.from;
+            const bIsLine = b.to === b.from;
+            if (aIsLine && !bIsLine) return -1;
+            if (!aIsLine && bIsLine) return 1;
+            return a.to - b.to;
+        });
+        for (const e of decoEntries) {
+            try {
+                builder.add(e.from, e.to, e.deco);
+            } catch (err) {
+                // RangeSetBuilder 충돌 방어
+            }
         }
         return builder.finish();
     }
@@ -311,31 +350,35 @@ export const buildDateClickablePlugin = (app: App, getPlugin: () => { settings: 
             // 날짜 클릭 처리
             if (target && target.classList.contains("myworld-date-clickable-text")) {
                 const pos = view.posAtDOM(target);
-                const { isMatch, dateStr, exactFrom, exactTo } = isDateClickableRange(view, pos);
+                const { isMatch, dateStr } = isDateClickableRange(view, pos);
                 if (isMatch) {
                     e.preventDefault();
                     const rect = target.getBoundingClientRect();
-                    // Bug M: 클릭 시점 view를 캡처하여 콜백에서 사용
                     const clickedView = view;
                     const doc = view.dom.ownerDocument;
-                    buildCalendarPopup(dateStr, rect.left + rect.width / 2, rect.top + rect.height / 2, (newDate) => {
-                        try {
-                            const targetText = clickedView.state.doc.sliceString(exactFrom, exactTo);
-                            if (!targetText.includes(dateStr)) {
-                                console.warn("Date clickable position changed, aborting replacement.");
-                                return;
-                            }
+                    const currentLine = view.state.doc.lineAt(pos);
+                    const initialImportant = /\s*(⭐|\[중요\])/.test(currentLine.text);
 
-                            if (newDate === null) {
-                                const removeFrom = (exactFrom > 0 && clickedView.state.doc.sliceString(exactFrom - 1, exactFrom) === ' ') ? exactFrom - 1 : exactFrom;
-                                clickedView.dispatch({ changes: { from: removeFrom, to: exactTo, insert: '' } });
-                            } else {
-                                clickedView.dispatch({ changes: { from: exactFrom, to: exactTo, insert: `\uD83D\uDCC5 ${newDate}` } });
-                            }
+                    buildCalendarPopup(dateStr, rect.left + rect.width / 2, rect.top + rect.height / 2, (newDate, isImportant) => {
+                        try {
+                            const latestLine = clickedView.state.doc.lineAt(pos);
+                            // @ts-ignore
+                            const pluginInstance = getPlugin() as any;
+                            const updatedLine = pluginInstance.updateTaskLineDate
+                                ? pluginInstance.updateTaskLineDate(latestLine.text, newDate, isImportant)
+                                : latestLine.text;
+                            clickedView.dispatch({
+                                changes: { from: latestLine.from, to: latestLine.to, insert: updatedLine }
+                            });
+                            window.setTimeout(() => {
+                                try {
+                                    clickedView.dispatch({ effects: RebuildDecorations.of(null) });
+                                } catch (e) { /* ignore */ }
+                            }, 10);
                         } catch (err) {
-                            console.error("[Bug M] view dispatch 실패:", err);
+                            console.error("[Date Click] view dispatch 실패:", err);
                         }
-                    }, doc, lang);
+                    }, doc, lang, initialImportant);
                     return true;
                 }
             }

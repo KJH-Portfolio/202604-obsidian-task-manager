@@ -32,7 +32,7 @@ export class TemplateHelper {
         return content;
     }
 
-    
+
     public readonly scRenderJsContent = `// 1. 프로젝트 파일 가져오기 (오직 "1. Project/00.Tasks" 폴더 내부 계획서만 엄격하게 격리)
 const pages = dv.pages().where(p => {
     const normPath = (p.file.path || "").replace(/\\\\/g, "/");
@@ -128,11 +128,27 @@ for (let p of pages) {
             color = inheritedBadge.color;
         }
 
+        if (t.completed) {
+            badge = "";
+        }
+
+        const isImportant = /⭐|\[중요\]/.test(t.text);
         const displayText = t.text.replace(/\\s*\\^[a-zA-Z0-9]+$/, "");
-        const formattedText = displayText.replace(/(📅\\s*\\d{4}-\\d{2}-\\d{2})/g, '<span class="myworld-date-clickable">$1</span>');
+        const itemFilePath = (p.file && p.file.path) ? p.file.path : (p.filePath || (t.path || ""));
+        let formattedText = displayText;
+        if (t.completed) {
+            formattedText = displayText
+                .replace(/\\s*(📅\\s*\\d{4}-\\d{2}-\\d{2})/g, '<span class="myworld-hidden-completed-item">$1</span>')
+                .replace(/\\s*(⭐|\\[중요\\])/g, '<span class="myworld-hidden-star">$1</span>');
+        } else {
+            formattedText = displayText
+                .replace(/(📅\\s*\\d{4}-\\d{2}-\\d{2})/g, \`<span class="myworld-date-clickable" data-project-path="\${itemFilePath}">$1</span>\`)
+                .replace(/(⭐|\\[중요\\])/g, '<span class="myworld-hidden-star">$1</span>');
+        }
         if (badge !== "") {
             badgeMap.set(t.line, { badge, color });
-            t.visual = \`<span><span class="dday-virtual-badge" style="color: \${color};">\${badge}</span>\` + formattedText + \`</span>\`;
+            const badgeCls = "dday-virtual-badge" + (isImportant ? " is-important" : "");
+            t.visual = \`<span><span class="\${badgeCls}" style="color: \${color};">\${badge}</span>\` + formattedText + \`</span>\`;
         } else {
             t.visual = formattedText;
         }
@@ -228,6 +244,11 @@ if (projects.length > 0) {
                 dv.container.lastElementChild.style.marginLeft = "25px";
                 dv.container.lastElementChild.style.marginBottom = "15px";
                 dv.container.lastElementChild.setAttribute("data-project-path", p.filePath);
+                dv.container.lastElementChild.querySelectorAll(".task-list-item").forEach(item => {
+                    if (item.querySelector(".myworld-hidden-star")) {
+                        item.classList.add("myworld-task-important");
+                    }
+                });
             }
         } else {
             dv.span("<div style='margin-left: 25px; margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);'>등록된 실행 항목이 없습니다.</div>");
@@ -235,12 +256,19 @@ if (projects.length > 0) {
     });
 
     setTimeout(() => {
+        dv.container.querySelectorAll(".task-list-item").forEach(item => {
+            if (item.querySelector(".myworld-hidden-star")) {
+                item.classList.add("myworld-task-important");
+            }
+        });
+
         if (!dv.container.dataset.clickBound) {
             dv.container.dataset.clickBound = "true";
 
             // mousedown 캡처 단계에서 링크 포커스 및 네비게이션 원천 차단
             dv.container.addEventListener('mousedown', (e) => {
-                const dateSpan = e.target.closest('.myworld-date-clickable');
+                const targetEl = (e.target && e.target.closest) ? e.target : (e.target ? e.target.parentElement : null);
+                const dateSpan = targetEl ? targetEl.closest('.myworld-date-clickable') : null;
                 if (dateSpan) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -250,14 +278,15 @@ if (projects.length > 0) {
 
             // click 캡처 단계에서 달력 팝업 오픈
             dv.container.addEventListener('click', (e) => {
-                const dateSpan = e.target.closest('.myworld-date-clickable');
+                const targetEl = (e.target && e.target.closest) ? e.target : (e.target ? e.target.parentElement : null);
+                const dateSpan = targetEl ? targetEl.closest('.myworld-date-clickable') : null;
                 if (dateSpan) {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                     
                     const text = dateSpan.textContent || "";
-                    const match = text.match(/\d{4}-\d{2}-\d{2}/);
+                    const match = text.match(/\\d{4}-\\d{2}-\\d{2}/);
                     if (!match) return;
                     const dateStr = match[0];
                     
